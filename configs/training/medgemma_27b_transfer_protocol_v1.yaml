@@ -1,0 +1,49 @@
+# Protocolo congelado para a transferência controlada MedGemma 4B -> 27B
+# (panorama, docs/119_PANORAMA_GERAL_ATUAL_ARGOS.md §15, "Etapa 1 — Congelar o
+# protocolo de transferência ao 27B").
+#
+# Este arquivo só CONGELA a comparação; não a executa. A execução real (Etapa
+# 2) depende do Mac (run_mac.sh) e está fora do escopo deste incremento.
+schema: argos-medgemma-27b-transfer-protocol-v1
+candidate_id: medgemma_27b_transfer_v1
+comparison_status: not_yet_executed
+
+# Mesmo protocolo/coorte/splits já congelados para a linha supervisionada —
+# a comparação 4B vs 27B usa a MESMA definição de positivo/negativo e a
+# MESMA cobertura multicohort, para que os números sejam comparáveis.
+training_protocol_config: configs/training/hybrid_v1_protocol.yaml
+training_protocol_lock: configs/training/hybrid_v1_protocol.lock.json
+nested_splits: configs/training/hybrid_v1_nested_splits.json
+
+backends:
+  four_billion:
+    config: configs/medgemma_local_4b_volumetric_pathology_target.yaml
+    hardware: windows_rtx_4060_8gb_local
+  twenty_seven_billion:
+    config: configs/medgemma_ollama_27b_volumetric_pathology_target.yaml
+    hardware: mac_ollama
+    launcher: run_mac.sh
+
+# Painéis, prompt e schema pathology-target já são idênticos entre os dois
+# backends (mesmo contrato HTTP dtwin-medgemma-v1) — nenhuma config nova de
+# painel é necessária, só trocar o backend/config do MedGemma.
+panels_frozen: true
+prompt_frozen: true
+schema_pathology_target_frozen: true
+
+methodology:
+  # A coorte já foi aberta pela linha supervisionada (Fases 0-13); esta
+  # comparação é retrospectiva multicohort, nunca validação externa cega.
+  retrospective_multicohort: true
+  external_blind_validation: false
+  technical_failures_count_as_errors: true
+  must_report_by_dataset: true
+  confidence_interval_95_required: true
+
+acceptance:
+  sensitivity_minimum: 0.75
+  specificity_minimum: 0.75
+  end_to_end_seconds_maximum: 180
+
+research_only: true
+clinical_use_allowed: false
