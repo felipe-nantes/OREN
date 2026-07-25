@@ -1545,6 +1545,88 @@ Fase 5. Permanece **não promovido** ao webapp: o gate exige estabilidade, e a
 análise por dataset mostra que ela ainda não existe. A Fase 5 segue como
 referência congelada; nada foi alterado nela.
 
+## Etapa C — ablação: o ganho é biologia ou calibração de domínio?
+
+### Pergunta
+
+O resultado da Etapa C passou o gate agregado com classes específicas de coorte
+(`positive_unspecified`/`negative_unspecified`), que permitem ao modelo
+condicionar a calibração ao domínio. Antes de qualquer afirmação, era preciso
+saber se o ganho vem da **biologia** (o rótulo fino ajuda a separar
+mimetizadores) ou da **calibração de domínio** (as classes de coorte agem como
+indicador de dataset). O desenho que isola isso: restringir ao **LLD-MMRI**
+(única coorte com rótulos finos reais), onde não existe classe de coorte por
+construção, e comparar dois braços que diferem **só** na granularidade do
+rótulo. Mesmo módulo, mesmos embeddings, mesmos splits congelados (apenas
+intersectados com o universo LLD, sem reatribuir folds), mesma agregação, mesma
+seleção de threshold.
+
+### Resultado — LLD-MMRI, 335 casos
+
+```text
+braço              sens     esp      AUC      gate
+binário          76,43%   75,84%   0,8567    OK
+multiclasse      75,16%   76,97%   0,8664    OK
+
+Δ (multi − binário):  sens −1,27 pp | esp +1,12 pp | AUC +0,0098
+```
+
+Na decisão binária o rótulo fino é praticamente um empate (troca 1,3 pp de
+sensibilidade por 1,1 pp de especificidade); no AUC, adiciona apenas +0,010.
+
+### Decomposição do ganho da Etapa C
+
+Reconciliando o AUC **dentro do LLD** entre as quatro configurações:
+
+```text
+Fase 5 binário, treino nos 467 (subset LLD):   AUC 0,8081   (baseline)
+binário, treino SÓ no LLD (335):               AUC 0,8567   (+0,049)
+multiclasse, treino SÓ no LLD (335):           AUC 0,8664   (+0,058)
+multiclasse, treino nos 467 c/ classes coorte: AUC 0,8630
+```
+
+O salto de AUC da Etapa C (~+0,055 sobre a Fase 5 no LLD) decompõe-se em:
+
+- **separação de domínio** (parar de misturar OpenSwissHCC no treino):
+  **+0,049** — o efeito dominante;
+- **granularidade de rótulo fino**, por cima disso: **+0,010** — marginal.
+
+O AUC do run completo multiclasse (0,8630) é essencialmente reproduzido pelo
+binário treinado só no LLD (0,8567): as classes específicas de coorte, no run
+completo, faziam **o mesmo trabalho** que restringir fisicamente ao LLD — separar
+domínios. A biologia dos subtipos (hcc/hemangioma/cisto/fnh) contribui pouco.
+
+### Interpretação — reformulação do teto
+
+O gargalo não é "o modelo não sabe distinguir cisto de HCC". É **heterogeneidade
+de domínio**: misturar OpenSwissHCC e LLD-MMRI no treino piora o desempenho em
+cada coorte, e um classificador binário simples treinado por coorte já passa o
+gate na sua própria coorte (LLD: 76,43%/75,84%). Isso é o mesmo problema de
+domain shift que o histórico documentou (v23 dev87 → full132), agora medido de
+forma limpa.
+
+Consequências:
+
+1. A supervisão multiclasse "funcionou" no run completo majoritariamente porque
+   as classes de coorte agiram como indicador de domínio, não porque o modelo
+   aprendeu a caracterizar melhor as lesões. O ganho é **~85% domínio, ~15%
+   rótulo fino**.
+2. Treino por coorte **não é candidato promovível**: uma coorte nova não tem
+   rótulos in-domain para calibrar. É diagnóstico, não solução de produção.
+3. Perseguir rótulos de subtipo melhores tem retorno marginal (+0,010 AUC). O
+   valor está em **generalização entre domínios** — que é o que uma coorte
+   independente ou um backbone mais forte (27B) endereçam, não mais engenharia
+   de feature/rótulo sobre estes dois datasets.
+
+### Decisão
+
+A Etapa C permanece como está: primeiro candidato a passar o gate agregado,
+**não promovido** por não ser estável por dataset. A ablação não muda essa
+conclusão — refina o entendimento de **por que**: o teto atual é dominado por
+domain shift, não por discriminação de mimetizadores. Nada foi alterado nos
+artefatos congelados (Fase 5 e o próprio run canônico da Etapa C reproduzem suas
+assinaturas; as opções de ablação só entram no freeze quando não-padrão).
+
 ## Estado após Fase 9B e Fase 10
 
 ```text

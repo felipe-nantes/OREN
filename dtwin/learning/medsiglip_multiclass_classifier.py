@@ -67,6 +67,14 @@ EVALUATION_SCHEMA = "argos-hybrid-medsiglip-multiclass-oof-evaluation-v1"
 POSITIVE_UNSPECIFIED = "positive_unspecified"
 NEGATIVE_UNSPECIFIED = "negative_unspecified"
 
+# Label granularities. ``binary`` collapses every case onto the unspecified
+# classes, which makes a multinomial fit with two classes equivalent to the
+# binary head of Phase 5 — that is what turns this module into a controlled
+# ablation instrument: the same code path, splits and aggregation, with label
+# granularity as the only variable.
+CLINICAL_GRANULARITY = "clinical_subtype"
+BINARY_GRANULARITY = "binary"
+
 
 def _json(path: Path, description: str) -> Any:
     try:
@@ -112,18 +120,35 @@ def load_multiclass_config(path: Path) -> dict[str, Any]:
         raise PipelineError("Threshold deve ser selecionado só no inner CV.")
     if value.get("technical_failures_count_as_errors") is not True:
         raise PipelineError("Falhas técnicas devem contar como erros.")
+    granularity = value.get("label_granularity", CLINICAL_GRANULARITY)
+    if granularity not in (CLINICAL_GRANULARITY, BINARY_GRANULARITY):
+        raise PipelineError(f"label_granularity inválido: {granularity!r}")
+    restrict = value.get("restrict_to_dataset_ids")
+    if restrict is not None and (
+        not isinstance(restrict, list) or not restrict or any(not str(v).strip() for v in restrict)
+    ):
+        raise PipelineError("restrict_to_dataset_ids deve ser lista não vazia de dataset_id.")
     return value
 
 
 def build_multiclass_labels(
-    protected_cases: Iterable[Any], subtype_by_id: dict[str, str]
+    protected_cases: Iterable[Any],
+    subtype_by_id: dict[str, str],
+    granularity: str = CLINICAL_GRANULARITY,
 ) -> tuple[dict[str, str], dict[str, int]]:
-    """Assign each case its finest available label, without inventing detail.
+    """Assign each case its label at the requested granularity.
+
+    ``clinical_subtype`` uses the finest label available per case, without
+    inventing detail. ``binary`` collapses everything onto the unspecified
+    classes, reproducing Phase 5's supervision through this same code path so
+    the two can be compared as a controlled ablation.
 
     Returns ``(class_by_case, binary_by_case)``. Fails closed if a clinical
     subtype ever disagrees with the binary endpoint it is supposed to refine —
     that would mean the label sources contradict each other.
     """
+    if granularity not in (CLINICAL_GRANULARITY, BINARY_GRANULARITY):
+        raise PipelineError(f"label_granularity inválido: {granularity!r}")
     class_by_case: dict[str, str] = {}
     binary_by_case: dict[str, int] = {}
     polarity: dict[str, set[int]] = defaultdict(set)
@@ -131,7 +156,7 @@ def build_multiclass_labels(
         binary = int(case.label == "POSITIVE")
         binary_by_case[case.case_id] = binary
         subtype = subtype_by_id.get(case.case_id)
-        if subtype:
+        if granularity == CLINICAL_GRANULARITY and subtype:
             label = subtype
         else:
             label = POSITIVE_UNSPECIFIED if binary else NEGATIVE_UNSPECIFIED
@@ -176,6 +201,38 @@ def resolve_positive_classes(
             f"configurado={sorted(configured)} implícito={sorted(implied_positive)}"
         )
     return sorted(configured)
+
+
+def restrict_splits(splits: dict[str, Any], allowed_case_ids: set[str]) -> dict[str, Any]:
+    """Intersect frozen nested splits with a smaller case universe.
+
+    Fold membership is never reassigned — cases keep the outer/inner fold the
+    frozen artifact already gave them and are only dropped when outside the
+    universe. Used for cohort-restricted ablations, so a restricted run stays
+    comparable to the full run.
+    """
+    outer_rows = []
+    for outer in splits["outer_folds"]:
+        outer_rows.append(
+            {
+                "outer_fold": outer["outer_fold"],
+                "train_case_ids": [c for c in outer["train_case_ids"] if c in allowed_case_ids],
+                "test_case_ids": [c for c in outer["test_case_ids"] if c in allowed_case_ids],
+                "inner_folds": [
+                    {
+                        "inner_fold": inner["inner_fold"],
+                        "train_case_ids": [
+                            c for c in inner["train_case_ids"] if c in allowed_case_ids
+                        ],
+                        "validation_case_ids": [
+                            c for c in inner["validation_case_ids"] if c in allowed_case_ids
+                        ],
+                    }
+                    for inner in outer["inner_folds"]
+                ],
+            }
+        )
+    return {**splits, "outer_folds": outer_rows}
 
 
 def _load_embedding_map(embedding_root: Path) -> tuple[dict[str, list[np.ndarray]], dict[str, list[str]]]:
@@ -428,10 +485,27 @@ def generate_oof_predictions(
     validate_nested_splits(splits)
 
     protected_cases = load_protected_cases(training_protocol_config_path, workspace_root)
+    restrict = config.get("restrict_to_dataset_ids")
+    if restrict:
+        allowed_datasets = {str(v).strip() for v in restrict}
+        available = {case.dataset_id for case in protected_cases}
+        unknown = sorted(allowed_datasets - available)
+        if unknown:
+            raise PipelineError(f"restrict_to_dataset_ids cita dataset ausente: {unknown}")
+        protected_cases = [
+            case for case in protected_cases if case.dataset_id in allowed_datasets
+        ]
+        if not protected_cases:
+            raise PipelineError("Restrição de coorte não deixou nenhum caso.")
+        splits = restrict_splits(splits, {case.case_id for case in protected_cases})
+
     subtype_by_id = clinical_subtype_map(
         load_protected_label_rows(training_protocol_config_path, workspace_root)
     )
-    class_by_case, binary_by_case = build_multiclass_labels(protected_cases, subtype_by_id)
+    granularity = str(config.get("label_granularity", CLINICAL_GRANULARITY))
+    class_by_case, binary_by_case = build_multiclass_labels(
+        protected_cases, subtype_by_id, granularity=granularity
+    )
     positive_classes = resolve_positive_classes(
         config["positive_classes"], class_by_case, binary_by_case
     )
@@ -453,6 +527,8 @@ def generate_oof_predictions(
         outer_index = int(outer["outer_fold"])
         outer_train_ids = list(outer["train_case_ids"])
         outer_test_ids = list(outer["test_case_ids"])
+        if not outer_test_ids:
+            continue
         candidates: list[dict[str, Any]] = []
         for c_value in c_grid:
             for aggregation in aggregations:
@@ -570,6 +646,19 @@ def generate_oof_predictions(
         "status": "frozen_before_final_metric_calculation",
         "candidate_id": str(config["candidate_id"]),
         "class_names": class_names,
+        # Recorded only when non-default, so the canonical Etapa C run (clinical
+        # granularity, unrestricted) keeps producing its original, already-frozen
+        # signature — the ablation options must not retroactively change it.
+        **(
+            {"label_granularity": granularity}
+            if granularity != CLINICAL_GRANULARITY
+            else {}
+        ),
+        **(
+            {"restricted_to_dataset_ids": sorted({str(v).strip() for v in restrict})}
+            if restrict
+            else {}
+        ),
         "positive_classes": positive_classes,
         "class_case_counts": {
             name: sum(1 for value in class_by_case.values() if value == name)
@@ -652,8 +741,13 @@ def evaluate_oof_predictions(
 
     protected_cases = load_protected_cases(training_protocol_config_path, workspace_root)
     protected = {case.case_id: case for case in protected_cases}
-    if {str(row["case_id"]) for row in predictions} != set(protected):
-        raise PipelineError("Predições e labels não cobrem os mesmos casos.")
+    covered = {str(row["case_id"]) for row in predictions}
+    # A cohort-restricted ablation legitimately covers a subset; what must always
+    # hold is that every predicted case is inside the protected protocol.
+    if not covered <= set(protected):
+        raise PipelineError("Predições citam caso fora do protocolo protegido.")
+    if int(freeze.get("prediction_count", -1)) != len(predictions):
+        raise PipelineError("Contagem de predições diverge do freeze.")
     subtype_by_id = clinical_subtype_map(
         load_protected_label_rows(training_protocol_config_path, workspace_root)
     )
@@ -701,11 +795,12 @@ def evaluate_oof_predictions(
         }
 
     overall = metrics_for(predictions)
+    covered_datasets = sorted({protected[case_id].dataset_id for case_id in covered})
     by_dataset = {
         dataset_id: metrics_for(
             [row for row in predictions if protected[str(row["case_id"])].dataset_id == dataset_id]
         )
-        for dataset_id in sorted({case.dataset_id for case in protected.values()})
+        for dataset_id in covered_datasets
     }
     by_clinical_subtype = {
         subtype: metrics_for(

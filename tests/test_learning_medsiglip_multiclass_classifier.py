@@ -6,6 +6,8 @@ import yaml
 
 from dtwin.core import PipelineError
 from dtwin.learning.medsiglip_multiclass_classifier import (
+    BINARY_GRANULARITY,
+    CLINICAL_GRANULARITY,
     NEGATIVE_UNSPECIFIED,
     POSITIVE_UNSPECIFIED,
     _aggregate,
@@ -16,6 +18,7 @@ from dtwin.learning.medsiglip_multiclass_classifier import (
     build_multiclass_labels,
     load_multiclass_config,
     resolve_positive_classes,
+    restrict_splits,
 )
 from dtwin.learning.schemas import ProtectedTrainingCase
 
@@ -169,6 +172,64 @@ def test_confusion_counts_missing_score_as_error_on_correct_axis():
     assert result["fn"] == 1
     assert result["fp"] == 1
     assert result["technical_failures"] == 1
+
+
+def test_binary_granularity_collapses_fine_labels():
+    # The ablation's control arm: same code path, fine labels discarded.
+    cases = [_case("l1", "POSITIVE"), _case("l2", "NEGATIVE")]
+    subtypes = {"l1": "hcc", "l2": "hepatic_cyst"}
+    class_by_case, _ = build_multiclass_labels(cases, subtypes, granularity=BINARY_GRANULARITY)
+    assert class_by_case == {"l1": POSITIVE_UNSPECIFIED, "l2": NEGATIVE_UNSPECIFIED}
+    # ...while the default granularity keeps them
+    fine, _ = build_multiclass_labels(cases, subtypes, granularity=CLINICAL_GRANULARITY)
+    assert fine == {"l1": "hcc", "l2": "hepatic_cyst"}
+
+
+def test_build_labels_rejects_unknown_granularity():
+    with pytest.raises(PipelineError, match="label_granularity inválido"):
+        build_multiclass_labels([_case("a", "POSITIVE")], {}, granularity="whatever")
+
+
+def test_config_rejects_unknown_granularity_and_empty_restriction(tmp_path):
+    path = tmp_path / "c.yaml"
+    path.write_text(yaml.safe_dump(_config(label_granularity="nope")), encoding="utf-8")
+    with pytest.raises(PipelineError, match="label_granularity inválido"):
+        load_multiclass_config(path)
+    path.write_text(yaml.safe_dump(_config(restrict_to_dataset_ids=[])), encoding="utf-8")
+    with pytest.raises(PipelineError, match="restrict_to_dataset_ids"):
+        load_multiclass_config(path)
+
+
+def test_config_defaults_preserve_unrestricted_clinical_behaviour(tmp_path):
+    # Etapa C's committed run must keep working unchanged when the new options
+    # are absent from the config.
+    path = tmp_path / "c.yaml"
+    path.write_text(yaml.safe_dump(_config()), encoding="utf-8")
+    loaded = load_multiclass_config(path)
+    assert loaded.get("label_granularity", CLINICAL_GRANULARITY) == CLINICAL_GRANULARITY
+    assert loaded.get("restrict_to_dataset_ids") is None
+
+
+def test_restrict_splits_keeps_original_fold_membership():
+    splits = {
+        "schema": "argos-hybrid-nested-splits-v1",
+        "case_count": 4,
+        "outer_folds": [
+            {
+                "outer_fold": 0,
+                "train_case_ids": ["c3", "c4"],
+                "test_case_ids": ["c1", "c2"],
+                "inner_folds": [
+                    {"inner_fold": 0, "train_case_ids": ["c3"], "validation_case_ids": ["c4"]}
+                ],
+            }
+        ],
+    }
+    restricted = restrict_splits(splits, {"c1", "c3"})
+    fold = restricted["outer_folds"][0]
+    assert fold["test_case_ids"] == ["c1"]      # c2 dropped, c1 stays in fold 0
+    assert fold["train_case_ids"] == ["c3"]     # c4 dropped
+    assert fold["inner_folds"][0]["validation_case_ids"] == []
 
 
 def test_best_threshold_selected_from_supplied_scores_only():
