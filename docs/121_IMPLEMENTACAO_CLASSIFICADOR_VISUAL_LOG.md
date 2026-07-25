@@ -1317,6 +1317,117 @@ fusion_phase5_lora:     a43c740e30b74e83444b97186ce609b75b924315a4d5c092d61499fd
 fusion_v23_phase5_lora: 4c7e6706b0a32829e2b74a7c3b0e92c2cf5eaf4c3ea75581a66fd064328ca497
 ```
 
+## Etapa B — assinatura dinâmica por candidato (hipótese NÃO sustentada)
+
+### Hipótese
+
+A Etapa A mostrou que quase todo o déficit de especificidade vem de um único
+bucket (cisto hepático, ~42% chamados positivos). Como um cisto simples não
+realça em nenhuma fase pós-contraste, a hipótese era que uma medida de
+**realce por candidato relativa ao parênquima local** separaria cisto de HCC,
+onde a radiômica da Fase 6/7 falhou por medir o **fígado inteiro** (uma lesão
+de 2 cm é ~0,1% dos voxels do órgão).
+
+Compromisso metodológico assumido antes de rodar: **duas** operacionalizações
+pré-especificadas; se ambas falhassem, encerrar a hipótese em vez de iterar
+parâmetros contra os dados.
+
+### Sonda 1 — hipointensidade persistente por valor extremo
+
+Feature: mínimo, sobre os voxels do fígado, do mínimo entre fases do z-score
+relativo ao parênquima (suavizado 3 mm). Cisto deveria ser o mais negativo.
+
+```text
+hcc           -6.51   <- menos hipointenso
+hepatic_cyst  -8.23
+hemangioma    -9.01   <- MAIS hipointenso que o cisto
+fnh           -7.64
+
+AUC cisto vs resto: 0,4861  (aleatório)
+```
+
+Diagnóstico: estatística de valor extremo mede "quão escura é a coisa mais
+escura do fígado". Todo fígado tem estruturas persistentemente escuras
+(ductos biliares, fissuras, fluido fisiológico, artefatos), presentes em
+**todos** os casos — não "existe uma lesão focal que não realça".
+
+### Sonda 2 — volume de lesão compacta persistentemente não-realçante
+
+Correção mecanística (não ajuste a rótulo): conjunção por voxel exigindo
+hipointensidade em **todas** as fases (exclui HCC que realça na arterial,
+hemangioma que preenche na tardia, FNH), abertura morfológica para remover
+estruturas tubulares finas, e **volume** de componentes sobreviventes em vez
+de valor extremo.
+
+```text
+                 volume total (mL), mediana
+hcc                     0,00
+hepatic_cyst            0,00
+hemangioma              0,00
+fnh                     0,00
+
+AUC cisto vs resto: 0,5543 (total) / 0,5475 (maior componente)
+```
+
+O detector encontrou volume ~zero em **todos** os subtipos, inclusive cistos:
+a operacionalização é restritiva demais. O spacing do LLD é anisotrópico
+(0,76 × 0,76 × 3,0 mm), então a abertura de 3 mm exige ~9 mm de extensão
+através dos cortes — agressiva para cistos pequenos.
+
+### Diagnóstico de registro — hipótese própria refutada
+
+Antes de concluir, testei a explicação mais plausível para a falha: aritmética
+voxel-a-voxel entre fases exige registro **anatômico**, e grade coincidente
+(o que a Fase 6 verifica com `_same_geometry`) não é o mesmo que anatomia
+alinhada, já que fases dinâmicas são aquisições separadas e a respiração
+desloca o fígado.
+
+Deslocamento rígido ótimo por correlação de fase, contra o controle
+OpenSwissHCC (cujas fases passaram por registro explícito):
+
+```text
+LLD-MMRI    arterial vs venosa:  mediana 0,00 mm, max 1,48 mm
+LLD-MMRI    tardia  vs venosa:   mediana 0,00 mm, max 1,48 mm
+OpenSwiss   arterial registrada: mediana 0,00 mm, max 1,19 mm  (controle)
+OpenSwiss   tardia   registrada: mediana 0,00 mm, max 0,00 mm  (controle)
+```
+
+As fases do LLD **já estão bem registradas**, indistinguíveis do controle que
+passou por registro formal. **Misregistro não é a causa** — a hipótese
+explicativa foi refutada, não confirmada. Registrar isso evita que o projeto
+invista numa infraestrutura de registro que não é o gargalo.
+
+### Decisão
+
+A hipótese **não está refutada** (a física continua verdadeira: cisto não
+realça), mas **não é sustentada** por duas operacionalizações
+pré-especificadas. Fazê-la funcionar exigiria iterar parâmetros de
+processamento de imagem contra os rótulos — exatamente a armadilha de
+sobreajuste que o doc 120 §3.2 proíbe e que o compromisso desta etapa
+antecipou. A linha é encerrada aqui, sem código de produção promovido.
+
+Nenhuma config órfã foi deixada: `candidate_enhancement_v1.yaml`, escrita
+durante a etapa, foi removida por não corresponder a um contrato validado.
+
+### Padrão acumulado — sinal para a estratégia
+
+Três tentativas de feature manualmente engenheirada já falharam
+(Fase 7 radiômica, Fase 8 patches 2.5D, Etapa B realce por candidato),
+enquanto os três melhores sinais do projeto são todos derivados de
+**representação aprendida** (MedSigLIP congelado, LoRA, e a fusão dos dois).
+Isso é evidência empírica acumulada de onde está o valor neste problema, e
+deve orientar a próxima etapa.
+
+Uma oportunidade concreta permanece **não explorada**: a Fase 8 treinou
+classificador de candidato em apenas 87 casos OpenSwissHCC com 56 candidatos
+positivos — gravemente subdimensionado — e nunca no LLD-MMRI, que tem 335
+casos cujos negativos são exatamente os mimetizadores em questão. Além disso,
+os rótulos de subtipo descobertos na Etapa A (hcc/hemangioma/cisto/fnh)
+permitem supervisão **multiclasse** sobre os embeddings MedSigLIP **já
+extraídos**, em vez de binária — forçando o modelo a aprender por que as
+lesões diferem, não apenas "anormal ou não". Isso não requer GPU nova nem
+processamento de imagem novo.
+
 ## Estado após Fase 9B e Fase 10
 
 ```text
