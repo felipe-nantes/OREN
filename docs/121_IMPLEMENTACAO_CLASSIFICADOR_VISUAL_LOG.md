@@ -1428,6 +1428,123 @@ extraídos**, em vez de binária — forçando o modelo a aprender por que as
 lesões diferem, não apenas "anormal ou não". Isso não requer GPU nova nem
 processamento de imagem novo.
 
+## Etapa C — supervisão multiclasse (primeiro candidato a passar o gate agregado)
+
+### Hipótese e desenho
+
+A Etapa B mostrou que injetar uma *feature* manualmente engenheirada falha. Esta
+etapa muda o lever: **rótulo mais fino em vez de feature mais fina**, sobre a
+MESMA representação. Os subtipos descobertos na Etapa A permitem treinar a
+cabeça para dizer QUAL lesão vê, e derivar a decisão binária como a massa de
+probabilidade nas classes positivas.
+
+Ablação apples-to-apples contra a Fase 5: mesmos embeddings
+(`embedding_signature` 4836ef54…), mesmos splits (`splits_sha256` 41c15cc1…),
+mesma família de modelo, mesmas agregações, mesma seleção de threshold no inner
+CV, mesma política de falhas. **A única diferença é a granularidade do rótulo
+no ajuste.** Artefatos da Fase 5 não foram modificados.
+
+Espaço de rótulos (nenhuma informação fabricada — o endpoint binário é
+inalterado, e a polaridade de cada classe é validada contra os labels
+protegidos, falhando fechado em caso de contradição):
+
+```text
+LLD-MMRI      hcc 157 | hemangioma 79 | hepatic_cyst 53 | fnh 46
+OpenSwissHCC  positive_unspecified 63 | negative_unspecified 69
+```
+
+Os positivos do OpenSwissHCC **não** estão documentados como especificamente
+HCC na fonte protegida, então recebem classe explicitamente não especificada em
+vez de um subtipo inventado.
+
+### Resultado — 467 casos multicohort
+
+```text
+TP 167 | TN 188 | FP 59 | FN 53 | falhas técnicas 16
+sensibilidade    = 75,91%   (IC95% Wilson 69,84–81,08%)
+especificidade   = 76,11%   (IC95% Wilson 70,42–81,01%)
+bootstrap por paciente: sens 70,25–81,82% | esp 70,99–81,47%
+ROC-AUC          = 0,8534
+gate 75/75 (estimativa pontual): APROVADO
+```
+
+Comparação direta contra os melhores candidatos anteriores:
+
+| Candidato | Sensibilidade | Especificidade | AUC |
+|---|---:|---:|---:|
+| Fase 5 (binário, mesma representação) | 72,27% | 73,28% | 0,8014 |
+| Fase 13-3 LoRA | 75,00% | 70,45% | 0,8187 |
+| **Etapa C multiclasse** | **75,91%** | **76,11%** | **0,8534** |
+
+O ganho de AUC (+0,053 sobre o melhor anterior) indica melhoria em nível de
+**representação/ordenação**, não apenas deslocamento de threshold.
+
+Assinaturas:
+
+```text
+prediction_signature:
+01d8f7017c93141ad04b35c1cfa943419e363b80b96acb7082dcc0120bd7c630
+
+evaluation_signature:
+744456cfa1d8f2ae60cac22a7799aca4f3023b461002e25d35f8cd9fda1619f5
+
+robustness report_signature:
+6a4dd3b3d4f3a0999f1769a6594f483cea8a702778a864813044fb41e72b7afd
+```
+
+### O mecanismo NÃO foi o previsto
+
+A Etapa A previu que o ganho viria da especificidade em cisto. Os números
+refutam parcialmente essa previsão:
+
+| Subgrupo | Eixo | Fase 5 | Multiclasse | Δ |
+|---|---|---:|---:|---:|
+| hepatic_cyst | especificidade | 58,49% | 64,15% | +5,7 pp |
+| fnh | especificidade | 82,61% | 89,13% | +6,5 pp |
+| hemangioma | especificidade | 79,75% | 78,48% | −1,3 pp |
+| hcc (LLD) | sensibilidade | 75,16% | 73,25% | **−1,9 pp** |
+| OpenSwiss dev | sensibilidade | 66,67% | 82,05% | **+15,4 pp** |
+| OpenSwiss holdout | sensibilidade | 62,50% | 83,33% | **+20,8 pp** |
+
+O cisto melhorou, mas continua o pior bucket. **O ganho dominante veio da
+sensibilidade no OpenSwissHCC**, não da discriminação de mimetizadores. Registrar
+isso importa: a previsão mecanística da Etapa A estava em grande parte errada,
+mesmo que a intervenção tenha funcionado.
+
+### Ressalvas obrigatórias — o gate agregado passou, a generalização não
+
+1. **Os IC95% cruzam 75%** em ambos os eixos (limites inferiores ~70%). A
+   estimativa pontual passa, mas não se pode afirmar ≥75% com 95% de confiança.
+2. **Não é estável por dataset.** Só `openswisshcc_development` passa 75/75
+   isoladamente:
+
+```text
+lld_mmri                       73,25% / 76,97%   FALHA (sensibilidade)
+openswisshcc_development       82,05% / 77,55%   OK
+openswisshcc_consumed_holdout  83,33% / 65,00%   FALHA (especificidade)
+```
+
+   Pela matriz de decisão do doc 120 §7 ("atinge 75/75 mas colapsa por
+   dataset → declarar resultado retrospectivo instável"), este é um resultado
+   **retrospectivo promissor, não generalização consolidada**. Não autoriza
+   promoção ao webapp.
+3. **Classes específicas de coorte.** `positive_unspecified`/
+   `negative_unspecified` existem por coorte, então o modelo pode aplicar
+   calibração condicionada ao domínio. Isso **não** é atalho de dataset para a
+   classe — saber a coorte praticamente não informa o rótulo (OpenSwiss 63/132
+   ≈ 48% positivo; LLD 157/335 ≈ 47%) — e não há vazamento de label do fold de
+   teste. Mas o ganho pode não transferir para uma terceira coorte inédita. A
+   ablação natural (mapear OpenSwiss para as classes finas, sem classes
+   específicas de coorte) é o próximo teste indicado.
+
+### Decisão
+
+Primeiro candidato do projeto a passar o gate 75/75 na coorte agregada de 467
+casos, com melhoria real de AUC e sob metodologia nested OOF idêntica à da
+Fase 5. Permanece **não promovido** ao webapp: o gate exige estabilidade, e a
+análise por dataset mostra que ela ainda não existe. A Fase 5 segue como
+referência congelada; nada foi alterado nela.
+
 ## Estado após Fase 9B e Fase 10
 
 ```text

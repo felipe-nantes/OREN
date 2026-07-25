@@ -1,0 +1,47 @@
+# Supervisão MULTICLASSE sobre os embeddings MedSigLIP já congelados.
+#
+# Ablação apples-to-apples contra a Fase 5 (binária): mesmos embeddings, mesmos
+# splits nested congelados, mesma família de modelo, mesmas agregações de painel,
+# mesma seleção de threshold no inner CV, mesma política de falhas. A ÚNICA
+# diferença é a granularidade do rótulo usada no ajuste.
+#
+# Motivação: a Etapa A mostrou que o déficit de especificidade está concentrado
+# em cisto hepático (~42% chamados positivos) e que o desempenho acompanha a
+# conspicuidade da lesão, não sua caracterização. A Etapa B tentou injetar uma
+# feature de realce manualmente engenheirada e falhou. Aqui o lever é outro:
+# rótulo mais fino em vez de feature mais fina.
+#
+# Espaço de rótulos: os subtipos finos existem só no LLD-MMRI (descobertos na
+# Etapa A). O OpenSwissHCC declara apenas o endpoint binário, e seus positivos
+# NÃO estão documentados como especificamente HCC na fonte protegida -- então
+# permanecem em classes explicitamente não especificadas em vez de receberem um
+# subtipo inventado. Nenhuma informação de rótulo é fabricada e o endpoint
+# binário permanece inalterado.
+schema: argos-hybrid-medsiglip-multiclass-config-v1
+candidate_id: hybrid_v1_medsiglip_multiclass_supervised
+model: class_balanced_multinomial_logistic_regression
+solver: lbfgs
+
+# Classes derivadas automaticamente do rótulo mais fino disponível por caso:
+#   LLD-MMRI      -> hcc | hemangioma | hepatic_cyst | fnh
+#   OpenSwissHCC  -> positive_unspecified | negative_unspecified
+# A polaridade binária de cada classe é validada contra os labels protegidos.
+positive_classes:
+  - hcc
+  - positive_unspecified
+
+regularization_c_grid:
+  - 0.01
+  - 0.1
+  - 1.0
+panel_probability_aggregations:
+  - mean
+  - max
+  - top2_mean
+standardization: inner_or_outer_training_panels_only
+threshold_selection: inner_oof_only
+seed: 20260724
+max_iter: 3000
+technical_failures_count_as_errors: true
+research_only: true
+clinical_use_allowed: false
