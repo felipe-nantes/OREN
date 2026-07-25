@@ -1226,6 +1226,97 @@ os configs pathology-target já existentes para 4B (Windows) e 27B
 (Etapa 2 do panorama) depende do Mac e fica fora do escopo deste
 incremento.
 
+## Etapa A — diagnóstico por mimetizador clínico
+
+### Motivação
+
+A Fase 10 mostrou que nenhum candidato passa 75/75, mas não conseguia dizer
+**onde** o erro se concentra: o vocabulário canônico de subtipo
+(`NEGATIVE_SUBTYPES`/`POSITIVE_SUBTYPES`) tem cobertura 0% neste protocolo.
+Sem isso, qualquer decisão sobre o próximo passo seria no escuro.
+
+### Achado de dado
+
+O campo `subtype` do LLD-MMRI **existe e está 100% preenchido** nas 335
+linhas da fonte protegida:
+
+```text
+hcc:           157  (POSITIVE)
+hemangioma:     79  (NEGATIVE)
+hepatic_cyst:   53  (NEGATIVE)
+fnh:            46  (NEGATIVE)
+```
+
+Ele era simplesmente descartado por `ProtectedTrainingCase.from_mapping`,
+que só aceita o vocabulário fechado. Mapear hemangioma/cisto/FNH para o
+vocabulário canônico os colapsaria todos em `benign_non_target_finding` —
+destruindo exatamente a granularidade necessária. Optou-se por carregar o
+subtipo clínico bruto como **dimensão separada de avaliação**
+(`load_protected_label_rows` + `clinical_subtype_metrics`), sem alterar a
+taxonomia compartilhada com o benchmark clínico.
+
+### Resultado — desempenho por mimetizador (LLD-MMRI, 335 casos)
+
+| Subtipo | Classe | Casos | Eixo | Fase 5 | LoRA |
+|---|---|---:|---|---:|---:|
+| hcc | POSITIVE | 157 | sensibilidade | 75,16% | 77,07% |
+| fnh | NEGATIVE | 46 | especificidade | 82,61% | 84,78% |
+| hemangioma | NEGATIVE | 79 | especificidade | 79,75% | 74,68% |
+| **hepatic_cyst** | NEGATIVE | 53 | especificidade | **58,49%** | **56,60%** |
+
+Cobertura: 335/467 casos (71,7%). Os 132 casos OpenSwissHCC não declaram
+subtipo clínico em nenhuma fonte — reportado como cobertura 0 em vez de
+assumido.
+
+### Interpretação
+
+O erro **não** está distribuído entre os mimetizadores. HCC, FNH e
+hemangioma já estão em patamar aceitável (74–85%); praticamente todo o
+déficit de especificidade vem de um único bucket: **cisto hepático**, onde
+~42% dos casos são chamados de positivos.
+
+Isso é clinicamente contraintuitivo — um cisto simples é o achado mais fácil
+de descartar em RM (não realça em nenhuma fase, é marcadamente
+hiperintenso em T2, homogêneo e bem delimitado). O padrão observado é
+consistente com um classificador que responde a **conspicuidade**, não a
+caracterização: o desempenho piora conforme a lesão fica mais conspícua
+(FNH, a mais sutil, é a melhor; cisto, a mais chamativa, é a pior).
+
+### Projeção quantificada
+
+Corrigindo apenas o bucket de cisto, mantendo todo o resto inalterado:
+
+```text
+Fase 5  (sens 72,27%): cisto->80% => esp 77,73% | cisto->90% => esp 80,16%
+LoRA    (sens 75,00%): cisto->80% => esp 75,30% | cisto->90% => esp 77,73%
+```
+
+O LoRA, que já tem 75,00% de sensibilidade agregada, **passaria o gate
+75/75 na coorte completa de 467 casos** se a especificidade em cisto subir
+de 56,60% para 80% — um alvo plausível para uma lesão que não realça.
+
+Esta é a primeira via quantificada e concreta para a meta em todo o
+histórico do projeto. Não é garantia: o ganho precisa ser conquistado com
+sinal novo e medido em nested OOF, não assumido.
+
+### Consequência para a Etapa B
+
+A hipótese da assinatura dinâmica por candidato é sustentada, mas
+**redirecionada**: a feature de maior retorno não é a curva sutil de
+washout, e sim a mais trivial de todas — **magnitude de realce do candidato
+relativa ao parênquima, através das fases**. Um cisto tende a zero (ou
+negativo) nessa medida em todas as fases. É barata, robusta e ataca
+diretamente o maior bucket de erro.
+
+Assinaturas dos relatórios (`casos/qualification/hybrid_v1/robustness_v2_clinical_subtypes/`):
+
+```text
+medsiglip_phase5:       5a7715131e42d9a7fb16cfdd2f572963b5bca0dfd38d1cdd9e7ab3270b9602ef
+medsiglip_lora_stage3:  649e92bbfc61004f717ee121613a0f301d060bf62a7cadaeb69782ff88e72553
+fusion_phase5_lora:     a43c740e30b74e83444b97186ce609b75b924315a4d5c092d61499fd8c6fe7a5
+fusion_v23_phase5_lora: 4c7e6706b0a32829e2b74a7c3b0e92c2cf5eaf4c3ea75581a66fd064328ca497
+```
+
 ## Estado após Fase 9B e Fase 10
 
 ```text

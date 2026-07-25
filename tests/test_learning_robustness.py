@@ -5,6 +5,8 @@ import pytest
 from dtwin.learning.robustness import (
     _metrics_for,
     bootstrap_confidence_interval,
+    clinical_subtype_map,
+    clinical_subtype_metrics,
     leave_one_dataset_out,
     subgroup_metrics,
 )
@@ -123,3 +125,52 @@ def test_metrics_for_counts_technical_failure_as_error():
     result = _metrics_for(rows, protected)
     assert result["fn"] == 1
     assert result["technical_failures"] == 1
+
+
+def test_clinical_subtype_map_reads_cohort_specific_field():
+    rows = [
+        {"case_id": "c1", "subtype": "Hemangioma"},
+        {"case_id": "c2", "subtype": "hcc"},
+        {"case_id": "c3"},  # cohort without clinical subtype
+    ]
+    mapping = clinical_subtype_map(rows)
+    assert mapping == {"c1": "hemangioma", "c2": "hcc"}  # normalized, c3 absent
+
+
+def test_clinical_subtype_metrics_separates_mimickers_and_picks_right_axis():
+    protected = {
+        "h1": _case("h1", "NEGATIVE", "lld_mmri"),
+        "h2": _case("h2", "NEGATIVE", "lld_mmri"),
+        "cy1": _case("cy1", "NEGATIVE", "lld_mmri"),
+        "k1": _case("k1", "POSITIVE", "lld_mmri"),
+        "k2": _case("k2", "POSITIVE", "lld_mmri"),
+    }
+    subtypes = {"h1": "hemangioma", "h2": "hemangioma", "cy1": "hepatic_cyst", "k1": "hcc", "k2": "hcc"}
+    rows = [
+        _row("h1", "POSITIVE"),   # hemangioma called positive -> hurts specificity
+        _row("h2", "POSITIVE"),   # again
+        _row("cy1", "NEGATIVE"),  # cyst correctly negative
+        _row("k1", "POSITIVE"),
+        _row("k2", "NEGATIVE"),   # missed hcc
+    ]
+    result = clinical_subtype_metrics(rows, protected, subtypes)
+    by = result["by_clinical_subtype"]
+
+    assert by["hemangioma"]["relevant_axis"] == "specificity"
+    assert by["hemangioma"]["specificity"] == 0.0  # both called positive
+    assert by["hepatic_cyst"]["specificity"] == 1.0
+    assert by["hcc"]["relevant_axis"] == "sensitivity"
+    assert by["hcc"]["sensitivity"] == 0.5
+    assert result["coverage"]["clinical_subtype_coverage_fraction"] == 1.0
+
+
+def test_clinical_subtype_metrics_reports_partial_coverage():
+    protected = {
+        "a": _case("a", "NEGATIVE", "openswisshcc"),
+        "b": _case("b", "NEGATIVE", "lld_mmri"),
+    }
+    rows = [_row("a", "NEGATIVE"), _row("b", "NEGATIVE")]
+    result = clinical_subtype_metrics(rows, protected, {"b": "hemangioma"})
+    assert result["coverage"]["cases_with_clinical_subtype"] == 1
+    assert result["coverage"]["clinical_subtype_coverage_fraction"] == 0.5
+    assert set(result["by_clinical_subtype"]) == {"hemangioma"}

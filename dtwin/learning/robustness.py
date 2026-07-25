@@ -29,8 +29,20 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from dtwin.core import PipelineError
-from dtwin.learning.protocol import canonical_sha256, load_protected_cases, sha256_file
+from dtwin.learning.protocol import (
+    canonical_sha256,
+    load_protected_cases,
+    load_protected_label_rows,
+    sha256_file,
+)
 from dtwin.learning.schemas import ProtectedTrainingCase
+
+# Cohort-specific clinical subtype fields, in priority order. These carry the
+# fine-grained lesion type (LLD-MMRI: hcc / hemangioma / hepatic_cyst / fnh)
+# that the closed benchmark vocabulary collapses into a single
+# ``benign_non_target_finding`` bucket — precisely the granularity needed to
+# tell WHICH mimicker costs specificity.
+CLINICAL_SUBTYPE_FIELDS = ("subtype", "clinical_subtype", "lesion_type")
 
 
 def _json(path: Path, description: str) -> Any:
@@ -287,6 +299,61 @@ def subgroup_metrics(
     }
 
 
+def clinical_subtype_map(label_rows: Iterable[dict[str, Any]]) -> dict[str, str]:
+    """Map ``case_id -> clinical subtype`` from raw protected label rows.
+
+    Cases whose cohort does not declare a clinical subtype are simply absent
+    from the result, so coverage can be reported honestly instead of assumed.
+    """
+    mapping: dict[str, str] = {}
+    for row in label_rows:
+        case_id = str(row.get("case_id") or "").strip()
+        if not case_id:
+            continue
+        for field in CLINICAL_SUBTYPE_FIELDS:
+            value = row.get(field)
+            if value:
+                mapping[case_id] = str(value).strip().lower()
+                break
+    return mapping
+
+
+def clinical_subtype_metrics(
+    rows: list[dict[str, Any]],
+    protected_by_id: dict[str, ProtectedTrainingCase],
+    subtype_by_id: dict[str, str],
+) -> dict[str, Any]:
+    """Break performance down by fine-grained clinical subtype.
+
+    For a POSITIVE subtype (e.g. hcc) the meaningful axis is sensitivity; for a
+    NEGATIVE subtype (hemangioma, cyst, fnh) it is specificity. Both are
+    reported per subtype so the failure mode is visible directly.
+    """
+    covered = [row for row in rows if str(row["case_id"]) in subtype_by_id]
+    values = sorted({subtype_by_id[str(row["case_id"])] for row in covered})
+    by_subtype: dict[str, Any] = {}
+    for value in values:
+        group = [row for row in covered if subtype_by_id[str(row["case_id"])] == value]
+        metrics = _metrics_for(group, protected_by_id)
+        labels = {protected_by_id[str(row["case_id"])].label for row in group}
+        # A clinical subtype is single-class by construction (hcc is always
+        # POSITIVE, hemangioma always NEGATIVE); surface which axis applies so
+        # the report never quotes a meaningless 0.0 on the empty axis.
+        metrics["label_class"] = sorted(labels)
+        metrics["relevant_axis"] = (
+            "sensitivity" if labels == {"POSITIVE"} else "specificity" if labels == {"NEGATIVE"} else "mixed"
+        )
+        by_subtype[value] = metrics
+    return {
+        "by_clinical_subtype": by_subtype,
+        "coverage": {
+            "case_count": len(rows),
+            "cases_with_clinical_subtype": len(covered),
+            "clinical_subtype_coverage_fraction": (len(covered) / len(rows) if rows else None),
+        },
+    }
+
+
 def evaluate_robustness(
     *,
     candidate_root: Path,
@@ -314,6 +381,10 @@ def evaluate_robustness(
         rows, protected_by_id, n_resamples=n_resamples, seed=seed
     )
     subgroups = subgroup_metrics(rows, protected_by_id)
+    subtype_by_id = clinical_subtype_map(
+        load_protected_label_rows(training_protocol_config_path, workspace_root)
+    )
+    clinical = clinical_subtype_metrics(rows, protected_by_id, subtype_by_id)
 
     body = {
         "schema": "argos-hybrid-robustness-report-v1",
@@ -323,6 +394,7 @@ def evaluate_robustness(
         "leave_one_dataset_out": lodo,
         "bootstrap": bootstrap,
         "subgroups": subgroups,
+        "clinical_subtypes": clinical,
         "stability": {
             "worst_dataset_sensitivity": min(
                 (metrics["sensitivity"] for metrics in lodo.values()), default=None
@@ -381,13 +453,37 @@ def render_markdown_report(report: dict[str, Any]) -> str:
             f"Pior especificidade entre datasets: {report['stability']['worst_dataset_specificity']}",
             f"Todos os datasets no gate 75/75: {report['stability']['all_datasets_pass_75_75']}",
             "",
-            "## Cobertura de subtipo clínico",
+            "## Cobertura de subtipo canônico (vocabulário fechado)",
             "",
             f"- negative_subtype: {report['subgroups']['coverage']['negative_subtype_coverage_fraction']}",
             f"- positive_subtype: {report['subgroups']['coverage']['positive_subtype_coverage_fraction']}",
             f"- phenotype_tags: {report['subgroups']['coverage']['phenotype_tag_coverage_fraction']}",
         ]
     )
+    clinical = report.get("clinical_subtypes") or {}
+    if clinical.get("by_clinical_subtype"):
+        coverage = clinical["coverage"]
+        lines += [
+            "",
+            "## Desempenho por subtipo clínico (mimetizador)",
+            "",
+            f"Cobertura: {coverage['cases_with_clinical_subtype']}/{coverage['case_count']} casos "
+            f"({100*(coverage['clinical_subtype_coverage_fraction'] or 0):.1f}%)",
+            "",
+            "| Subtipo | Classe | Casos | Eixo relevante | Valor | Falhas técnicas |",
+            "|---|---|---:|---|---:|---:|",
+        ]
+        for name, metrics in sorted(
+            clinical["by_clinical_subtype"].items(),
+            key=lambda item: (item[1]["relevant_axis"], item[0]),
+        ):
+            axis = metrics["relevant_axis"]
+            value = metrics.get(axis) if axis in ("sensitivity", "specificity") else None
+            rendered = f"{100*value:.2f}%" if value is not None else "n/a"
+            lines.append(
+                f"| {name} | {'/'.join(metrics['label_class'])} | {metrics['case_count']} | "
+                f"{axis} | {rendered} | {metrics['technical_failures']} |"
+            )
     if report["subgroups"]["by_negative_subtype"]:
         lines += ["", "### Negativos por subtipo", "", "| Subtipo | Casos | Especificidade |", "|---|---:|---:|"]
         for name, metrics in sorted(report["subgroups"]["by_negative_subtype"].items()):
