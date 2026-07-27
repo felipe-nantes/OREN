@@ -1,0 +1,20 @@
+schema: argos-hybrid-medsiglip-head-config-v1
+candidate_id: hybrid_v1_medsiglip_frozen_nonlinear_head
+stage: phase13_stage1_head_only
+encoder_trainable: false
+pooling: l2_normalized_mean_of_panel_embeddings
+hidden_units_grid:
+  - 16
+  - 32
+alpha_grid:
+  - 0.001
+  - 0.01
+activation: relu
+class_weighting: balanced_sample_weight
+early_stopping: inner_training_partition_only
+threshold_selection: inner_oof_only
+seed: 20260724
+max_iter: 300
+technical_failures_count_as_errors: true
+research_only: true
+clinical_use_allowed: false

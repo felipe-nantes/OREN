@@ -1,0 +1,8 @@
+schema: argos-hybrid-phase13-verification-config-v1
+phase5_prediction_freeze_sha256: cfb77a7bd969bae9e390bd030af5bbe4c1b74be3bb5d1b0ba4c3f2c279d8dace
+phase5_evaluation_sha256: 8ea7d1e0db85650d90f9ffeb5b25f27f14ab0837bbb1a0e021611247df0c0e75
+expected_case_count: 467
+expected_technical_failures: 16
+lesion_masks_read: 0
+research_only: true
+clinical_use_allowed: false

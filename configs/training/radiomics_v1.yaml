@@ -1,0 +1,43 @@
+schema: argos-hybrid-radiomics-config-v1
+candidate_id: hybrid_v1_whole_liver_multiphase_radiomics
+phases:
+  - arterial
+  - venous
+  - delayed
+mask_scope: automatic_liver_mask_only
+lesion_masks_allowed: false
+
+sources:
+  - dataset_id: openswisshcc
+    kind: openswiss_aligned
+    inputs_root: casos/qualification/openswisshcc_v1/prepared/development_v1/inputs
+    alignment_root: casos/qualification/openswisshcc_v1/prepared/development_alignment_v1
+  - dataset_id: openswisshcc
+    kind: openswiss_aligned
+    inputs_root: casos/qualification/openswisshcc_v1/prepared/holdout_blind_v1/inputs
+    alignment_root: casos/qualification/openswisshcc_v1/prepared/holdout_alignment_v1
+  - dataset_id: lld_mmri
+    kind: lld_inputs_v2
+    inputs_root: casos/qualification/lld_mmri_v23/prepared/external_inputs_v2/inputs
+
+parameters:
+  erosion_mm: 3.0
+  local_sigma_mm: 3.0
+  minimum_mask_voxels: 1000
+  robust_scale: median_absolute_deviation
+  histogram_bins: 32
+  histogram_range:
+    - -5.0
+    - 5.0
+
+features:
+  - liver_geometry
+  - phase_robust_distribution
+  - local_residual_tail
+  - gradient_tail
+  - dynamic_phase_differences
+  - joint_arterial_dominance
+  - within_exam_median_and_scale_ratios
+
+research_only: true
+clinical_use_allowed: false

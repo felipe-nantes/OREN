@@ -1,0 +1,16 @@
+schema: argos-hybrid-late-fusion-config-v1
+candidate_id: hybrid_v1_v23_plus_medsiglip_phase5_fixed_80_20
+method: weighted_signed_margin
+weights:
+  v23: 0.8
+  medsiglip_phase5: 0.2
+weight_selection: fixed_before_fusion_evaluation
+decision_threshold: 0.0
+threshold_selection: fixed_no_evaluation_label_tuning
+technical_failures_count_as_errors: true
+radiomics_included: false
+radiomics_exclusion_reason: rejected_by_phase7_gate
+patch25d_included: false
+patch25d_exclusion_reason: rejected_by_phase8_gate
+research_only: true
+clinical_use_allowed: false

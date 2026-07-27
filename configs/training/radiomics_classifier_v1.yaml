@@ -1,0 +1,24 @@
+schema: argos-hybrid-radiomics-classifier-config-v1
+candidate_id: hybrid_v1_whole_liver_radiomics_elastic_net
+model: class_balanced_elastic_net_logistic_regression
+solver: saga
+regularization_c_grid:
+  - 0.03
+  - 0.1
+  - 0.3
+l1_ratio_grid:
+  - 0.0
+  - 0.5
+  - 0.9
+feature_count_grid:
+  - 32
+  - 64
+imputation: median_fit_on_training_fold_only
+standardization: fit_on_training_fold_only
+feature_selection: f_classif_fit_on_training_fold_only
+threshold_selection: inner_oof_only
+seed: 20260724
+max_iter: 5000
+technical_failures_count_as_errors: true
+research_only: true
+clinical_use_allowed: false

@@ -1,0 +1,75 @@
+{
+  "acceptance": {
+    "confidence_interval_95_required": true,
+    "end_to_end_seconds_maximum": 180,
+    "localizer_recall_minimum": 0.85,
+    "must_compare_with_v23_full132": true,
+    "must_report_by_dataset": true,
+    "sensitivity_minimum": 0.75,
+    "specificity_minimum": 0.75
+  },
+  "aggregate_case_count": 467,
+  "aggregate_label_counts": {
+    "NEGATIVE": 247,
+    "POSITIVE": 220
+  },
+  "candidate_id": "hybrid_v1_medsiglip_frozen_supervised",
+  "clinical_use_allowed": false,
+  "config_sha256": "ad0417f07e384e3d0ad724a32e3be63f8ac6c88db8a808f67897a87c753c558a",
+  "dataset_case_counts": {
+    "lld_mmri": 335,
+    "openswisshcc_consumed_holdout": 44,
+    "openswisshcc_development": 88
+  },
+  "failure_policy": {
+    "excluded_from_primary_metric": false,
+    "inconclusive_counts_as_error": true,
+    "technical_failure_counts_as_error": true
+  },
+  "labels_excluded_from_feature_artifacts": true,
+  "lesion_masks_read_during_freeze": 0,
+  "primary_endpoint": {
+    "negative": "normal_plus_benign_variant_plus_pseudolesion",
+    "positive": "focal_liver_lesion_or_target_pathology_suspicion"
+  },
+  "protected_label_sources": [
+    {
+      "case_count": 88,
+      "dataset_id": "openswisshcc_development",
+      "path": "casos/qualification/openswisshcc_v1/prepared/development_v1/protected_ground_truth/development_labels.jsonl",
+      "sha256": "406a746124c10bf6b8a43d4a2b500d9582f22a6dc01529ccb7b27769c8e32020"
+    },
+    {
+      "case_count": 44,
+      "dataset_id": "openswisshcc_consumed_holdout",
+      "path": "casos/qualification/openswisshcc_v1/prepared/holdout_v21_protected_labels/holdout_labels.jsonl",
+      "sha256": "9cd81bdc01286c2d57ffd27408dec14441118b043cb76f3780c7e61287d0596f"
+    },
+    {
+      "case_count": 335,
+      "dataset_id": "lld_mmri",
+      "path": "casos/qualification/lld_mmri_v23/prepared/external_protocol_v1/protected_ground_truth/labels.jsonl",
+      "sha256": "2a3d276f3076b1ccccf5f6e554609b863fc44e354650bb73c3059cbc778e6bc1"
+    }
+  ],
+  "protocol_signature": "7754fc80bbdf0de6775f699595059778d0b3cb6a8d22f2e801d3b4b1588f8510",
+  "research_only": true,
+  "schema": "argos-hybrid-training-protocol-v1",
+  "splits_path": "configs/training/hybrid_v1_nested_splits.json",
+  "splits_sha256": "41c15cc14b89ee80ee8afc7b60eab5637e729057fa3cbe92798cd45115f70fd0",
+  "status": "frozen_before_supervised_feature_extraction",
+  "target_condition": "focal_liver_lesion_suspicion",
+  "validation": {
+    "feature_selection": "inner_training_only",
+    "inner_folds": 4,
+    "leave_one_dataset_out": true,
+    "outer_folds": 5,
+    "repeated_cv": {
+      "folds": 5,
+      "repeats": 50
+    },
+    "seed": 20260724,
+    "strategy": "nested_patient_grouped_cross_validation",
+    "threshold_selection": "inner_oof_only"
+  }
+}

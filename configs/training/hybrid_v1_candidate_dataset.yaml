@@ -1,0 +1,23 @@
+schema: argos-hybrid-label-blind-candidate-config-v1
+candidate_id: hybrid_v1_global_liver_panels_stage_a
+
+sources:
+  - dataset_id: openswisshcc
+    root: casos/qualification/openswisshcc_v1/prepared/v24_liver_enriched_full130_v1
+  - dataset_id: lld_mmri
+    root: casos/qualification/lld_mmri_v23/prepared/external_liver_enriched_full321_v3
+
+representation:
+  stage: global_panels_before_candidate_patches
+  candidate_kind: global_liver_panel
+  image_mode: multiphase_rgb_fusion
+  expected_panels_per_materialized_case: 3
+  organ: liver
+  contours_allowed: false
+  lesion_masks_allowed: false
+  ground_truth_allowed: false
+
+safety:
+  label_blind: true
+  research_only: true
+  clinical_use_allowed: false

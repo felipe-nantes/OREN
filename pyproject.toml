@@ -42,9 +42,18 @@ medgemma = [
     "accelerate>=1.10",
     "bitsandbytes>=0.48",
     "fastapi>=0.115",
+    "protobuf>=5.29,<7",
     "sentencepiece>=0.2",
     "transformers>=4.57",
     "uvicorn>=0.34",
+]
+openswiss = [
+    "itk-elastix==0.25.3",
+]
+training = [
+    "joblib>=1.4",
+    "pandas>=2.2",
+    "scikit-learn>=1.6",
 ]
 
 [project.scripts]
@@ -52,7 +61,7 @@ digital-twin = "digital_twin:main"
 
 [tool.setuptools]
 py-modules = ["digital_twin"]
-packages = ["dtwin", "dtwin.benchmark", "dtwin.datasets", "dtwin.graphrag", "dtwin.rag"]
+packages = ["dtwin", "dtwin.benchmark", "dtwin.datasets", "dtwin.graphrag", "dtwin.learning", "dtwin.rag"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
