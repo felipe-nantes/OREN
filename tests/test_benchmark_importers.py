@@ -264,4 +264,10 @@ def test_dicom_importer_reuses_stage1_and_explicit_organ_mask(tmp_path):
     inference = prepare_inference_case(case.inference, tmp_path / "inference")
     assert inference.input_format == "DICOM"
     assert inference.volume_path.exists()
-    assert "volume_sha256" in inference.manifest_path.read_text("utf-8")
+    persisted = json.loads(inference.manifest_path.read_text("utf-8"))
+    assert "volume_sha256" in persisted
+    assert persisted["series_selection"]["selected_group_count"] == 1
+    selected = persisted["series_selection"]["selected_series"][0]
+    assert selected["modality"] == "MR"
+    assert selected["file_count"] == 6
+    assert not list(tmp_path.glob(".selected-series-*"))
