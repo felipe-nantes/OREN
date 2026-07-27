@@ -1,0 +1,7 @@
+# Variante técnica de alto contraste para avaliar fallbacks venosos pouco legíveis.
+# Não usa máscara de lesão, overlay, RAG ou informação de ground truth.
+extends: medgemma_local_4b_venous_review_fallback_pathology.yaml
+medgemma_screening:
+  panel:
+    window_percentile_low: 20.0
+    window_percentile_high: 95.0

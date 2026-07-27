@@ -1,0 +1,7 @@
+# Label-blind LLD-MMRI v23 coverage pilot. No inference is authorized until
+# the signed gallery is approved by a human reviewer.
+extends: medgemma_local_4b_lld_v23_full_fov_no_mask_pilot.yaml
+medgemma_screening:
+  panel:
+    panel_image_count: 3
+    axial_slices: 9

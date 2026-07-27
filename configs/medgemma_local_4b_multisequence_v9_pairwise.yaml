@@ -1,0 +1,15 @@
+# OpenSwissHCC v9: scoring pairwise cego de painéis T1/T2/TRACE/ADC.
+extends: medgemma_local_4b.yaml
+medgemma_screening:
+  medgemma:
+    response_mode: choice_classification
+    timeout_seconds: 120
+    minimum_timeout_seconds: 120
+    max_retries: 0
+    response_validation_max_retries: 0
+    max_output_tokens: 64
+  panel:
+    strategy: volumetric_blocks
+    axial_tiles_per_panel: 9
+  rag:
+    enabled: false

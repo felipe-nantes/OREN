@@ -1,0 +1,19 @@
+schema: argos-medsiglip-zero-shot-v1
+model_id: google/medsiglip-448
+image_size: 448
+max_text_tokens: 64
+research_only: true
+clinical_use_allowed: false
+prompt_ensemble:
+  positive:
+    - Liver MRI showing a discrete focal hepatic mass distinct from vessels.
+    - Liver MRI with a focal lesion persisting across adjacent slices.
+    - Liver MRI showing a suspicious focal parenchymal lesion.
+  negative:
+    - Liver MRI showing normal branching hepatic vessels without a focal mass.
+    - Liver MRI with a benign vascular or perfusion variation and no focal lesion.
+    - Liver MRI with artifact or partial volume effect and no true focal lesion.
+scoring:
+  decision_enabled: false
+  exploratory_threshold: 0.5
+  minimum_adjacent_axial_tiles: 2

@@ -1,0 +1,49 @@
+# Development-only second reader. It reuses liver-enriched panels, adds the
+# audited local RAG corpus and asks only whether a focal lesion remains
+# suspicious after specifically considering common benign mimics.
+extends: medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml
+medgemma_screening:
+  panel:
+    # Pixel provenance stays with the separately reviewed liver-enriched cohort.
+    # This flag authorizes changing only the inference prompt/RAG configuration.
+    reuse_approved_liver_enriched_panels: true
+  medgemma:
+    response_mode: choice_classification
+    max_output_tokens: 160
+    response_validation_max_retries: 1
+  rag:
+    enabled: true
+    index_path: rag/index/liver_mri_rag_v1/bm25_index.json
+    retrieval_eval: docs/rag/retrieval_eval_v1.yaml
+    top_k: 2
+    max_sources: 10
+    max_chunk_chars: 520
+    min_score: 0.0
+    query_ids:
+      - hcc_aphe_washout_capsule
+      - hemangioma_t2_fill_in
+      - fnh_central_scar_hepatobiliary
+      - dwi_adc_benign_malignant
+      - dynamic_contrast_phases
+      - pseudolesion_perfusion_pitfall
+  prompt:
+    template: |-
+      Você está realizando uma releitura de RM hepática em modo de pesquisa, após uma primeira triagem positiva. Não é diagnóstico, não é laudo médico e exige revisão humana obrigatória.
+
+      Alvo: suspeita visual de lesão focal hepática, especialmente padrão compatível com HCC. Não trate qualquer foco como HCC: compare a evidência visual disponível com padrões benignos como hemangioma, FNH, cisto, gordura focal, vaso, alteração de perfusão, pseudolesão e artefato. O contexto RAG é educacional; as imagens continuam sendo a única evidência do caso.
+
+      Classificação obrigatória:
+      - POSITIVA somente se persistir suspeita visual de lesão focal/patologia alvo e ha_lesao_focal_suspeita=true.
+      - NEGATIVA se não houver lesão focal suspeita após a releitura, mesmo que exista padrão focal benigno provável, vaso, pseudolesão ou artefato.
+      - INCONCLUSIVA se a imagem não permitir separar com segurança HCC/patologia alvo de mimetizador benigno.
+
+      Não afirme diagnóstico definitivo, não recomende conduta e responda somente com JSON válido:
+      {
+        "resultado_hipotese": "POSITIVA | NEGATIVA | INCONCLUSIVA",
+        "confianca": "baixa | moderada | alta",
+        "ha_lesao_focal_suspeita": true,
+        "ha_variante_anatomica_benigna": false,
+        "ha_pseudolesao_ou_artefato": false,
+        "tipo_alteracao_nao_alvo": "none | vascular_variant | perfusion_pseudolesion | artifact | focal_fat | cystic_benign | other",
+        "justificativa_da_separacao": "string"
+      }

@@ -1,0 +1,36 @@
+# v21 CHAOS secondary specificity/domain-shift arm.
+# This keeps the frozen 4B choice reader and uniform-9 representation, while
+# assigning the RGB channels to the actual CHAOS MRI sequences (not DCE phases).
+extends: medgemma_local_4b_multiphase_uniform9_choice_v21.yaml
+medgemma_screening:
+  panel:
+    fusion:
+      channel_map:
+        red: t1in
+        green: t1out
+        blue: t2spir
+  prompt:
+    template: |-
+      Analise este painel derivado de RM hepatica em modo de pesquisa.
+      Vermelho representa T1 in-phase, verde representa T1 out-phase e azul
+      representa T2-SPIR. Estas imagens nao sao fases dinamicas de contraste.
+      Nenhuma lesao foi marcada. O alvo e suspeita visual de lesao focal
+      hepatica ou patologia focal, nao qualquer diferenca anatomica, queda
+      difusa de sinal, variacao global de cor ou estrutura vascular.
+
+      Separe obrigatoriamente:
+      - POSITIVA: foco ou massa suspeita com morfologia focal nao explicada por
+        vaso, variante anatomica, movimento, registro, efeito de volume parcial
+        ou artefato;
+      - NEGATIVA: sem lesao focal suspeita, inclusive variante vascular benigna
+        ou alteracao difusa entre in-phase e out-phase;
+      - INCONCLUSIVA: qualidade insuficiente, desalinhamento ou duvida real.
+
+      Estrutura tubular continua, veia calibrosa, variante anatomica,
+      pseudolesao, borda de registro ou artefato isolado nao tornam o caso
+      POSITIVA. Baseie-se somente na imagem.
+
+      Isto nao e diagnostico nem laudo medico. E uso exclusivo em pesquisa,
+      com revisao humana obrigatoria. Nao recomende conduta clinica.
+
+      Responda somente com POSITIVA, NEGATIVA ou INCONCLUSIVA.

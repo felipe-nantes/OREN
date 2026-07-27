@@ -1,0 +1,20 @@
+schema: argos-medsiglip-zero-shot-v1
+model_id: google/medsiglip-448
+image_size: 448
+max_text_tokens: 64
+research_only: true
+clinical_use_allowed: false
+prompt_ensemble:
+  positive:
+    - MRI slice of the liver with a discrete focal hepatic lesion.
+    - Liver MRI showing a focal mass inside the hepatic parenchyma.
+    - Magnetic resonance image with a persistent focal liver lesion.
+  negative:
+    - MRI slice of the liver without a focal hepatic lesion.
+    - Liver MRI showing homogeneous parenchyma and no focal mass.
+    - Magnetic resonance image with normal vessels and no focal liver lesion.
+scoring:
+  # A decisão permanece desabilitada até calibração em desenvolvimento revisado.
+  decision_enabled: false
+  exploratory_threshold: 0.5
+  minimum_adjacent_axial_tiles: 2

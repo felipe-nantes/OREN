@@ -1,0 +1,10 @@
+# Fallback pré-declarado para casos OpenSwissHCC que reprovam o gate multifásico.
+# Usa exclusivamente a fase venosa e sua máscara hepática automática.
+extends: medgemma_local_4b_fast_pathology.yaml
+medgemma_screening:
+  panel:
+    mode: single_grayscale
+    strategy: uniform_9
+    axial_slices: 9
+  rag:
+    enabled: false

@@ -1,0 +1,35 @@
+# OpenSwissHCC development candidate: complete multiphase RGB liver coverage.
+# Research only. The decision mode returns balanced continuous scores.
+extends: medgemma_local_4b_multiphase_fast_pathology.yaml
+medgemma_screening:
+  panel:
+    strategy: volumetric_blocks
+    axial_tiles_per_panel: 9
+  medgemma:
+    response_mode: choice_classification
+    timeout_seconds: 120
+    max_retries: 0
+    response_validation_max_retries: 0
+    max_output_tokens: 64
+  rag:
+    enabled: false
+  prompt:
+    template: |-
+      Analise este painel derivado de RM hepatica em modo de pesquisa.
+      Vermelho representa a fase arterial registrada, verde a fase venosa de
+      referencia e azul a fase tardia registrada. Nenhuma lesao foi marcada.
+      O alvo e suspeita visual de lesao focal hepatica ou patologia focal,
+      nao qualquer diferenca anatomica ou variacao global de cor.
+
+      Separe obrigatoriamente:
+      - POSITIVA: foco ou massa suspeita com padrao focal nao explicado por
+        vaso, variante anatomica, movimento, registro ou artefato;
+      - NEGATIVA: sem lesao focal suspeita, inclusive variante vascular benigna;
+      - INCONCLUSIVA: qualidade insuficiente, desalinhamento ou duvida real.
+
+      Estrutura tubular continua, veia calibrosa, variante anatomica,
+      pseudolesao, borda de registro ou artefato isolado nao tornam o caso
+      POSITIVA. Analise somente este painel parcial e baseie-se na imagem.
+      Isto não é diagnóstico e não é laudo médico. Uso exclusivo em pesquisa,
+      com revisão humana obrigatória. Não recomende conduta clínica.
+

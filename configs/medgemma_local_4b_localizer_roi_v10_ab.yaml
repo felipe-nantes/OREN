@@ -1,0 +1,15 @@
+# OpenSwissHCC v10: single-token mirrored A/B scoring on paired localizer ROIs.
+extends: medgemma_local_4b.yaml
+medgemma_screening:
+  medgemma:
+    response_mode: choice_classification
+    timeout_seconds: 45
+    minimum_timeout_seconds: 45
+    max_retries: 0
+    response_validation_max_retries: 0
+    max_output_tokens: 16
+  panel:
+    strategy: volumetric_blocks
+    axial_tiles_per_panel: 9
+  rag:
+    enabled: false

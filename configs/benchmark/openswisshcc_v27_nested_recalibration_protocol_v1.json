@@ -1,0 +1,124 @@
+{
+  "acceptance": {
+    "loocv_sensitivity_minimum": 0.75,
+    "loocv_specificity_minimum": 0.75,
+    "must_improve_minimum_axis_over_v23": true,
+    "repeated_validation_report_required": true
+  },
+  "candidate_id": "v27_nested_recalibration_of_frozen_v23_v26_signals",
+  "clinical_use_allowed": false,
+  "evaluation_code_sha256": "748bd315cbda28cab328e62e83c1190dd2ba12c163d63b83b9977d7d6587b8b4",
+  "feature_families": {
+    "all_frozen_signals": [
+      "v23_localizer_log_volume",
+      "v23_medgemma_uncertainty_margin",
+      "v23_medsiglip_inverse_sagittal",
+      "v23_candidate_weighted_linearity",
+      "v24_max_positive_probability",
+      "v24_mean_positive_probability",
+      "v24_std_positive_probability",
+      "v24_mean_positive_negative_margin",
+      "v24_positive_panel_fraction",
+      "v25_max_positive_probability",
+      "v25_mean_positive_probability",
+      "v25_std_positive_probability",
+      "v25_mean_positive_negative_margin",
+      "v25_positive_panel_fraction",
+      "v25_suspicious_panel_fraction",
+      "v25_benign_variant_panel_fraction",
+      "v25_artifact_panel_fraction",
+      "v26_max_positive_probability",
+      "v26_mean_positive_probability",
+      "v26_std_positive_probability",
+      "v26_mean_positive_negative_margin",
+      "v26_positive_panel_fraction",
+      "v26_suspicious_panel_fraction",
+      "v26_benign_variant_panel_fraction",
+      "v26_artifact_panel_fraction"
+    ],
+    "v23_core": [
+      "v23_localizer_log_volume",
+      "v23_medgemma_uncertainty_margin",
+      "v23_medsiglip_inverse_sagittal",
+      "v23_candidate_weighted_linearity"
+    ],
+    "v23_plus_v24_liver_enriched": [
+      "v23_localizer_log_volume",
+      "v23_medgemma_uncertainty_margin",
+      "v23_medsiglip_inverse_sagittal",
+      "v23_candidate_weighted_linearity",
+      "v24_max_positive_probability",
+      "v24_mean_positive_probability",
+      "v24_std_positive_probability",
+      "v24_mean_positive_negative_margin",
+      "v24_positive_panel_fraction"
+    ],
+    "v23_plus_v25_pathology_target": [
+      "v23_localizer_log_volume",
+      "v23_medgemma_uncertainty_margin",
+      "v23_medsiglip_inverse_sagittal",
+      "v23_candidate_weighted_linearity",
+      "v25_max_positive_probability",
+      "v25_mean_positive_probability",
+      "v25_std_positive_probability",
+      "v25_mean_positive_negative_margin",
+      "v25_positive_panel_fraction",
+      "v25_suspicious_panel_fraction",
+      "v25_benign_variant_panel_fraction",
+      "v25_artifact_panel_fraction"
+    ],
+    "v23_plus_v26_pathology_target_rag": [
+      "v23_localizer_log_volume",
+      "v23_medgemma_uncertainty_margin",
+      "v23_medsiglip_inverse_sagittal",
+      "v23_candidate_weighted_linearity",
+      "v26_max_positive_probability",
+      "v26_mean_positive_probability",
+      "v26_std_positive_probability",
+      "v26_mean_positive_negative_margin",
+      "v26_positive_panel_fraction",
+      "v26_suspicious_panel_fraction",
+      "v26_benign_variant_panel_fraction",
+      "v26_artifact_panel_fraction"
+    ]
+  },
+  "held_out_label_use_forbidden": true,
+  "inner_validation": {
+    "folds": 5,
+    "seed": 20260724,
+    "selection_order": [
+      "maximum_minimum_of_sensitivity_and_specificity",
+      "maximum_balanced_accuracy",
+      "stronger_regularization"
+    ],
+    "threshold_fit": "pooled_inner_oof_predictions_only"
+  },
+  "labels_used_only_inside_training_and_final_evaluator": true,
+  "lesion_masks_read": 0,
+  "model": "class_balanced_l2_logistic_regression_newton_v1",
+  "outer_validation": {
+    "primary": "patient_level_loocv",
+    "robustness": "50x5_fold_assignments_already_frozen"
+  },
+  "preprocessing": "outer_training_mean_std_only",
+  "primary_family": "all_frozen_signals",
+  "protocol_signature": "c1bab29b40b32294ffc01bcf0d7161fcc8a37bf53c0a15c8d09423790d1e198d",
+  "regularization_grid": [
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0
+  ],
+  "research_only": true,
+  "schema": "argos-openswisshcc-v27-nested-recalibration-protocol-v1",
+  "source_hashes": {
+    "phase3_exact_v23_signals": "290d003436e85cb82a397c011a387e506161fde1de062b2779fec6020336a5f0",
+    "phase3_technical_failures": "4a4201b6d0a6d5a6b6258606b21659856dd05a584cdd8f37712519621398f8c4",
+    "v24_cases": "c13680ec5ba08acff13beba52acc6443f74b8e164c731e185427f4726ded284b",
+    "v25_cases": "b5ba075e580c59c3d32e04fd8606cc532f81330cb6a88dcf4aeef48b854dff87",
+    "v26_cases": "6e9e209c25c8399dcaf0da0cf2327c462dc0a39cc2de99aa1a8df3be9680b68f"
+  },
+  "status": "frozen_before_nested_prediction_generation",
+  "technical_failures_count_as_errors": true
+}

@@ -1,0 +1,16 @@
+{
+  "archive": {
+    "bytes": 1345046539,
+    "md5": "0bd127e0e144b3ed3d75432d70963865",
+    "name": "PHLF.zip",
+    "url": "https://zenodo.org/api/records/18622298/files/PHLF.zip/content"
+  },
+  "article_doi": "10.1038/s41597-026-07483-x",
+  "dataset_doi": "10.5281/zenodo.18622298",
+  "dataset_id": "gd_eob_dtpa_phlf_2026",
+  "license": "CC-BY-4.0",
+  "record_id": 18622298,
+  "record_revision": 3,
+  "source_snapshot_checked_at": "2026-07-23",
+  "zenodo_url": "https://zenodo.org/records/18622298"
+}

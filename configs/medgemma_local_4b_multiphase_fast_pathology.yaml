@@ -1,0 +1,45 @@
+# Candidato OpenSwissHCC de baixa latência: uma fusão RGB multifásica por caso.
+# R=arterial registrada, G=venosa de referência, B=tardia registrada.
+# Uso exclusivo em pesquisa, com revisão humana obrigatória.
+extends: medgemma_local_4b_multiphase.yaml
+medgemma_screening:
+  medgemma:
+    response_mode: prefilled_label
+    timeout_seconds: 120
+    max_retries: 0
+    response_validation_max_retries: 0
+    max_output_tokens: 64
+  panel:
+    strategy: uniform_9
+    axial_slices: 9
+  rag:
+    enabled: false
+  prompt:
+    template: |-
+      Analise este painel derivado de RM hepática em modo de pesquisa.
+      Vermelho representa a fase arterial registrada, verde a fase venosa de
+      referência e azul a fase tardia registrada. Nenhuma lesão foi marcada.
+      O alvo é suspeita visual de lesão focal hepática ou patologia focal,
+      não qualquer diferença anatômica ou variação global de cor.
+
+      Separe obrigatoriamente:
+      - POSITIVA: foco ou massa suspeita com padrão focal não explicado por
+        vaso, variante anatômica, movimento, registro ou artefato;
+      - NEGATIVA: sem lesão focal suspeita, inclusive variante vascular benigna;
+      - INCONCLUSIVA: qualidade insuficiente, desalinhamento ou dúvida real.
+
+      Estrutura tubular contínua, veia calibrosa, variante anatômica,
+      pseudolesão, borda de registro ou artefato isolado não tornam o caso
+      POSITIVA. Uma diferença focal vermelha/alaranjada pode representar realce
+      arterial relativo, mas só é suspeita quando possui morfologia focal e não
+      acompanha um vaso. Baseie-se somente na imagem.
+
+      Isto não é diagnóstico e não é laudo médico. É uso exclusivo em pesquisa,
+      com revisão humana obrigatória. Não recomende conduta clínica.
+
+      O gateway já iniciará um objeto JSON com a chave resultado_hipotese e a
+      abertura do valor. Complete o valor com POSITIVA, NEGATIVA ou INCONCLUSIVA
+      e acrescente somente: confianca (baixa, moderada ou alta) e
+      necessidade_de_revisao_humana (sempre true). Feche o objeto. Não gere
+      raciocínio, narrativa clínica, outras chaves, recomendações ou texto adicional.
+

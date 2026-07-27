@@ -1,0 +1,40 @@
+# Cenário experimental de baixa latência para qualificação do MedGemma 1.5 4B.
+# Preserva o painel baseline de nove cortes, desativa RAG e solicita uma decisão
+# focal compacta. Não substitui configurações já expostas no exame individual.
+extends: medgemma_local_4b.yaml
+medgemma_screening:
+  medgemma:
+    response_mode: prefilled_label
+    timeout_seconds: 120
+    max_retries: 0
+    response_validation_max_retries: 0
+    max_output_tokens: 64
+  panel:
+    strategy: uniform_9
+    axial_slices: 9
+    crop_to_liver: true
+    crop_margin_fraction: 0.15
+    overlay_mode: none
+  rag:
+    enabled: false
+  prompt:
+    template: |-
+      Analise este painel recortado ao redor do fígado em modo de pesquisa.
+      Nenhuma lesão foi marcada. O alvo é suspeita visual de
+      lesão focal hepática, não qualquer diferença anatômica.
+
+      Separe obrigatoriamente:
+      - POSITIVA: foco ou massa suspeita não explicada por vaso ou artefato;
+      - NEGATIVA: sem lesão focal suspeita, inclusive variante vascular benigna;
+      - INCONCLUSIVA: qualidade insuficiente ou dúvida real.
+
+      Veia calibrosa, estrutura tubular contínua, variante anatômica,
+      pseudolesão ou artefato isolado não tornam o caso POSITIVA. Baseie-se
+      somente na imagem. Isto não é diagnóstico e não é laudo médico. É uso
+      exclusivo em pesquisa, com revisão humana obrigatória.
+
+      O gateway já iniciará um objeto JSON com a chave resultado_hipotese e a
+      abertura do valor. Complete o valor com POSITIVA, NEGATIVA ou INCONCLUSIVA
+      e acrescente somente: confianca (baixa, moderada ou alta) e
+      necessidade_de_revisao_humana (sempre true). Feche o objeto. Não gere
+      raciocínio, narrativa clínica, outras chaves, recomendações ou texto adicional.

@@ -1,0 +1,69 @@
+{
+  "algorithm": {
+    "calibrator_signature": "d0a955178783cf7f2914053c87d3d99d186ab4a56960620068bd118e5ccac475",
+    "decision_threshold": 0.5121839080459771,
+    "name": "argos_v23_frozen_shape_fusion",
+    "recalibration_on_external_cohort_allowed": false,
+    "weights": {
+      "candidate_weighted_linearity": 0.2,
+      "v11": 0.8
+    }
+  },
+  "baseline_lock_sha256": "31905cbf005bd06a4b310d599b9ec2490f191e365181e21aec5eea7f52ff3999",
+  "candidate_images_bound": false,
+  "class_definition": {
+    "NEGATIVE": "non_hcc_liver_tumor",
+    "POSITIVE": "hepatocellular_carcinoma",
+    "negative_does_not_mean_healthy": true
+  },
+  "clinical_use_allowed": false,
+  "contract_signature": "5fd26d5ffaf8884ef7260492de2ef7da560b2e79e91785b82c296cec6281982b",
+  "dataset": {
+    "all_cases_have_visible_liver_tumor": true,
+    "archive_bytes": 1345046539,
+    "archive_md5": "0bd127e0e144b3ed3d75432d70963865",
+    "archive_name": "PHLF.zip",
+    "article_doi": "10.1038/s41597-026-07483-x",
+    "case_count": 220,
+    "centers": 3,
+    "dataset_doi": "10.5281/zenodo.18622298",
+    "dataset_id": "gd_eob_dtpa_phlf_2026",
+    "expected_hcc_count_from_publication": 164,
+    "expected_non_hcc_count_from_publication": 56,
+    "license": "CC-BY-4.0",
+    "phase": "hepatobiliary_phase_gd_eob_dtpa",
+    "zenodo_record_id": 18622298
+  },
+  "execution_policy": {
+    "human_review_required": true,
+    "no_case_exclusion_after_inference": true,
+    "no_ground_truth_in_inference": true,
+    "no_lesion_or_anatomical_annotation_in_inference": true,
+    "no_threshold_selection_on_external_cohort": true,
+    "one_shot_after_prediction_freeze": true,
+    "predictions_frozen_before_labels": true
+  },
+  "primary_gate": {
+    "confusion_matrix_required": true,
+    "inconclusive_counts_as_error": true,
+    "maximum_raw_input_end_to_end_seconds_per_case": 180.0,
+    "minimum_sensitivity": 0.75,
+    "minimum_specificity": 0.75,
+    "technical_failure_counts_as_error": true,
+    "wilson_95_percent_intervals_required": true
+  },
+  "protected_labels_bound": false,
+  "qualified": false,
+  "ready_for_full_inference": false,
+  "ready_for_technical_pilot": false,
+  "representation_gate": {
+    "full_cohort_inference_allowed_before_gate": false,
+    "hbp_adapter_status": "must_be_frozen_label_blind_before_inference",
+    "technical_pilot_may_not_read_labels_or_lesion_masks": true,
+    "unchanged_v23_signal_semantics_required": true
+  },
+  "research_only": true,
+  "schema": "argos-v23-external-hcc-hbp-contract-v1",
+  "status": "frozen_before_images_are_extracted_or_protected_payloads_opened",
+  "target_condition": "hcc_suspicion"
+}

@@ -1,0 +1,21 @@
+# Label-blind technical representation for the Gd-EOB-DTPA HBP-only cohort.
+# The same HBP volume is replicated across RGB, producing true grayscale.
+# This does not invent arterial, venous or delayed enhancement information.
+extends: medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml
+medgemma_screening:
+  panel:
+    fusion:
+      channel_map:
+        red: hbp
+        green: hbp
+        blue: hbp
+      partial_fov_fallback_phase: hbp
+  rag:
+    enabled: false
+  prompt:
+    template: |-
+      Avaliação experimental de uma RM hepática contendo somente a fase
+      hepatobiliar Gd-EOB-DTPA. Não presuma que existam fases arterial, portal
+      ou tardia e não infira washout a partir desta representação.
+
+      Uso exclusivo em pesquisa, com revisão humana obrigatória.

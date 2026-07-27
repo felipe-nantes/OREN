@@ -1,0 +1,32 @@
+schema: argos-public-independent-cohort-config-v1
+cohort_id: public_independent_v21_liverhccseg_chaos
+# Secondary domain-shift stress design only. Do not report a combined primary
+# 75/75 confusion matrix from this config: class and dataset are confounded and
+# CHAOS MRI has T1-DUAL/T2-SPIR rather than the DCE protocol used in positives.
+status: secondary_domain_shift_stress_only
+minimum_subjects_per_role:
+  positive: 14
+  negative: 15
+sources:
+  - dataset_id: liverhccseg
+    role: positive
+    registry: data/registry/liverhccseg_tumor_positive.jsonl
+    root_env: ARGOS_LIVERHCCSEG_ROOT
+    subject_path_components: 1
+  - dataset_id: chaos_mri
+    role: negative
+    registry: data/registry/chaos_mri.jsonl
+    root_env: ARGOS_CHAOS_MRI_ROOT
+    subject_path_components: 1
+safety:
+  research_only: true
+  clinical_use_allowed: false
+  requires_human_review: true
+  protected_labels_never_sent_to_model: true
+methodology:
+  use_all_eligible_subjects: true
+  target_condition: focal_liver_lesion_suspicion
+  known_dataset_class_confounding: true
+  final_publication_evidence: false
+  combined_primary_metric_allowed: false
+  report_arms_separately: true

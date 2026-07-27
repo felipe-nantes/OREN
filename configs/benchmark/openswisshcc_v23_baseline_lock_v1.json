@@ -1,0 +1,105 @@
+{
+  "schema": "argos-openswisshcc-v23-baseline-lock-v1",
+  "status": "frozen_reproducible_development_baseline",
+  "development_only": true,
+  "qualified": false,
+  "independent_balanced_validation_required": true,
+  "holdout_v21_reuse_forbidden": true,
+  "files": {
+    "dtwin/benchmark/openswisshcc_candidate_shape.py": {
+      "sha256": "1d1ecca98d9c3f26c7e6d8908a3879be5e22f6d58622498fe26e58a3b19f64cc",
+      "bytes": 9875
+    },
+    "dtwin/benchmark/openswisshcc_v23_shape_fusion.py": {
+      "sha256": "4d0d245d1ded99a589afe6451ed307a0dbe1cdaab51a7550261b95d82a3cd044",
+      "bytes": 19692
+    },
+    "tools/evaluate_openswisshcc_v23_shape_fusion.py": {
+      "sha256": "d0794a766c9355f246ce3ec06f6f6d3bd26d122684c1ee150e55a6357dc88d02",
+      "bytes": 1423
+    },
+    "tools/freeze_openswisshcc_v23_shape_calibrator.py": {
+      "sha256": "bb1928f911347a1ac100ec1b49832eb0436b4435b414b64934555101e24c45e7",
+      "bytes": 1595
+    },
+    "casos/qualification/openswisshcc_v1/runs/dev_v20_blind_fusion87/summary.json": {
+      "sha256": "cc5b2e846346f92d759f40805eb694bbd698f3b5d4f60db740b362a5600a0540",
+      "bytes": 4969
+    },
+    "casos/qualification/openswisshcc_v1/runs/dev_v20_blind_fusion87/signals.jsonl": {
+      "sha256": "b226d7382f0f9e49dbcadfc24f056cd455d6e3c66fb9eb0e295f3599a02912b7",
+      "bytes": 55295
+    },
+    "casos/qualification/openswisshcc_v1/prepared/development_freezes_v20/fusion_protocol.json": {
+      "sha256": "1946ec4af0b05588ecc28570cf1b937430505bbd738f1c90531442ebf98c4914",
+      "bytes": 5508
+    },
+    "casos/qualification/openswisshcc_v1/prepared/development_v23_candidate_shape_full87_v1/summary.json": {
+      "sha256": "a6c586367a82f1945b39a122406ddf1401ce580e8695490a6f1c9d3b9fdb1d39",
+      "bytes": 4376
+    },
+    "casos/qualification/openswisshcc_v1/prepared/development_v23_candidate_shape_full87_v1/features.jsonl": {
+      "sha256": "2453501adcdb379b210a8c3d005431d63d76484efc975f6bd9c6685631893e52",
+      "bytes": 113897
+    },
+    "casos/qualification/openswisshcc_v1/evaluations/dev_v23_shape_fusion87_v1/evaluation.json": {
+      "sha256": "70c43566a20ddd9d1f9ed50bbb6c1db5b6e5b89de0e0fb77fce04b39b35a237f",
+      "bytes": 4606
+    },
+    "casos/qualification/openswisshcc_v1/evaluations/dev_v23_shape_fusion87_v1/case_scores.csv": {
+      "sha256": "6f197c71d3ca5a544f5d22e52fdb0289b16a80c15336ae86dea7358aa7372d0b",
+      "bytes": 9391
+    },
+    "casos/qualification/openswisshcc_v1/prepared/development_freezes_v23/shape_fusion_calibrator_v1.json": {
+      "sha256": "69a8c110dd42e7cdf7e2906e337981fd678b4040ad7074fc4012f5af5c2a578d",
+      "bytes": 10899
+    },
+    "casos/qualification/openswisshcc_v1/timing/dev_v23_candidate_shape_full87_v1.json": {
+      "sha256": "4f7d5f698e988601dcd1184b9a6fb554ab0d423df86f45bf88c351d97f60ca43",
+      "bytes": 11101
+    },
+    "casos/qualification/openswisshcc_v1/prepared/development_v1/protected_ground_truth/development_labels.jsonl": {
+      "sha256": "406a746124c10bf6b8a43d4a2b500d9582f22a6dc01529ccb7b27769c8e32020",
+      "bytes": 24376
+    }
+  },
+  "artifact_roles": {
+    "evaluation": "casos/qualification/openswisshcc_v1/evaluations/dev_v23_shape_fusion87_v1/evaluation.json",
+    "calibrator": "casos/qualification/openswisshcc_v1/prepared/development_freezes_v23/shape_fusion_calibrator_v1.json",
+    "timing": "casos/qualification/openswisshcc_v1/timing/dev_v23_candidate_shape_full87_v1.json",
+    "case_scores": "casos/qualification/openswisshcc_v1/evaluations/dev_v23_shape_fusion87_v1/case_scores.csv",
+    "v20_signals": "casos/qualification/openswisshcc_v1/runs/dev_v20_blind_fusion87/signals.jsonl",
+    "shape_features": "casos/qualification/openswisshcc_v1/prepared/development_v23_candidate_shape_full87_v1/features.jsonl",
+    "development_labels": "casos/qualification/openswisshcc_v1/prepared/development_v1/protected_ground_truth/development_labels.jsonl"
+  },
+  "expected_primary_loocv_metrics": {
+    "tp": 32,
+    "tn": 38,
+    "fp": 10,
+    "fn": 7,
+    "sensitivity": 0.8205128205128205,
+    "specificity": 0.7916666666666666,
+    "balanced_accuracy": 0.8060897435897436,
+    "passed_75_75": true
+  },
+  "expected_repeated_stratified_5fold": {
+    "repeats": 50,
+    "folds": 5,
+    "seed": 20260720,
+    "runs_passing_75_75": 49,
+    "median_sensitivity": 0.8205128205128205,
+    "median_specificity": 0.7916666666666666,
+    "minimum_sensitivity": 0.717948717948718,
+    "minimum_specificity": 0.75,
+    "transform_and_threshold_fit_inside_each_training_fold": true
+  },
+  "expected_calibrator": {
+    "decision_threshold": 0.5121839080459771,
+    "calibrator_signature": "d0a955178783cf7f2914053c87d3d99d186ab4a56960620068bd118e5ccac475"
+  },
+  "expected_timing": {
+    "case_count": 87,
+    "prepared_upper_bound_seconds": 107.7982862999984,
+    "raw_dicom_end_to_end_180_seconds_proven": false
+  }
+}

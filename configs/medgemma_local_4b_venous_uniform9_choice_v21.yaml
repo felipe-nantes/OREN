@@ -1,0 +1,15 @@
+# Frozen v21 technical fallback for cases that fail multiphase alignment.
+extends: medgemma_local_4b_venous_review_fallback_pathology.yaml
+medgemma_screening:
+  medgemma:
+    response_mode: choice_classification
+    timeout_seconds: 120
+    max_retries: 0
+    response_validation_max_retries: 0
+    max_output_tokens: 64
+  panel:
+    mode: single_grayscale
+    strategy: uniform_9
+    axial_slices: 9
+  rag:
+    enabled: false

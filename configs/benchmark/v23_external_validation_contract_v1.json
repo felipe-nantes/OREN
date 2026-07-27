@@ -1,0 +1,69 @@
+{
+  "algorithm": {
+    "calibrator_signature": "d0a955178783cf7f2914053c87d3d99d186ab4a56960620068bd118e5ccac475",
+    "configuration_changes_after_freeze_allowed": false,
+    "decision_threshold": 0.5121839080459771,
+    "name": "argos_v23_frozen_shape_fusion",
+    "weights": {
+      "candidate_weighted_linearity": 0.2,
+      "v11": 0.8
+    }
+  },
+  "candidate_images_bound": false,
+  "clinical_use_allowed": false,
+  "cohort_requirements": {
+    "both_classes_must_exist_in_the_same_source_dataset": true,
+    "consumed_dataset_ids_forbidden": [
+      "openswisshcc",
+      "lld_mmri",
+      "liverhccseg",
+      "chaos_mri",
+      "tcga_lihc"
+    ],
+    "expert_or_public_reference_standard_required": true,
+    "fresh_dataset_not_used_for_development_or_prior_evaluation": true,
+    "image_manifest_and_labels_must_match_exactly": true,
+    "minimum_negative_cases": 40,
+    "minimum_positive_cases": 40,
+    "single_patient_single_case": true,
+    "study_fingerprint_overlap_forbidden": true
+  },
+  "contract_signature": "d285095c191afe9faad7e278d697c8719e894e7ce9295f5f4bfbc8fbaf26992e",
+  "development_result_context_only": {
+    "case_count": 87,
+    "qualified": false,
+    "sensitivity": 0.8205128205128205,
+    "specificity": 0.7916666666666666
+  },
+  "execution_policy": {
+    "human_review_required": true,
+    "no_case_exclusion_after_inference": true,
+    "no_ground_truth_in_inference": true,
+    "no_lesion_mask_in_inference": true,
+    "no_threshold_selection_on_external_cohort": true,
+    "one_shot_after_prediction_freeze": true,
+    "predictions_must_be_frozen_before_label_evaluation": true
+  },
+  "primary_gate": {
+    "confusion_matrix_required": true,
+    "inconclusive_counts_as_error": true,
+    "maximum_raw_input_end_to_end_seconds_per_case": 180.0,
+    "minimum_sensitivity": 0.75,
+    "minimum_specificity": 0.75,
+    "point_estimates_are_primary": true,
+    "roc_auc_secondary_only": true,
+    "technical_failure_counts_as_error": true,
+    "wilson_95_percent_intervals_required": true
+  },
+  "protected_labels_bound": false,
+  "qualified": false,
+  "ready_for_inference": false,
+  "research_only": true,
+  "schema": "argos-v23-independent-external-validation-contract-v1",
+  "source_hashes": {
+    "baseline_lock": "31905cbf005bd06a4b310d599b9ec2490f191e365181e21aec5eea7f52ff3999",
+    "implementation": "a9194a4719892028314bb8a491866d8bde564bed401a80a60897f475b6f80727"
+  },
+  "status": "frozen_awaiting_fresh_balanced_external_cohort",
+  "target_condition": "focal_liver_lesion_suspicion"
+}

@@ -1,0 +1,18 @@
+# OpenSwissHCC v19: contexto RAG textual focalizado para o atlas axial aprovado.
+# A representação visual e o endpoint permanecem os mesmos do scorer v17.
+extends: medgemma_local_4b_rag.yaml
+medgemma_screening:
+  rag:
+    enabled: true
+    index_path: rag/index/liver_mri_rag_v1/bm25_index.json
+    retrieval_eval: docs/rag/retrieval_eval_v1.yaml
+    top_k: 2
+    max_sources: 8
+    max_chunk_chars: 420
+    min_score: 0.0
+    query_ids:
+      - hcc_aphe_washout_capsule
+      - dynamic_contrast_phases
+      - arterial_phase_motion_artifact
+      - pseudolesion_perfusion_pitfall
+

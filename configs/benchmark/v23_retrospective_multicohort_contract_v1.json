@@ -1,0 +1,149 @@
+{
+  "algorithm": {
+    "baseline_lock_sha256": "31905cbf005bd06a4b310d599b9ec2490f191e365181e21aec5eea7f52ff3999",
+    "candidate_weighted_linearity_weight": 0.2,
+    "family_fixed": true,
+    "frozen_calibrator_signature": "d0a955178783cf7f2914053c87d3d99d186ab4a56960620068bd118e5ccac475",
+    "frozen_deployment_threshold": 0.5121839080459771,
+    "liver_enriched_in_frozen_v23": false,
+    "medgemma_model": "medgemma_1_5_4b",
+    "name": "argos_v23_shape_fusion",
+    "pathology_target_in_frozen_v23": false,
+    "rag_in_frozen_v23": false,
+    "v11_weight": 0.8
+  },
+  "anti_gaming": {
+    "all_candidates_must_be_predeclared": true,
+    "failed_experiments_must_be_retained": true,
+    "missing_phase_cannot_be_fabricated": true,
+    "no_case_removal_after_protocol_freeze": true,
+    "no_ground_truth_in_inference": true,
+    "no_lesion_mask_in_inference": true,
+    "no_relabeling_from_model_output": true,
+    "no_threshold_change_after_result_observation": true
+  },
+  "claim": {
+    "allowed": "Desempenho retrospectivo multicohort nas bases disponíveis ao projeto.",
+    "clinical_qualification_claim_allowed": false,
+    "external_blind_validation_claim_allowed": false,
+    "prospective_validation_claim_allowed": false
+  },
+  "clinical_use_allowed": false,
+  "cohorts": [
+    {
+      "cohort_id": "openswisshcc",
+      "combined_sensitivity_specificity_allowed": true,
+      "exact_v23_compatibility": "required",
+      "expected_cases": 132,
+      "expected_negative": 69,
+      "expected_positive": 63,
+      "prior_project_exposure": true,
+      "role": "primary_mixed_retrospective"
+    },
+    {
+      "cohort_id": "lld_mmri",
+      "combined_sensitivity_specificity_allowed": false,
+      "exact_v23_compatibility": "must_be_proven_before_scoring",
+      "expected_cases": 335,
+      "expected_preexisting_technical_failures": 14,
+      "expected_technically_processable": 321,
+      "prior_project_exposure": true,
+      "role": "secondary_sensitivity_stress"
+    },
+    {
+      "cohort_id": "liverhccseg",
+      "combined_sensitivity_specificity_allowed": false,
+      "exact_v23_compatibility": "must_be_proven_before_scoring",
+      "expected_cases": 14,
+      "prior_project_exposure": true,
+      "role": "secondary_small_positive_sensitivity"
+    },
+    {
+      "cohort_id": "chaos_mri",
+      "combined_sensitivity_specificity_allowed": false,
+      "exact_v23_compatibility": "incompatible_missing_dynamic_phases",
+      "expected_cases": 20,
+      "prior_project_exposure": true,
+      "role": "secondary_visual_specificity_robustness",
+      "v23_qualification_metric_allowed": false
+    },
+    {
+      "cohort_id": "local_cases",
+      "combined_sensitivity_specificity_allowed": false,
+      "exact_v23_compatibility": "case_by_case_preflight_required",
+      "prior_project_exposure": true,
+      "role": "exploratory_only_pending_human_curation",
+      "v23_qualification_metric_allowed": false
+    }
+  ],
+  "contract_signature": "9377ca42793ea679dceb7bd411c3b7ad45a7917ac3bbeefb56a09e0bbbc7e213",
+  "estimands": {
+    "primary": {
+      "cohort_id": "openswisshcc",
+      "ecdf_and_threshold_fit_on_training_only": true,
+      "fixed_weights": true,
+      "held_out_case_never_used_for_its_transform_or_threshold": true,
+      "name": "openswisshcc_patient_level_out_of_fold_v23_family",
+      "predictions_out_of_fold_only": true
+    },
+    "secondary_frozen_calibrator": {
+      "calibrator_must_remain_unchanged": true,
+      "name": "frozen_v23_deployment_score",
+      "not_a_substitute_for_primary_out_of_fold_metrics": true,
+      "only_exactly_compatible_multiphase_cases_allowed": true
+    }
+  },
+  "future_candidate_policy": {
+    "candidate_order": [
+      "v23_frozen",
+      "v23_plus_liver_enriched",
+      "v23_plus_liver_enriched_plus_pathology_target",
+      "v23_plus_liver_enriched_plus_pathology_target_plus_text_rag",
+      "nested_recalibration_of_predeclared_signals"
+    ],
+    "selection_objective": "maximize_minimum_sensitivity_specificity",
+    "tie_break_order": [
+      "best_worst_cohort_result",
+      "fewest_technical_failures",
+      "lowest_maximum_time",
+      "simplest_configuration",
+      "least_dataset_specific_calibration"
+    ],
+    "v24_development_allowed_only_after_v23_result_is_frozen": true
+  },
+  "inference_authorized": false,
+  "known_baseline_context": {
+    "development_case_count": 87,
+    "loocv_sensitivity": 0.8205128205128205,
+    "loocv_specificity": 0.7916666666666666,
+    "qualified": false
+  },
+  "metrics_authorized": false,
+  "phase": 1,
+  "primary_gate": {
+    "all_cases_fixed_before_scoring": true,
+    "best_fold_or_best_split_cannot_qualify": true,
+    "confusion_matrix_required": true,
+    "inconclusive_counts_as_error": true,
+    "maximum_raw_dicom_end_to_end_seconds_per_case": 180.0,
+    "minimum_sensitivity": 0.75,
+    "minimum_specificity": 0.75,
+    "noncomputable_v23_counts_as_error": true,
+    "roc_auc_secondary_only": true,
+    "technical_failure_counts_as_error": true,
+    "timeouts_count_as_error": true,
+    "wilson_95_percent_intervals_required": true
+  },
+  "qualified": false,
+  "research_only": true,
+  "schema": "argos-v23-retrospective-multicohort-contract-v1",
+  "secondary_reporting": {
+    "cross_dataset_pooled_metric_cannot_qualify": true,
+    "cross_dataset_pooled_metric_is_descriptive_only": true,
+    "positive_only_and_negative_only_sources_cannot_form_a_primary_metric": true,
+    "results_must_be_reported_per_cohort": true,
+    "worst_cohort_result_required": true
+  },
+  "status": "frozen_before_retrospective_multicohort_reanalysis",
+  "target_condition": "focal_liver_lesion_suspicion"
+}

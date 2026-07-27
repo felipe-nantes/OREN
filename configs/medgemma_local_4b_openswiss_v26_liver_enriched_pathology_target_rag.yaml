@@ -1,0 +1,20 @@
+# Candidate 3 predeclared in the retrospective multicohort contract.
+# It preserves the verified liver-enriched panels and the frozen pathology-
+# target prompt, adding only the audited local text-RAG context.
+extends: medgemma_local_4b_openswiss_v25_liver_enriched_pathology_target.yaml
+medgemma_screening:
+  rag:
+    enabled: true
+    index_path: rag/index/liver_mri_rag_v1/bm25_index.json
+    retrieval_eval: docs/rag/retrieval_eval_v1.yaml
+    top_k: 2
+    max_sources: 10
+    max_chunk_chars: 520
+    min_score: 0.0
+    query_ids:
+      - hcc_aphe_washout_capsule
+      - hemangioma_t2_fill_in
+      - fnh_central_scar_hepatobiliary
+      - dwi_adc_benign_malignant
+      - dynamic_contrast_phases
+      - pseudolesion_perfusion_pitfall

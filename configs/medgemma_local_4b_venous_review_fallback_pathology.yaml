@@ -1,0 +1,12 @@
+# Fallback venoso para remediação técnica declarada antes da inferência.
+# O enquadramento ampliado reduz o risco de cortar bordas do fígado.
+extends: medgemma_local_4b_fast_pathology.yaml
+medgemma_screening:
+  panel:
+    mode: single_grayscale
+    strategy: uniform_9
+    axial_slices: 9
+    crop_to_liver: true
+    crop_margin_fraction: 0.30
+  rag:
+    enabled: false

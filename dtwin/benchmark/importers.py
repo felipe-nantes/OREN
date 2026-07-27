@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import shutil
+import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,7 +14,8 @@ import yaml
 
 from dtwin import stages
 from dtwin.core import Case, PipelineError, load_profile, sha256_of
-from dtwin.engine import Engine
+from dtwin.benchmark.dataset_audit import describe_selected_series, select_best_mr_series
+from dtwin.segmentation_subprocess import run_segmentation_subprocess, segmentation_error
 
 from .hashing import input_hashes, sha256_paths
 from .models import (
@@ -88,6 +91,19 @@ class ProtectedGroundTruth:
 class DatasetCase:
     inference: InferenceSource
     ground_truth: ProtectedGroundTruth
+
+
+@contextmanager
+def _selected_dicom_series(root: Path, staging_parent: Path):
+    """Materializa somente a série MR escolhida e apaga os DICOMs ao terminar."""
+    files, _frames, _selection = select_best_mr_series(root, min_slices=3)
+    selection = describe_selected_series(files)
+    with tempfile.TemporaryDirectory(prefix=".selected-series-", dir=staging_parent) as temporary:
+        selected_dir = Path(temporary)
+        for index, source in enumerate(files):
+            source_path = Path(source)
+            shutil.copyfile(source_path, selected_dir / f"{index:05d}_{source_path.name}")
+        yield selected_dir, selection
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
@@ -411,17 +427,33 @@ def prepare_inference_case(
     workspace = Path(workspace).resolve()
     workspace.mkdir(parents=True, exist_ok=False)
     case = Case(workspace)
+    series_selection: dict[str, Any] | None = None
     if source.input_format == "DICOM":
-        if source.organ_mask_path:
-            profile = load_profile(profile_path)
-            stages.stage1_ingest(case, profile, source.dicom_dir, "anonymize")
-            shutil.copyfile(source.organ_mask_path, case.mask_organ)
-        elif segment_if_missing:
-            Engine(profile_path).prepare(source.dicom_dir, workspace, policy="anonymize", device=device)
-        else:
-            raise PipelineError(
-                f"DICOM {source.case_id} não possui organ_mask; habilite segment_if_missing."
-            )
+        with _selected_dicom_series(source.dicom_dir, workspace.parent) as (
+            selected_dir,
+            series_selection,
+        ):
+            if source.organ_mask_path:
+                profile = load_profile(profile_path)
+                stages.stage1_ingest(case, profile, selected_dir, "anonymize")
+                shutil.copyfile(source.organ_mask_path, case.mask_organ)
+            elif segment_if_missing:
+                process = run_segmentation_subprocess(
+                    dicom_dir=selected_dir,
+                    case_dir=workspace,
+                    profile_path=profile_path,
+                    device=device,
+                    fast=True,
+                    timeout_seconds=900 if device == "gpu" else 2400,
+                )
+                if not case.volume.is_file() or not case.mask_organ.is_file():
+                    raise PipelineError(
+                        "Falha na segmentação isolada: " + segmentation_error(process)
+                    )
+            else:
+                raise PipelineError(
+                    f"DICOM {source.case_id} não possui organ_mask; habilite segment_if_missing."
+                )
     else:
         shutil.copyfile(source.volume_path, case.volume)
         shutil.copyfile(source.organ_mask_path, case.mask_organ)
@@ -435,6 +467,8 @@ def prepare_inference_case(
         if manifest_source
         else _sanitized_manifest(source, case.volume)
     )
+    if series_selection is not None:
+        manifest["series_selection"] = series_selection
     case.write_manifest(manifest)
     hashes = input_hashes(case.volume, case.mask_organ, case.manifest)
     return InferenceCase(

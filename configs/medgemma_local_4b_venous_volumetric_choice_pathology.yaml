@@ -1,0 +1,31 @@
+# OpenSwissHCC venous fallback with complete liver coverage. Research only.
+extends: medgemma_local_4b_venous_review_fallback_pathology.yaml
+medgemma_screening:
+  panel:
+    strategy: volumetric_blocks
+    axial_tiles_per_panel: 9
+  medgemma:
+    response_mode: choice_classification
+    timeout_seconds: 120
+    max_retries: 0
+    response_validation_max_retries: 0
+    max_output_tokens: 64
+  rag:
+    enabled: false
+  prompt:
+    template: |-
+      Analise este painel de fase venosa de RM hepatica em modo de pesquisa.
+      Nenhuma lesao foi marcada. O alvo e suspeita visual de lesao focal
+      hepatica, nao qualquer diferenca anatomica.
+
+      Separe obrigatoriamente:
+      - POSITIVA: foco ou massa suspeita nao explicada por vaso ou artefato;
+      - NEGATIVA: sem lesao focal suspeita, inclusive variante vascular benigna;
+      - INCONCLUSIVA: qualidade insuficiente ou duvida real.
+
+      Veia calibrosa, estrutura tubular continua, variante anatomica,
+      pseudolesao ou artefato isolado nao tornam o caso POSITIVA. Analise
+      somente este painel parcial e baseie-se na imagem. Isto não é diagnóstico
+      e não é laudo médico. Uso exclusivo em pesquisa, com
+      revisão humana obrigatória. Não recomende conduta clínica.
+

@@ -1,0 +1,62 @@
+# Candidate 2 predeclared in the retrospective multicohort contract.
+# Reuses the already reviewed v24 liver-enriched pixels and changes only the
+# inference target/schema. No RAG is enabled in this candidate.
+extends: medgemma_local_4b_openswiss_v24_liver_enriched_choice.yaml
+medgemma_screening:
+  panel:
+    reuse_approved_liver_enriched_panels: true
+  rag:
+    enabled: false
+  prompt:
+    template: |-
+      Você está avaliando painéis de RM hepática em modo de pesquisa.
+
+      Os painéis cobrem o fígado em cortes axiais intercalados. Não existe lesão
+      previamente marcada, contorno de lesão ou crop direcionado a candidato.
+      A localização hepática automática foi usada somente para escolher os
+      cortes e não constitui evidência diagnóstica.
+
+      Alvo da triagem: lesão focal hepática ou patologia hepática suspeita
+      visível nas imagens fornecidas.
+
+      Não classifique qualquer alteração visual como positiva. Separe:
+      1. fígado sem achado focal relevante;
+      2. variante anatômica benigna, estrutura vascular, pseudolesão, alteração
+         de perfusão ou artefato sem evidência suficiente de patologia alvo;
+      3. lesão focal hepática ou patologia suspeita.
+
+      Regras obrigatórias:
+      - POSITIVA somente quando houver suspeita visual de lesão focal/patologia
+        alvo. Uma estrutura tubular, vaso ou veia calibrosa isolada não é massa.
+      - NEGATIVA quando não houver evidência suficiente de lesão focal, mesmo
+        que exista variante vascular, pseudolesão, artefato, gordura focal
+        provável ou cisto simples provável.
+      - INCONCLUSIVA quando a qualidade/cobertura for insuficiente ou houver
+        dúvida real entre variante/pseudolesão e patologia alvo.
+      - Uma alteração benigna não alvo pode ser registrada, mas não pode tornar
+        o caso POSITIVA sozinha.
+      - Baseie-se somente nas imagens. Não use prevalência presumida, metadados
+        clínicos ou diagnóstico esperado.
+
+      Isto não é diagnóstico. Não é laudo médico. Revisão humana obrigatória.
+      Responda com um único objeto JSON, sem Markdown:
+      {
+        "resultado_hipotese": "POSITIVA | NEGATIVA | INCONCLUSIVA",
+        "resumo_do_achado": "string",
+        "localizacao_aproximada": "string",
+        "sinais_visuais_observados": ["string"],
+        "confianca": "baixa | moderada | alta",
+        "limitacoes_da_analise": ["string"],
+        "necessidade_de_revisao_humana": true,
+        "alvo_da_triagem": "lesao_focal_hepatica_suspeita",
+        "ha_lesao_focal_suspeita": true,
+        "ha_variante_anatomica_benigna": false,
+        "ha_pseudolesao_ou_artefato": false,
+        "tipo_alteracao_nao_alvo": "none | vascular_variant | perfusion_pseudolesion | artifact | focal_fat | cystic_benign | other",
+        "justificativa_da_separacao": "string"
+      }
+
+      Consistência obrigatória:
+      - POSITIVA exige ha_lesao_focal_suspeita=true.
+      - Variante anatômica ou pseudolesão isolada não pode gerar POSITIVA.
+      - Não recomende tratamento, cirurgia, biópsia ou medicação.

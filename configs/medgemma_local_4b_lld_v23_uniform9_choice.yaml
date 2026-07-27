@@ -1,0 +1,11 @@
+# LLD-MMRI v23 external reader. Complete-FOV cases reproduce v21 exactly.
+# Missing dynamic-FOV voxels are shown as venous grayscale, never false RGB enhancement.
+extends: medgemma_local_4b_multiphase_uniform9_choice_v21.yaml
+medgemma_screening:
+  panel:
+    # Preserve the 3x3 contract without duplicating anatomy when an audited
+    # external mask contains fewer than nine liver-bearing axial planes.
+    short_liver_policy: blank_tiles
+    fusion:
+      partial_fov_policy: venous_grayscale
+      partial_fov_fallback_phase: pv

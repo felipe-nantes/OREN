@@ -1,0 +1,9 @@
+# Label-blind LLD-MMRI v23 liver-enriched visual pilot. The organ mask is used
+# only as a coarse axial localizer and is never rendered or used for in-plane crop.
+extends: medgemma_local_4b_lld_v23_full_fov_no_mask_3x9_pilot.yaml
+medgemma_screening:
+  panel:
+    spatial_focus: liver_enriched_full_fov
+    localizer_padding_mm: 20.0
+    localizer_stable_min_planes: 9
+    localizer_stable_min_component_fraction: 0.75

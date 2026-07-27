@@ -1,0 +1,13 @@
+# Label-blind LLD-MMRI v23 technical pilot. This representation is not yet
+# inference-qualified and intentionally accepts no organ or lesion mask.
+extends: medgemma_local_4b_lld_v23_uniform9_choice.yaml
+medgemma_screening:
+  panel:
+    spatial_focus: full_fov_no_mask
+    crop_to_liver: false
+    overlay_mode: none
+    background_dim: 1.0
+    window_scope: volume
+    minimum_slice_nonzero_fraction: 0.02
+  rag:
+    enabled: false

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ARGOS Gd-EOB HCC label-blind HBP image case",
+  "type": "object",
+  "required": [
+    "schema",
+    "case_id",
+    "source_dataset_id",
+    "center_pseudonym",
+    "phase",
+    "image",
+    "study_fingerprint_sha256",
+    "ground_truth_read",
+    "lesion_masks_read",
+    "anatomical_annotations_used",
+    "research_only",
+    "clinical_use_allowed"
+  ],
+  "properties": {
+    "schema": {"const": "argos-gd-eob-hcc-image-case-v1"},
+    "case_id": {
+      "type": "string",
+      "pattern": "^anon-gdeob-[0-9a-f]{20}$"
+    },
+    "source_dataset_id": {"const": "gd_eob_dtpa_phlf_2026"},
+    "center_pseudonym": {"enum": ["center-1", "center-2", "center-3"]},
+    "phase": {"const": "hepatobiliary_phase_gd_eob_dtpa"},
+    "image": {
+      "type": "object",
+      "required": [
+        "relative_path",
+        "bytes",
+        "sha256",
+        "shape",
+        "spacing_mm",
+        "orientation"
+      ],
+      "properties": {
+        "relative_path": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "shape": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"type": "integer", "minimum": 2}
+        },
+        "spacing_mm": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"type": "number", "exclusiveMinimum": 0}
+        },
+        "orientation": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "study_fingerprint_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ground_truth_read": {"const": false},
+    "lesion_masks_read": {"const": false},
+    "anatomical_annotations_used": {"const": false},
+    "research_only": {"const": true},
+    "clinical_use_allowed": {"const": false}
+  },
+  "additionalProperties": false
+}

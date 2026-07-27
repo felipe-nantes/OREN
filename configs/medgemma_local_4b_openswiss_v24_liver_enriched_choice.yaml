@@ -1,0 +1,8 @@
+# v24 candidate 1: preserve the frozen choice reader and change only the
+# representation to reviewed liver-enriched full-FOV panels.
+extends: medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml
+medgemma_screening:
+  panel:
+    spatial_focus: liver_enriched_full_fov
+  rag:
+    enabled: false
