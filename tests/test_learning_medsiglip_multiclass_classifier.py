@@ -13,6 +13,7 @@ from dtwin.learning.medsiglip_multiclass_classifier import (
     _aggregate,
     _best_threshold,
     _confusion,
+    _cross_validated_case_scores,
     _fit_model,
     _positive_probability,
     build_multiclass_labels,
@@ -239,3 +240,36 @@ def test_best_threshold_selected_from_supplied_scores_only():
     assert metrics["sensitivity"] == 1.0
     assert metrics["specificity"] == 1.0
     assert 0.3 < threshold <= 0.7
+
+
+def test_cross_validated_scores_cover_each_case_exactly_once():
+    # Two outer folds; every case is scored exactly once, by the fold where it is
+    # in test (never by a model that trained on it).
+    rng = np.random.RandomState(0)
+    embedding_map = {}
+    class_by_case = {}
+    for i in range(4):
+        embedding_map[f"h{i}"] = [rng.randn(4) + np.array([4.0, 0, 0, 0])]
+        class_by_case[f"h{i}"] = "hcc"
+    for i in range(4):
+        embedding_map[f"c{i}"] = [rng.randn(4) + np.array([-4.0, 0, 0, 0])]
+        class_by_case[f"c{i}"] = "hepatic_cyst"
+    class_index = {"hcc": 0, "hepatic_cyst": 1}
+    fold_a = {"h0", "h1", "c0", "c1"}
+    fold_b = {"h2", "h3", "c2", "c3"}
+    splits = {
+        "outer_folds": [
+            {"outer_fold": 0, "train_case_ids": sorted(fold_b), "test_case_ids": sorted(fold_a),
+             "inner_folds": []},
+            {"outer_fold": 1, "train_case_ids": sorted(fold_a), "test_case_ids": sorted(fold_b),
+             "inner_folds": []},
+        ]
+    }
+    scores = _cross_validated_case_scores(
+        splits=splits, embedding_map=embedding_map, class_index=class_index,
+        class_by_case=class_by_case, positive_indices={0}, c_value=1.0,
+        aggregation="mean", seed=1, max_iter=500,
+    )
+    assert set(scores) == set(class_by_case)  # every case scored exactly once
+    # separable synthetic -> hcc scored above cysts
+    assert min(scores[f"h{i}"] for i in range(4)) > max(scores[f"c{i}"] for i in range(4))

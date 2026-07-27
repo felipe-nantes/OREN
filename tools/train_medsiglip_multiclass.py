@@ -8,12 +8,13 @@ from pathlib import Path
 from dtwin.learning.medsiglip_multiclass_classifier import (
     evaluate_oof_predictions,
     generate_oof_predictions,
+    train_production_bundle,
 )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("predict-oof", "evaluate"))
+    parser.add_argument("command", choices=("predict-oof", "evaluate", "train-production"))
     parser.add_argument(
         "--multiclass-config",
         type=Path,
@@ -54,6 +55,11 @@ def main() -> int:
         type=Path,
         default=Path("casos/qualification/hybrid_v1/medsiglip_multiclass_oof_evaluation_v1"),
     )
+    parser.add_argument(
+        "--bundle",
+        type=Path,
+        default=Path("casos/qualification/hybrid_v1/medsiglip_multiclass_production_bundle_v1"),
+    )
     parser.add_argument("--workspace-root", type=Path, default=Path.cwd())
     args = parser.parse_args()
 
@@ -67,6 +73,17 @@ def main() -> int:
             candidate_root=args.candidates,
             workspace_root=args.workspace_root,
             output_root=args.predictions,
+        )
+    elif args.command == "train-production":
+        result = train_production_bundle(
+            multiclass_config_path=args.multiclass_config,
+            training_protocol_config_path=args.training_config,
+            training_protocol_path=args.protocol,
+            splits_path=args.splits,
+            embedding_root=args.embeddings,
+            candidate_root=args.candidates,
+            workspace_root=args.workspace_root,
+            output_root=args.bundle,
         )
     else:
         result = evaluate_oof_predictions(

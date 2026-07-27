@@ -843,3 +843,194 @@ def evaluate_oof_predictions(
         encoding="utf-8",
     )
     return evaluation
+
+
+BUNDLE_SCHEMA = "argos-hybrid-medsiglip-multiclass-production-bundle-v1"
+
+
+def _cross_validated_case_scores(
+    *,
+    splits: dict[str, Any],
+    embedding_map: dict[str, list[np.ndarray]],
+    class_index: dict[str, int],
+    class_by_case: dict[str, str],
+    positive_indices: set[int],
+    c_value: float,
+    aggregation: str,
+    seed: int,
+    max_iter: int,
+) -> dict[str, float]:
+    """One OOF score per case for a FIXED (c_value, aggregation), using the frozen
+    outer folds. Each case is scored by a model that did not train on it, so this
+    is an honest cross-validated estimate of that hyperparameter combination —
+    the basis for selecting the production hyperparameters without ever scoring a
+    case with a model that saw its label."""
+    scores: dict[str, float] = {}
+    for outer in splits["outer_folds"]:
+        train_ids = [cid for cid in outer["train_case_ids"] if cid in class_by_case]
+        test_ids = [cid for cid in outer["test_case_ids"] if cid in class_by_case]
+        if not test_ids:
+            continue
+        model = _fit_model(
+            train_ids, embedding_map, class_index, class_by_case, positive_indices,
+            c_value=c_value, seed=seed + int(outer["outer_fold"]), max_iter=max_iter,
+        )
+        fold_scores = _case_scores(model, test_ids, embedding_map, positive_indices, aggregation)
+        overlap = set(scores) & set(fold_scores)
+        if overlap:
+            raise PipelineError("Score de CV duplicado ao selecionar produção.")
+        scores.update(fold_scores)
+    return scores
+
+
+def train_production_bundle(
+    *,
+    multiclass_config_path: Path,
+    training_protocol_config_path: Path,
+    training_protocol_path: Path,
+    splits_path: Path,
+    embedding_root: Path,
+    candidate_root: Path,
+    workspace_root: Path,
+    output_root: Path,
+) -> dict[str, Any]:
+    """Fit ONE deployable classifier on all labeled cases and freeze a bundle.
+
+    Deployment procedure (honest): hyperparameters (C, aggregation) and the
+    decision threshold are chosen by cross-validation over the frozen outer
+    folds — a case is never scored during selection by a model that saw its
+    label. The FINAL model is then fit on all cases with the selected
+    hyperparameters. The reported generalization estimate for this bundle is the
+    nested-OOF result of the Etapa C run (evaluate_oof_predictions), NOT any
+    in-sample re-measurement; the bundle manifest records the exact training case
+    set so an in-sample benchmark can be detected and flagged downstream.
+    """
+    output_root = Path(output_root).resolve()
+    if output_root.exists():
+        raise PipelineError("Bundle de produção já existe; saída é imutável.")
+    output_root.mkdir(parents=True)
+    config = load_multiclass_config(multiclass_config_path)
+    protocol = verify_protocol(
+        config_path=training_protocol_config_path,
+        workspace_root=workspace_root,
+        protocol_path=training_protocol_path,
+        splits_path=splits_path,
+    )
+    embedding_manifest = verify_embeddings(candidate_root=candidate_root, output_root=embedding_root)
+    splits = _json(splits_path, "Splits")
+    validate_nested_splits(splits)
+
+    protected_cases = load_protected_cases(training_protocol_config_path, workspace_root)
+    restrict = config.get("restrict_to_dataset_ids")
+    if restrict:
+        allowed_datasets = {str(v).strip() for v in restrict}
+        unknown = sorted(allowed_datasets - {case.dataset_id for case in protected_cases})
+        if unknown:
+            raise PipelineError(f"restrict_to_dataset_ids cita dataset ausente: {unknown}")
+        protected_cases = [case for case in protected_cases if case.dataset_id in allowed_datasets]
+        if not protected_cases:
+            raise PipelineError("Restrição de coorte não deixou nenhum caso.")
+        splits = restrict_splits(splits, {case.case_id for case in protected_cases})
+
+    subtype_by_id = clinical_subtype_map(
+        load_protected_label_rows(training_protocol_config_path, workspace_root)
+    )
+    granularity = str(config.get("label_granularity", CLINICAL_GRANULARITY))
+    class_by_case, binary_by_case = build_multiclass_labels(
+        protected_cases, subtype_by_id, granularity=granularity
+    )
+    positive_classes = resolve_positive_classes(
+        config["positive_classes"], class_by_case, binary_by_case
+    )
+    class_names = sorted(set(class_by_case.values()))
+    class_index = {name: index for index, name in enumerate(class_names)}
+    positive_indices = {class_index[name] for name in positive_classes}
+
+    embedding_map, _ = _load_embedding_map(embedding_root)
+    c_grid = [float(v) for v in config["regularization_c_grid"]]
+    aggregations = list(config["panel_probability_aggregations"])
+    seed = int(config.get("seed", 20260724))
+    max_iter = int(config.get("max_iter", 3000))
+
+    # Select (C, aggregation, threshold) by cross-validation over all cases.
+    selection_candidates: list[dict[str, Any]] = []
+    for c_value in c_grid:
+        for aggregation in aggregations:
+            cv_scores = _cross_validated_case_scores(
+                splits=splits, embedding_map=embedding_map, class_index=class_index,
+                class_by_case=class_by_case, positive_indices=positive_indices,
+                c_value=c_value, aggregation=aggregation, seed=seed, max_iter=max_iter,
+            )
+            evaluated_ids = sorted(cv_scores)
+            threshold, metrics = _best_threshold(evaluated_ids, cv_scores, binary_by_case)
+            selection_candidates.append(
+                {"c_value": c_value, "aggregation": aggregation, "threshold": threshold, "cv_metrics": metrics}
+            )
+    selected = max(
+        selection_candidates,
+        key=lambda item: (
+            min(item["cv_metrics"]["sensitivity"], item["cv_metrics"]["specificity"]),
+            item["cv_metrics"]["balanced_accuracy"],
+            -item["c_value"],
+            -aggregations.index(item["aggregation"]),
+        ),
+    )
+
+    # Fit the final deployable model on ALL cases with the selected hyperparameters.
+    all_case_ids = sorted(case.case_id for case in protected_cases)
+    final_model = _fit_model(
+        all_case_ids, embedding_map, class_index, class_by_case, positive_indices,
+        c_value=selected["c_value"], seed=seed, max_iter=max_iter,
+    )
+    model_path = output_root / "production_model.joblib"
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{model_path.name}.", suffix=".tmp", dir=output_root)
+    os.close(descriptor)
+    temporary = Path(temporary_name)
+    try:
+        joblib.dump(final_model, temporary)
+        os.replace(temporary, model_path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+    training_case_ids = sorted(all_case_ids)
+    training_group_ids = sorted({case.patient_group_id for case in protected_cases})
+    body = {
+        "schema": BUNDLE_SCHEMA,
+        "candidate_id": str(config["candidate_id"]),
+        "label_granularity": granularity,
+        "restricted_to_dataset_ids": (sorted({str(v).strip() for v in restrict}) if restrict else None),
+        "class_names": class_names,
+        "positive_classes": positive_classes,
+        "selected_c_value": selected["c_value"],
+        "selected_aggregation": selected["aggregation"],
+        "decision_threshold": selected["threshold"],
+        "cross_validated_selection_metrics": selected["cv_metrics"],
+        "seed": seed,
+        "max_iter": max_iter,
+        "image_size": 448,
+        "expected_panels_per_case": 3,
+        "panel_image_mode": "multiphase_rgb_fusion",
+        "model_sha256": sha256_file(model_path),
+        "training_protocol_signature": protocol["protocol_signature"],
+        "embedding_signature": embedding_manifest["embedding_signature"],
+        "multiclass_config_sha256": sha256_file(multiclass_config_path),
+        "splits_sha256": sha256_file(splits_path),
+        # In-sample guard keys: any benchmark case whose id/group is listed here
+        # was seen in training and must never be reported as a clean number.
+        "training_case_count": len(training_case_ids),
+        "training_case_ids": training_case_ids,
+        "training_patient_group_ids": training_group_ids,
+        "training_case_set_sha256": canonical_sha256(training_case_ids),
+        "generalization_estimate_source": "nested_oof_etapa_c",
+        "in_sample_performance_is_not_a_generalization_estimate": True,
+        "individual_ground_truth_persisted": False,
+        "lesion_masks_read": 0,
+        "research_only": True,
+        "clinical_use_allowed": False,
+        "gate_75_75_stable_by_dataset": False,
+    }
+    bundle = {**body, "bundle_signature": canonical_sha256(body)}
+    (output_root / "bundle_manifest.json").write_text(
+        json.dumps(bundle, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return bundle
