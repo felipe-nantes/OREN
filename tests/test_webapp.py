@@ -1,6 +1,8 @@
 from pathlib import Path
+import time
 
 from fastapi.testclient import TestClient
+import pytest
 
 from dtwin.core import PipelineError
 from webapp import server
@@ -57,6 +59,32 @@ def test_find_best_series_empty_when_only_incompatible_modality(tmp_path):
     assert files == [] and n == 0
 
 
+def test_series_selection_metadata_is_sanitized(tmp_path):
+    import json
+    import numpy as np
+
+    from tools.make_synthetic_case import write_dicom_series
+
+    source = tmp_path / "patient-secret" / "mr"
+    write_dicom_series(
+        source,
+        np.random.default_rng(3).integers(0, 200, (5, 16, 16)),
+        modality="MR",
+    )
+    files, _ = server.find_best_series(tmp_path)
+    case_dir = tmp_path / "case"
+
+    saved = server._persist_series_selection(case_dir, files)
+    payload = json.loads(saved.read_text("utf-8"))
+    serialized = saved.read_text("utf-8")
+
+    assert payload["schema"] == "argos-series-selection-v1"
+    assert payload["raw_paths_persisted"] is False
+    assert payload["raw_uids_persisted"] is False
+    assert "patient-secret" not in serialized
+    assert str(tmp_path) not in serialized
+
+
 def test_load_report_accepts_valid_report_regardless_of_returncode(tmp_path):
     # relatório válido no disco = sucesso, mesmo que o subprocesso tenha crashado no shutdown
     import json
@@ -72,6 +100,27 @@ def test_load_report_rejects_missing_or_incomplete(tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text(json.dumps({"status": "x"}), "utf-8")  # sem report.resultado_hipotese
     assert server._load_report(bad) is None
+
+
+def test_screening_diagnostics_are_sanitized_and_persisted(tmp_path):
+    import json
+    import subprocess
+
+    case_dir = tmp_path / "case-001"
+    proc = subprocess.CompletedProcess(
+        args=["screening"], returncode=2,
+        stdout=f"[ABORTADO] falha em {case_dir.resolve()}",
+        stderr=f"trace em {server.REPO.resolve()}",
+    )
+    paths = server._persist_screening_diagnostics(case_dir, proc)
+    output = case_dir / "outputs" / "medgemma"
+    assert (case_dir / paths["stdout"]).is_file()
+    assert (case_dir / paths["stderr"]).is_file()
+    assert (case_dir / paths["metadata"]).is_file()
+    assert str(case_dir.resolve()) not in (output / "screening_subprocess.stdout.log").read_text("utf-8")
+    metadata = json.loads((output / "screening_subprocess.json").read_text("utf-8"))
+    assert metadata["returncode"] == 2
+    assert metadata["reason"].startswith("falha em [CASE_DIR]")
 
 
 def test_success_status_overrides_report_envelope_status():
@@ -148,6 +197,59 @@ def test_analyze_creates_job_and_status_is_queryable(monkeypatch, tmp_path):
     assert client.get("/api/status/inexistente").status_code == 404
     # o upload foi materializado preservando a subpasta
     assert (tmp_path / job_id / "_upload" / "estudo" / "IMG-0001.dcm").is_file()
+
+
+def test_individual_screening_accepts_only_volumetric_rag_and_pathology_target():
+    assert server._individual_screening_config("volumetric_rag") == server.VOLUMETRIC_RAG_MEDGEMMA_CONFIG
+    assert server._individual_screening_config("pathology_target") == server.PATHOLOGY_TARGET_MEDGEMMA_CONFIG
+    with pytest.raises(PipelineError, match="não autorizado"):
+        server._individual_screening_config("../../config-inseguro.yaml")
+
+
+def test_analyze_selects_authorized_individual_scenario(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_process(job_id, raw_dir, medgemma_config, scenario):
+        seen.update(config=medgemma_config, scenario=scenario)
+
+    monkeypatch.setattr(server, "process_job", fake_process)
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    client = TestClient(server.app)
+    response = client.post(
+        "/api/analyze",
+        files=[("files", ("IMG-0001.dcm", b"fake-dicom-bytes", "application/dicom"))],
+        data={"relpaths": '["estudo/IMG-0001.dcm"]', "scenario": "pathology_target"},
+    )
+    assert response.status_code == 200
+    assert response.json()["analysis_scenario"] == "pathology_target"
+    # O worker é disparado em thread; um pequeno polling evita tornar o teste dependente do scheduler.
+    for _ in range(50):
+        if seen:
+            break
+        time.sleep(0.01)
+    assert seen == {
+        "config": server.PATHOLOGY_TARGET_MEDGEMMA_CONFIG,
+        "scenario": "pathology_target",
+    }
+
+
+def test_analyze_rejects_unapproved_individual_scenario(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    client = TestClient(server.app)
+    response = client.post(
+        "/api/analyze",
+        files=[("files", ("IMG-0001.dcm", b"fake-dicom-bytes", "application/dicom"))],
+        data={"scenario": "baseline"},
+    )
+    assert response.status_code == 400
+    assert "não autorizado" in response.json()["detail"]
+
+
+def test_individual_page_exposes_only_authorized_modes():
+    page = Path("webapp/static/index.html").read_text(encoding="utf-8")
+    assert 'data-scenario="volumetric_rag"' in page
+    assert 'data-scenario="pathology_target"' in page
+    assert "fd.append('scenario', selectedScenario)" in page
 
 
 def test_benchmark_metrics_keep_failures_and_inconclusives_visible():
@@ -241,7 +343,10 @@ def test_benchmark_upload_maps_files_to_cases(monkeypatch, tmp_path):
 def test_benchmark_manifest_accepts_authorized_rag_scenarios():
     import json
 
-    for scenario in ("baseline", "volumetric", "rag", "volumetric_rag", "pathology_target"):
+    for scenario in (
+        "baseline", "volumetric", "rag", "volumetric_rag", "pathology_target",
+        "fast_pathology",
+    ):
         parsed = server._parse_benchmark_manifest(
             json.dumps({
                 "dataset_name": "Coorte",
@@ -293,9 +398,10 @@ def test_benchmark_case_uses_absolute_case_dir_and_scores(monkeypatch, tmp_path)
     monkeypatch.setattr(server, "WORKSPACE", Path("casos/webapp"))
     seen = {}
 
-    def fake_segment(series_dir, case_dir, device, timeout):
+    def fake_segment(series_dir, case_dir, device, timeout, *, fast):
         # o bug real era o case_dir chegar relativo aqui
         seen["absolute"] = Path(case_dir).is_absolute()
+        seen["fast"] = fast  # benchmark deve segmentar em modo rápido
         # simula uma segmentação bem-sucedida gravando os artefatos esperados. A
         # máscara é um NIfTI REAL: o webapp a lê para calcular o timeout efetivo.
         Path(case_dir).mkdir(parents=True, exist_ok=True)
@@ -329,6 +435,7 @@ def test_benchmark_case_uses_absolute_case_dir_and_scores(monkeypatch, tmp_path)
     result = server._evaluate_benchmark_result(inference_result, "positive")
 
     assert seen["absolute"] is True, "case_dir passado à segmentação deve ser absoluto"
+    assert seen["fast"] is True, "benchmark deve segmentar em modo rápido (throughput)"
     assert result["status"] == "decisive"
     assert result["prediction"] == "POSITIVA"
     assert result["correct"] is True

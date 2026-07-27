@@ -17,6 +17,7 @@ from .medgemma_client import (
     load_screening_config,
     effective_config_sha256,
     model_trace,
+    validate_configured_medgemma_report,
     validate_medgemma_report,
 )
 from .medgemma_panel import generate_liver_panel
@@ -26,7 +27,28 @@ from .rag import append_rag_to_prompt, build_rag_context, persist_rag_context
 
 REPORT_FILENAME = "medgemma_report.json"
 PANEL_REPORTS_FILENAME = "medgemma_panel_reports.json"
+FAILURE_FILENAME = "medgemma_failure.json"
 RAG_CONTEXT_FILENAME = "rag_context.json"
+
+
+def _clear_previous_inference_artifacts(output_dir: Path) -> None:
+    """Remove apenas artefatos derivados de uma inferência anterior.
+
+    O benchmark pode reutilizar o mesmo diretório de caso. Sem esta limpeza, um
+    ``medgemma_report.json`` antigo poderia ser interpretado como sucesso mesmo
+    depois de uma nova chamada falhar, ou um failure/contexto RAG antigo poderia
+    ficar ao lado de um relatório novo. Painéis e manifestos são regenerados e
+    validados separadamente; aqui limpamos somente estado de inferência.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for name in (
+        REPORT_FILENAME,
+        f".{REPORT_FILENAME}.tmp",
+        FAILURE_FILENAME,
+        PANEL_REPORTS_FILENAME,
+        RAG_CONTEXT_FILENAME,
+    ):
+        (output_dir / name).unlink(missing_ok=True)
 
 
 def build_report_envelope(
@@ -92,6 +114,68 @@ def sha256_of_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def _write_json_atomic(path: Path, payload: dict[str, Any] | list[dict[str, Any]]) -> None:
+    """Persiste artefatos de auditoria sem deixar JSON parcial em caso de crash."""
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    temporary.replace(path)
+
+
+def _persist_panel_failure(
+    *,
+    output_dir: Path,
+    panel_manifest: dict[str, Any],
+    panel_records: list[dict[str, Any]],
+    completed_reports: list[dict[str, Any]],
+    failed_record: dict[str, Any] | None,
+    error: Exception,
+    elapsed_seconds: float,
+    response_audit: Any,
+    failure_stage: str = "panel_inference",
+) -> Path:
+    """Registra falha técnica sem fabricar um relatório clínico parcial.
+
+    O artefato não contém prompt, resposta bruta do modelo nem pixels. Ele
+    permite reproduzir a causa por painel e explicita a ausência de relatório final.
+    """
+    payload: dict[str, Any] = {
+        "schema": "argos-medgemma-screening-failure-v1",
+        "case_id": panel_manifest.get("case_id"),
+        "status": "technical_failure_no_final_report",
+        "regulatory_mode": "RESEARCH",
+        "requires_human_review": True,
+        "failure_stage": failure_stage,
+        "panel_strategy": panel_manifest.get("panel_strategy", "uniform_9"),
+        "expected_panel_count": len(panel_records),
+        "completed_panel_count": len(completed_reports),
+        "completed_panels": [
+            {"panel_number": entry["panel_number"], "image": entry["image"], "sha256": entry["sha256"]}
+            for entry in completed_reports
+        ],
+        "failed_panel": (
+            {
+                "panel_number": failed_record.get("panel_number"),
+                "panel_total": failed_record.get("panel_total"),
+                "image": failed_record.get("image"),
+                "sha256": failed_record.get("sha256"),
+                "axial_interval": failed_record.get("axial_interval"),
+            }
+            if failed_record is not None
+            else None
+        ),
+        "error": {"type": type(error).__name__, "message": str(error)[:1000]},
+        "partial_panel_reports": PANEL_REPORTS_FILENAME if completed_reports else None,
+        "coverage": panel_manifest.get("coverage"),
+        "elapsed_seconds": round(elapsed_seconds, 4),
+        "created_at": now_utc(),
+    }
+    if isinstance(response_audit, dict) and response_audit:
+        payload["response_validation_audit"] = response_audit
+    path = output_dir / FAILURE_FILENAME
+    _write_json_atomic(path, payload)
+    return path
+
+
 def _authoritative_panels(panel: Any, manifest: dict[str, Any]) -> list[dict[str, Any]]:
     records = list(manifest.get("panels") or [])
     if not records:
@@ -124,7 +208,12 @@ def _partial_prompt(base_prompt: str, record: dict[str, Any]) -> str:
         f"{base_prompt}\n\nCONTEXTO DO PAINEL: painel {number}/{total}; "
         f"intervalo axial {interval[0]} a {interval[-1]}. "
         "Esta é uma avaliação parcial de uma cobertura volumétrica. Analise somente "
-        "as imagens deste painel e não presuma que ele representa sozinho todo o fígado."
+        "as imagens deste painel e não presuma que ele representa sozinho todo o fígado.\n\n"
+        "FORMATO INEGOCIÁVEL PARA ESTE PAINEL: responda somente com um objeto JSON válido, "
+        "sem Markdown, sem texto antes ou depois e sem caractere '|'. resultado_hipotese deve "
+        "ser exatamente uma única string: POSITIVA, NEGATIVA ou INCONCLUSIVA. confianca deve "
+        "ser exatamente uma única string: baixa, moderada ou alta; nunca copie o resultado "
+        "da hipótese para confianca. necessidade_de_revisao_humana deve ser true."
     )
 
 
@@ -155,7 +244,18 @@ def _aggregate_panel_reports(entries: list[dict[str, Any]]) -> dict[str, Any]:
     limitations: list[str] = []
     locations: list[str] = []
     summaries: list[str] = []
-    v2_present = False
+    v2_required = {
+        "alvo_da_triagem",
+        "ha_lesao_focal_suspeita",
+        "ha_variante_anatomica_benigna",
+        "ha_pseudolesao_ou_artefato",
+        "tipo_alteracao_nao_alvo",
+        "justificativa_da_separacao",
+    }
+    # Coleções mistas podem surgir quando um modo v1 precisou de retry. Campos
+    # opcionais v2 só são agregados quando TODOS os painéis os forneceram; nunca
+    # inferimos um booleano clínico ausente a partir da classe binária v1.
+    v2_complete = all(v2_required <= set(entry["report"]) for entry in entries)
     has_suspicious_lesion = False
     has_benign_variant = False
     has_pseudolesion_or_artifact = False
@@ -168,18 +268,6 @@ def _aggregate_panel_reports(entries: list[dict[str, Any]]) -> dict[str, Any]:
         locations.append(f"{prefix}: {report['localizacao_aproximada']}")
         signals.extend(f"{prefix}: {item}" for item in report["sinais_visuais_observados"])
         limitations.extend(f"{prefix}: {item}" for item in report["limitacoes_da_analise"])
-        if any(
-            key in report
-            for key in (
-                "alvo_da_triagem",
-                "ha_lesao_focal_suspeita",
-                "ha_variante_anatomica_benigna",
-                "ha_pseudolesao_ou_artefato",
-                "tipo_alteracao_nao_alvo",
-                "justificativa_da_separacao",
-            )
-        ):
-            v2_present = True
         has_suspicious_lesion = has_suspicious_lesion or report.get("ha_lesao_focal_suspeita") is True
         has_benign_variant = has_benign_variant or report.get("ha_variante_anatomica_benigna") is True
         has_pseudolesion_or_artifact = (
@@ -200,7 +288,7 @@ def _aggregate_panel_reports(entries: list[dict[str, Any]]) -> dict[str, Any]:
         "limitacoes_da_analise": limitations,
         "necessidade_de_revisao_humana": True,
     }
-    if v2_present:
+    if v2_complete:
         unique_non_target_types = sorted(set(non_target_types))
         aggregated.update(
             {
@@ -340,6 +428,10 @@ def run_screening(
     if panel_only:
         return result
 
+    # Fail-closed em reexecuções: nenhum resultado, failure ou contexto de uma
+    # rodada anterior pode sobreviver e ser confundido com a rodada atual.
+    _clear_previous_inference_artifacts(output_dir)
+
     privacy = config.get("privacy", {})
     if privacy.get("require_visible_phi_confirmation", True) and not visible_phi_confirmed:
         raise PipelineError(
@@ -371,12 +463,25 @@ def run_screening(
     for record in panel_records:
         panel_started_at = time.monotonic()
         panel_prompt = _partial_prompt(prompt, record)
-        if len(panel_prompt) > max_prompt_chars:
-            raise PipelineError(
-                f"Prompt do painel excede max_prompt_chars ({len(panel_prompt)} > {max_prompt_chars})."
+        try:
+            if len(panel_prompt) > max_prompt_chars:
+                raise PipelineError(
+                    f"Prompt do painel excede max_prompt_chars ({len(panel_prompt)} > {max_prompt_chars})."
+                )
+            raw = medgemma_client.generate(record["_path"], panel_prompt)
+            validated = validate_configured_medgemma_report(raw, config)
+        except Exception as exc:
+            _persist_panel_failure(
+                output_dir=output_dir,
+                panel_manifest=panel_manifest,
+                panel_records=panel_records,
+                completed_reports=panel_reports,
+                failed_record=record,
+                error=exc,
+                elapsed_seconds=time.monotonic() - total_started,
+                response_audit=getattr(medgemma_client, "last_response_audit", None),
             )
-        raw = medgemma_client.generate(record["_path"], panel_prompt)
-        validated = validate_medgemma_report(raw, config["report"])
+            raise
         entry = {
             "panel_number": record["panel_number"],
             "panel_total": record["panel_total"],
@@ -396,36 +501,46 @@ def run_screening(
             "seconds": round(time.monotonic() - panel_started_at, 4),
             **dict(getattr(medgemma_client, "last_timings", {}) or {}),
         })
-        temp_panel_reports = output_dir / f".{PANEL_REPORTS_FILENAME}.tmp"
-        temp_panel_reports.write_text(
-            json.dumps(panel_reports, indent=2, ensure_ascii=False), encoding="utf-8"
+        _write_json_atomic(panel_reports_path, panel_reports)
+    try:
+        raw_report = _aggregate_panel_reports(panel_reports)
+        durations = {
+            "panel_generation": round(panel_duration, 4),
+            "rag_retrieval": round(rag_duration, 4),
+            "panel_inference": inference_timings,
+            "medgemma_inference": round(sum(x["seconds"] for x in inference_timings), 4),
+            "screening_total": round(time.monotonic() - total_started, 4),
+        }
+        envelope = build_report_envelope(
+            case_id=panel_manifest["case_id"],
+            config=config,
+            panel_filename=panel.panel_path.name,
+            panel_manifest_filename=panel.manifest_path.name,
+            panel_manifest=panel_manifest,
+            screening_config_sha256=screening_config_sha256,
+            report=raw_report,
+            durations_seconds=durations,
+            panel_reports=panel_reports,
+            aggregation_rule=(
+                "any_positive_else_any_inconclusive_else_all_negative; "
+                "minimum_confidence_among_determining_reports"
+            ),
+            rag_context=rag_context,
+            prompt_audit=prompt_audit,
         )
-        temp_panel_reports.replace(panel_reports_path)
-    raw_report = _aggregate_panel_reports(panel_reports)
-    durations = {
-        "panel_generation": round(panel_duration, 4),
-        "rag_retrieval": round(rag_duration, 4),
-        "panel_inference": inference_timings,
-        "medgemma_inference": round(sum(x["seconds"] for x in inference_timings), 4),
-        "screening_total": round(time.monotonic() - total_started, 4),
-    }
-    envelope = build_report_envelope(
-        case_id=panel_manifest["case_id"],
-        config=config,
-        panel_filename=panel.panel_path.name,
-        panel_manifest_filename=panel.manifest_path.name,
-        panel_manifest=panel_manifest,
-        screening_config_sha256=screening_config_sha256,
-        report=raw_report,
-        durations_seconds=durations,
-        panel_reports=panel_reports,
-        aggregation_rule=(
-            "any_positive_else_any_inconclusive_else_all_negative; "
-            "minimum_confidence_among_determining_reports"
-        ),
-        rag_context=rag_context,
-        prompt_audit=prompt_audit,
-    )
+    except Exception as exc:
+        _persist_panel_failure(
+            output_dir=output_dir,
+            panel_manifest=panel_manifest,
+            panel_records=panel_records,
+            completed_reports=panel_reports,
+            failed_record=None,
+            error=exc,
+            elapsed_seconds=time.monotonic() - total_started,
+            response_audit=getattr(medgemma_client, "last_response_audit", None),
+            failure_stage="aggregation_and_final_validation",
+        )
+        raise
     report_path = output_dir / REPORT_FILENAME
     temp_path = output_dir / f".{REPORT_FILENAME}.tmp"
     temp_path.write_text(json.dumps(envelope, indent=2, ensure_ascii=False), encoding="utf-8")

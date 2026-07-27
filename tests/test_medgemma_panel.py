@@ -105,3 +105,24 @@ def test_panel_rejects_non_anonymous_case(synthetic_case, tmp_path):
     synthetic_case.write_manifest(manifest)
     with pytest.raises(PipelineError, match="identificador anônimo"):
         _generate(synthetic_case, tmp_path)
+
+
+def test_fast_panel_crops_to_liver_without_artificial_contour(synthetic_case, tmp_path):
+    config = load_screening_config("configs/medgemma_local_4b_fast_pathology.yaml")
+    result = generate_liver_panel(
+        volume_path=synthetic_case.volume,
+        liver_mask_path=synthetic_case.mask_organ,
+        case_manifest_path=synthetic_case.manifest,
+        organ_profile=load_profile("profiles/figado.yaml"),
+        screening_config=config,
+        output_dir=tmp_path / "fast",
+        model_trace=model_trace(config),
+    )
+
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["input_type"] == "mri_liver_crop_without_overlay"
+    assert manifest["crop_to_liver"] is True
+    assert manifest["overlay_mode"] == "none"
+    with Image.open(result.panel_path) as image:
+        pixels = np.asarray(image)
+    assert not np.any(np.all(pixels == np.array([255, 196, 0]), axis=2))

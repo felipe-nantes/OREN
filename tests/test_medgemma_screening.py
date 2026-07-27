@@ -167,6 +167,34 @@ def test_full_flow_persists_traceable_pending_review_report(synthetic_case, tmp_
     assert report["durations_seconds"]["screening_total"] >= 0
 
 
+def test_new_inference_clears_stale_success_failure_and_rag_artifacts(synthetic_case, tmp_path):
+    out = tmp_path / "screening"
+    out.mkdir(parents=True)
+    stale_names = (
+        "medgemma_report.json",
+        ".medgemma_report.json.tmp",
+        "medgemma_failure.json",
+        "medgemma_panel_reports.json",
+        "rag_context.json",
+    )
+    for name in stale_names:
+        (out / name).write_text('{"stale": true}', encoding="utf-8")
+
+    run_screening(
+        **_args(synthetic_case, tmp_path),
+        visible_phi_confirmed=True,
+        client=TestOnlyClient(),
+    )
+
+    report = json.loads((out / "medgemma_report.json").read_text("utf-8"))
+    assert report.get("stale") is None
+    assert not (out / ".medgemma_report.json.tmp").exists()
+    assert not (out / "medgemma_failure.json").exists()
+    assert not (out / "rag_context.json").exists()
+    panel_reports = json.loads((out / "medgemma_panel_reports.json").read_text("utf-8"))
+    assert isinstance(panel_reports, list) and panel_reports
+
+
 def test_full_flow_persists_response_validation_audit_without_raw_response(synthetic_case, tmp_path):
     result = run_screening(
         **_args(synthetic_case, tmp_path),
@@ -316,6 +344,25 @@ def test_aggregation_preserves_v2_pathology_target_flags():
     assert "Painel 1/2" in agg["justificativa_da_separacao"]
 
 
+def test_aggregation_of_mixed_v1_v2_panels_does_not_invent_v2_flags():
+    repaired_v2 = _panel_entry(1, 2, "INCONCLUSIVA", "baixa")
+    repaired_v2["report"].update({
+        "alvo_da_triagem": "lesao_focal_hepatica_suspeita",
+        "ha_lesao_focal_suspeita": False,
+        "ha_variante_anatomica_benigna": False,
+        "ha_pseudolesao_ou_artefato": False,
+        "tipo_alteracao_nao_alvo": "none",
+        "justificativa_da_separacao": "Evidência insuficiente.",
+    })
+    positive_v1 = _panel_entry(2, 2, "POSITIVA", "moderada")
+
+    agg = _aggregate_panel_reports([repaired_v2, positive_v1])
+
+    assert agg["resultado_hipotese"] == "POSITIVA"
+    assert "ha_lesao_focal_suspeita" not in agg
+    assert "alvo_da_triagem" not in agg
+
+
 class _CountingVolumetricClient:
     """Cliente de teste: uma resposta por painel, contando as chamadas."""
 
@@ -327,6 +374,8 @@ class _CountingVolumetricClient:
         idx = len(self.calls)
         self.calls.append(panel_path.name)
         assert "avaliação parcial" in prompt  # o prompt por painel é parcial
+        assert "FORMATO INEGOCIÁVEL" in prompt
+        assert "nunca copie o resultado" in prompt
         state = self.states[idx] if idx < len(self.states) else self.states[-1]
         return {
             "resultado_hipotese": state, "confianca": "baixa",
@@ -401,6 +450,14 @@ def test_volumetric_technical_failure_in_middle_panel_fails_whole_case(synthetic
         )
     # cobertura parcial nunca vira relatório final
     assert not (tmp_path / "screening" / "medgemma_report.json").exists()
+    failure = json.loads((tmp_path / "screening" / "medgemma_failure.json").read_text("utf-8"))
+    assert failure["status"] == "technical_failure_no_final_report"
+    assert failure["expected_panel_count"] == 3
+    assert failure["completed_panel_count"] == 1
+    assert failure["failed_panel"]["panel_number"] == 2
+    assert failure["partial_panel_reports"] == "medgemma_panel_reports.json"
+    assert "prompt" not in json.dumps(failure).lower()
+    assert "raw_response" not in json.dumps(failure).lower()
 
 
 def test_authoritative_panels_rejects_hash_mismatch(tmp_path):

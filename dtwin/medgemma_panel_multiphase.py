@@ -190,6 +190,7 @@ def generate_liver_panel_multiphase(
     output_dir: Path,
     model_trace: dict[str, Any],
     visible_phi_confirmed: bool = False,
+    phase_support_fractions: Mapping[str, float] | None = None,
 ) -> PanelResult:
     """Valida entradas e gera 9 axiais + 1 coronal + 1 sagital em fusão RGB.
 
@@ -211,6 +212,19 @@ def generate_liver_panel_multiphase(
     for name in required_phases:
         _require_file(phase_paths[name], f"Fase de RM '{name}'")
     _require_file(liver_mask_path, "Máscara do fígado")
+    if phase_support_fractions is None:
+        support_fractions = {name: 1.0 for name in required_phases}
+    else:
+        support_fractions = {str(name): value for name, value in phase_support_fractions.items()}
+        if set(support_fractions) != set(required_phases) or any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not np.isfinite(float(value))
+            or not 0.0 <= float(value) <= 1.0
+            for value in support_fractions.values()
+        ):
+            raise PipelineError("Cobertura física por fase inválida para fusão multifásica.")
+        support_fractions = {name: float(value) for name, value in support_fractions.items()}
 
     case_manifest = _validate_case_manifest(case_manifest_path)
 
@@ -255,6 +269,18 @@ def generate_liver_panel_multiphase(
     else:
         zc_s = yc_s = xc_s = slice(None)
     mask = mask_full[zc_s, yc_s, xc_s]
+    partial_roles = sorted(name for name, value in support_fractions.items() if value < 1.0)
+    fusion_cfg = panel_cfg.get("fusion", {})
+    partial_policy = str(fusion_cfg.get("partial_fov_policy", "reject"))
+    fallback_phase = str(fusion_cfg.get("partial_fov_fallback_phase", ""))
+    if partial_roles and (
+        partial_policy != "venous_grayscale"
+        or fallback_phase not in required_phases
+        or support_fractions[fallback_phase] < 1.0
+    ):
+        raise PipelineError(
+            "Fusão com campo de visão parcial exige fallback completo venous_grayscale."
+        )
 
     low = float(panel_cfg.get("window_percentile_low", 2.0))
     high = float(panel_cfg.get("window_percentile_high", 98.0))
@@ -266,12 +292,25 @@ def generate_liver_panel_multiphase(
 
     # Normaliza cada fase (recortada) para [0,1] com janela dentro do fígado.
     norm_phase: dict[str, np.ndarray] = {}
+    availability: dict[str, np.ndarray] = {}
     phase_sha256: dict[str, str] = {}
     for name in required_phases:
         arr = array_from(phase_imgs[name]).astype(np.float32)[zc_s, yc_s, xc_s]
-        lo, hi = _phase_window(arr, mask, low, high, scope)
+        available = (
+            np.isfinite(arr) & (arr != 0)
+            if name in partial_roles
+            else np.ones(arr.shape, dtype=bool)
+        )
+        availability[name] = available
+        window_mask = mask & available
+        lo, hi = _phase_window(arr, window_mask, low, high, scope)
         norm_phase[name] = np.clip((arr - lo) / (hi - lo), 0.0, 1.0)
         phase_sha256[name] = sha256_of(phase_paths[name])
+    joint_availability = np.logical_and.reduce(
+        [availability[name] for name in required_phases]
+    )
+    fallback_mask = mask & ~joint_availability
+    fallback_voxels = int(fallback_mask.sum())
 
     axial_present = np.flatnonzero(mask.any(axis=(1, 2)))
     centroid_zyx = np.rint(np.argwhere(mask).mean(axis=0)).astype(int)
@@ -293,7 +332,14 @@ def generate_liver_panel_multiphase(
     r, g, b = (channel_map[c] for c in RGB_CHANNELS)
 
     def fuse(sl) -> np.ndarray:
-        return np.stack([norm_phase[r][sl], norm_phase[g][sl], norm_phase[b][sl]], axis=-1)
+        rgb = np.stack(
+            [norm_phase[r][sl], norm_phase[g][sl], norm_phase[b][sl]], axis=-1
+        )
+        if partial_roles:
+            partial = fallback_mask[sl]
+            fallback = norm_phase[fallback_phase][sl]
+            rgb[partial] = np.stack([fallback[partial]] * 3, axis=-1)
+        return rgb
 
     strategy = panel_strategy(panel_cfg)
     if strategy == "volumetric_blocks":
@@ -343,6 +389,11 @@ def generate_liver_panel_multiphase(
             "input_phase_sha256": phase_sha256,
             "input_liver_mask_sha256": liver_mask_sha256,
             "fusion_channel_map": channel_map, "phases_used": required_phases,
+            "phase_support_fractions": support_fractions,
+            "partial_fov_roles": partial_roles,
+            "partial_fov_policy": partial_policy if partial_roles else "not_required",
+            "partial_fov_fallback_phase": fallback_phase if partial_roles else None,
+            "partial_fov_grayscale_fallback_voxels": fallback_voxels,
             "crop_to_liver": bool(panel_cfg.get("crop_to_liver", True)),
             "crop_bounds_zyx": [[zc_s.start, zc_s.stop], [yc_s.start, yc_s.stop], [xc_s.start, xc_s.stop]]
             if zc_s.start is not None else None,
@@ -380,7 +431,15 @@ def generate_liver_panel_multiphase(
     axial_count = int(panel_cfg.get("axial_slices", 9))
     if axial_count != 9:
         raise PipelineError("O contrato atual exige exatamente 9 fatias axiais (grade 3x3).")
-    axial_indices = _select_uniform_indices(axial_present, axial_count)
+    short_liver_policy = str(panel_cfg.get("short_liver_policy", "reject"))
+    if axial_present.size < axial_count:
+        if short_liver_policy != "blank_tiles":
+            axial_indices = _select_uniform_indices(axial_present, axial_count)
+        else:
+            axial_indices = tuple(int(index) for index in axial_present)
+    else:
+        axial_indices = _select_uniform_indices(axial_present, axial_count)
+    blank_axial_tile_count = axial_count - len(axial_indices)
 
     tiles: list[Image.Image] = []
     for number, z in enumerate(axial_indices, start=1):
@@ -391,6 +450,16 @@ def generate_liver_panel_multiphase(
                 contour_width, contour_color, background_dim,
             )
         )
+    for _ in range(blank_axial_tile_count):
+        blank = Image.new("RGB", (tile_size, tile_size), (10, 14, 20))
+        draw = ImageDraw.Draw(blank)
+        draw.multiline_text(
+            (14, 18),
+            "SEM PLANO HEPATICO\nDISPONIVEL\n\nTile vazio intencional.\nNenhum corte foi repetido\nou fabricado.",
+            fill=(185, 194, 205),
+            spacing=6,
+        )
+        tiles.append(blank)
     tiles.append(
         _render_color_tile(
             fuse(np.s_[:, yc, :]), mask[:, yc, :], "CORONAL (CENTROIDE)",
@@ -448,6 +517,11 @@ def generate_liver_panel_multiphase(
         "input_liver_mask_sha256": liver_mask_sha256,
         "fusion_channel_map": channel_map,
         "phases_used": required_phases,
+        "phase_support_fractions": support_fractions,
+        "partial_fov_roles": partial_roles,
+        "partial_fov_policy": partial_policy if partial_roles else "not_required",
+        "partial_fov_fallback_phase": fallback_phase if partial_roles else None,
+        "partial_fov_grayscale_fallback_voxels": fallback_voxels,
         "crop_to_liver": bool(panel_cfg.get("crop_to_liver", True)),
         "crop_bounds_zyx": [[zc_s.start, zc_s.stop], [yc_s.start, yc_s.stop], [xc_s.start, xc_s.stop]]
         if zc_s.start is not None
@@ -458,6 +532,11 @@ def generate_liver_panel_multiphase(
             "coronal_centroid_y_cropped": yc,
             "sagittal_centroid_x_cropped": xc,
         },
+        "short_liver_policy": (
+            short_liver_policy if blank_axial_tile_count else "not_required"
+        ),
+        "short_liver_real_axial_count": len(axial_indices),
+        "short_liver_blank_tile_count": blank_axial_tile_count,
         "liver_mask_voxels": mask_voxels,
         "png_metadata_keys": metadata_keys,
         "phi_metadata_removed": True,
@@ -470,6 +549,7 @@ def generate_liver_panel_multiphase(
             "No lesion mask was read, provided, or rendered.",
             "Phases fused into RGB channels; lesion conspicuity comes from enhancement dynamics.",
             "Liver-only crop and windowing use the organ mask only, never a lesion mask.",
+            "Short liver masks use explicit blank tiles; axial slices are never duplicated or fabricated.",
             "Burned-in pixel PHI cannot be ruled out automatically; visual confirmation is required before inference.",
             "Analysis is for research and education only.",
         ],

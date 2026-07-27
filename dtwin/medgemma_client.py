@@ -39,6 +39,15 @@ OPTIONAL_REPORT_V2_FIELDS = {
     "tipo_alteracao_nao_alvo",
     "justificativa_da_separacao",
 }
+COMPACT_RESPONSE_FIELDS = {
+    "resultado_hipotese",
+    "confianca",
+    "ha_lesao_focal_suspeita",
+    "ha_variante_anatomica_benigna",
+    "ha_pseudolesao_ou_artefato",
+    "tipo_alteracao_nao_alvo",
+    "justificativa_da_separacao",
+}
 REPORT_V2_TARGET = "lesao_focal_hepatica_suspeita"
 NON_TARGET_ALTERATION_TYPES = {
     "none",
@@ -127,6 +136,7 @@ def load_screening_config(
     if not isinstance(med, dict):
         raise PipelineError("Configuração sem bloco 'medgemma_screening.medgemma'.")
     med.setdefault("response_validation_max_retries", 1)
+    med.setdefault("response_mode", "full_report")
 
     env = os.environ if environ is None else environ
     overrides = {
@@ -210,8 +220,14 @@ def _validate_config(config: dict[str, Any]) -> None:
         raise PipelineError("O painel exige vistas coronal e sagital.")
     mode = str(panel.get("mode", "single_grayscale"))
     if mode == "single_grayscale":
-        if panel.get("overlay_mode") != "contour":
-            raise PipelineError("Somente overlay_mode=contour é permitido neste fluxo.")
+        overlay_mode = panel.get("overlay_mode")
+        if overlay_mode not in {"contour", "none"}:
+            raise PipelineError("panel.overlay_mode deve ser contour ou none.")
+        if overlay_mode == "none" and panel.get("crop_to_liver") is not True:
+            raise PipelineError("overlay_mode=none exige crop_to_liver=true.")
+        margin = float(panel.get("crop_margin_fraction", 0.15))
+        if not 0.0 <= margin <= 1.0:
+            raise PipelineError("panel.crop_margin_fraction deve estar entre 0 e 1.")
         if panel.get("preserve_grayscale_signal") is not True:
             raise PipelineError("panel.preserve_grayscale_signal deve ser true.")
     elif mode in ("multiphase_fusion", "texture_fusion"):
@@ -276,6 +292,14 @@ def _validate_config(config: dict[str, Any]) -> None:
         raise PipelineError("medgemma.max_prompt_chars deve ser positivo.")
     if int(med.get("max_image_pixels", 4_000_000)) <= 0:
         raise PipelineError("medgemma.max_image_pixels deve ser positivo.")
+    if med.get("response_mode") not in {
+        "full_report", "compact_classification", "choice_classification",
+        "prefilled_label",
+    }:
+        raise PipelineError(
+            "medgemma.response_mode deve ser full_report, compact_classification "
+            "choice_classification ou prefilled_label."
+        )
     if med.get("execution_mode") not in {"local", "remote"}:
         raise PipelineError("medgemma.execution_mode deve ser local ou remote.")
     if not str(med.get("endpoint_url", "")).strip():
@@ -327,7 +351,67 @@ def _short_error(value: Any, limit: int = 500) -> str:
     return text[:limit]
 
 
-def _validation_retry_prompt(original_prompt: str, error: str, max_chars: int) -> str:
+def _validation_retry_prompt(
+    original_prompt: str, error: str, max_chars: int, retry_number: int = 1
+) -> str:
+    # Quando nenhum JSON completo foi produzido, repetir o prompt clínico longo
+    # com geração determinística tende a repetir exatamente a mesma falha. O
+    # reparo passa a ser curto, direto e diferente em cada tentativa; a imagem do
+    # mesmo painel continua anexada à requisição.
+    if "objeto JSON válido" in error:
+        pathology_target = '"alvo_da_triagem"' in original_prompt
+        task_rule = (
+            "O alvo é suspeita visual de lesão focal/patologia hepática, não qualquer variante anatômica.\n"
+            "Variante vascular, vaso tubular, pseudolesão ou artefato isolado não torna o caso POSITIVA.\n"
+            "Use INCONCLUSIVA quando a imagem não permitir separar variante/artefato de patologia alvo."
+            if pathology_target
+            else "O alvo é possível anormalidade visual focal no fígado segmentado. Baseie-se somente na imagem."
+        )
+        v2_fields = (
+            """,
+  \"alvo_da_triagem\": \"lesao_focal_hepatica_suspeita\",
+  \"ha_lesao_focal_suspeita\": false,
+  \"ha_variante_anatomica_benigna\": false,
+  \"ha_pseudolesao_ou_artefato\": false,
+  \"tipo_alteracao_nao_alvo\": \"none\",
+  \"justificativa_da_separacao\": \"Evidência visual insuficiente para separar os achados com segurança.\""""
+            if pathology_target
+            else ""
+        )
+        v2_allowed = (
+            "\ntipo_alteracao_nao_alvo = none, vascular_variant, perfusion_pseudolesion, "
+            "artifact, focal_fat, cystic_benign ou other."
+            if pathology_target
+            else ""
+        )
+        compact_json = f"""
+CORREÇÃO OBRIGATÓRIA DE FORMATO — tentativa {retry_number}:
+Reanalise somente a mesma imagem de RM hepática enviada nesta requisição.
+Comece a resposta com {{ e termine com }}. Não produza raciocínio, Markdown ou texto antes/depois do JSON.
+
+{task_rule}
+Isto é pesquisa, não é diagnóstico nem laudo e exige revisão humana.
+
+Retorne exatamente um objeto com estes campos e tipos:
+{{
+  "resultado_hipotese": "INCONCLUSIVA",
+  "resumo_do_achado": "Avaliação visual limitada ao painel fornecido.",
+  "localizacao_aproximada": "Não determinada neste painel.",
+  "sinais_visuais_observados": [],
+  "confianca": "baixa",
+  "limitacoes_da_analise": ["Avaliação restrita à imagem fornecida."],
+  "necessidade_de_revisao_humana": true{v2_fields}
+}}
+O objeto acima é apenas um molde válido. Atualize os valores conforme a imagem. Valores permitidos:
+resultado_hipotese = POSITIVA, NEGATIVA ou INCONCLUSIVA; confianca = baixa, moderada ou alta;
+{v2_allowed}
+""".strip()
+        if len(compact_json) > max_chars:
+            raise PipelineError(
+                f"Prompt compacto de retry excede max_prompt_chars ({len(compact_json)} > {max_chars})."
+            )
+        return compact_json
+
     suffix = f"""
 
 CORREÇÃO OBRIGATÓRIA DE FORMATO:
@@ -570,6 +654,125 @@ def validate_medgemma_report(
     return report
 
 
+def _expand_compact_classification(raw_report: Any) -> dict[str, Any]:
+    """Expande uma decisão curta sem inventar uma síntese clínica.
+
+    O modelo fornece apenas decisão, flags e uma evidência visual curta. Campos
+    administrativos exigidos pelo contrato legado são determinísticos e deixam
+    explícita a limitação do modo rápido.
+    """
+    compact = _canonicalize_report(_parse_json_report(raw_report))
+    if REQUIRED_REPORT_FIELDS.issubset(compact):
+        return compact
+    missing = COMPACT_RESPONSE_FIELDS - set(compact)
+    if missing:
+        raise PipelineError(
+            f"Campos obrigatórios da classificação compacta ausentes: {sorted(missing)}."
+        )
+    compact = {key: compact[key] for key in COMPACT_RESPONSE_FIELDS}
+    state = compact["resultado_hipotese"]
+    if state not in {"POSITIVA", "NEGATIVA", "INCONCLUSIVA"}:
+        raise PipelineError(f"Estado compacto MedGemma inválido: {state!r}")
+    confidence = compact["confianca"]
+    if confidence not in {"baixa", "moderada", "alta"}:
+        raise PipelineError(f"Confiança compacta MedGemma inválida: {confidence!r}")
+    for key in (
+        "ha_lesao_focal_suspeita",
+        "ha_variante_anatomica_benigna",
+        "ha_pseudolesao_ou_artefato",
+    ):
+        if not isinstance(compact[key], bool):
+            raise PipelineError(f"Campo compacto {key} deve ser booleano.")
+    if state == "POSITIVA" and compact["ha_lesao_focal_suspeita"] is not True:
+        raise PipelineError("Classificação compacta POSITIVA exige lesão focal suspeita.")
+    if state == "NEGATIVA" and compact["ha_lesao_focal_suspeita"] is not False:
+        raise PipelineError("Classificação compacta NEGATIVA não pode declarar lesão focal suspeita.")
+    alteration_type = compact["tipo_alteracao_nao_alvo"]
+    if alteration_type not in NON_TARGET_ALTERATION_TYPES:
+        raise PipelineError(f"tipo_alteracao_nao_alvo compacto inválido: {alteration_type!r}")
+    justification = compact["justificativa_da_separacao"]
+    if not isinstance(justification, str) or not justification.strip():
+        raise PipelineError("justificativa_da_separacao compacta deve ser string não vazia.")
+    justification = justification.strip()
+    normalized_justification = justification.casefold()
+    placeholder_markers = {
+        "string",
+        "placeholder",
+        "uma evidência visual curta",
+        "uma evidencia visual curta",
+        "evidência visual curta",
+        "evidencia visual curta",
+    }
+    if normalized_justification in placeholder_markers:
+        raise PipelineError("justificativa_da_separacao compacta contém placeholder.")
+    if len(justification) > 500:
+        raise PipelineError("justificativa_da_separacao compacta excede 500 caracteres.")
+
+    return {
+        "resultado_hipotese": state,
+        "resumo_do_achado": justification,
+        "localizacao_aproximada": "Não determinada no modo de classificação rápida.",
+        "sinais_visuais_observados": [justification],
+        "confianca": confidence,
+        "limitacoes_da_analise": [
+            "Classificação rápida baseada somente no painel fornecido; revisão humana obrigatória."
+        ],
+        "necessidade_de_revisao_humana": True,
+        "alvo_da_triagem": REPORT_V2_TARGET,
+        "ha_lesao_focal_suspeita": compact["ha_lesao_focal_suspeita"],
+        "ha_variante_anatomica_benigna": compact["ha_variante_anatomica_benigna"],
+        "ha_pseudolesao_ou_artefato": compact["ha_pseudolesao_ou_artefato"],
+        "tipo_alteracao_nao_alvo": alteration_type,
+        "justificativa_da_separacao": justification,
+    }
+
+
+def validate_configured_medgemma_report(
+    raw_report: Any, config: dict[str, Any]
+) -> dict[str, Any]:
+    """Valida a saída conforme o modo versionado da configuração."""
+    mode = config["medgemma"].get("response_mode", "full_report")
+    if mode == "prefilled_label":
+        parsed = _canonicalize_report(_parse_json_report(raw_report))
+        if REQUIRED_REPORT_FIELDS.issubset(parsed):
+            candidate = parsed
+        else:
+            minimal_keys = {
+                "resultado_hipotese", "confianca", "necessidade_de_revisao_humana",
+            }
+            if set(parsed) not in ({"resultado_hipotese"}, minimal_keys):
+                extras = sorted(set(parsed) - minimal_keys)
+                raise PipelineError(
+                    "Resposta prefilled_label deve conter o schema mínimo autorizado; "
+                    f"chaves não autorizadas: {extras}."
+                )
+            state = parsed["resultado_hipotese"]
+            if state not in {"POSITIVA", "NEGATIVA", "INCONCLUSIVA"}:
+                raise PipelineError(f"Estado prefilled_label inválido: {state!r}")
+            confidence = parsed.get("confianca", "baixa")
+            if confidence not in {"baixa", "moderada", "alta"}:
+                raise PipelineError(f"Confiança prefilled_label inválida: {confidence!r}")
+            if "necessidade_de_revisao_humana" in parsed:
+                if parsed["necessidade_de_revisao_humana"] is not True:
+                    raise PipelineError("prefilled_label exige revisão humana true.")
+            candidate = _expand_compact_classification({
+                "resultado_hipotese": state,
+                "confianca": confidence,
+                "ha_lesao_focal_suspeita": state == "POSITIVA",
+                "ha_variante_anatomica_benigna": False,
+                "ha_pseudolesao_ou_artefato": False,
+                "tipo_alteracao_nao_alvo": "none",
+                "justificativa_da_separacao": (
+                    "Classificação rápida sem narrativa clínica gerada pelo modelo."
+                ),
+            })
+    elif mode in {"compact_classification", "choice_classification"}:
+        candidate = _expand_compact_classification(raw_report)
+    else:
+        candidate = raw_report
+    return validate_medgemma_report(candidate, config["report"])
+
+
 class HTTPJSONMedGemmaClient:
     """Adaptador para um gateway HTTP local com contrato dtwin-medgemma-v1.
 
@@ -665,6 +868,15 @@ class HTTPJSONMedGemmaClient:
             },
             "generation": {"max_output_tokens": int(self.med["max_output_tokens"])},
         }
+        if self.med.get("response_mode") == "compact_classification":
+            payload["generation"]["response_prefix"] = "{"
+        elif self.med.get("response_mode") == "prefilled_label":
+            payload["generation"]["response_prefix"] = '{"resultado_hipotese":"'
+        elif self.med.get("response_mode") == "choice_classification":
+            payload["generation"]["choices"] = [
+                "POSITIVA", "NEGATIVA", "INCONCLUSIVA",
+            ]
+            payload["generation"]["balanced_choices"] = True
         request = Request(
             str(self.med["endpoint_url"]),
             data=json.dumps(payload).encode("utf-8"),
@@ -713,6 +925,12 @@ class HTTPJSONMedGemmaClient:
         self.last_response_audit = {
             "schema": "argos-medgemma-response-validation-v1",
             "max_validation_retries": int(self.med.get("response_validation_max_retries", 1)),
+            "response_mode": self.med.get("response_mode", "full_report"),
+            "deterministic_report_expansion": (
+                self.med.get("response_mode") in {
+                    "compact_classification", "choice_classification", "prefilled_label",
+                }
+            ),
             "raw_response_persisted": False,
             "attempts": [],
         }
@@ -727,6 +945,10 @@ class HTTPJSONMedGemmaClient:
             inference_started = time.monotonic()
             decoded = self._post_generate(panel_bytes, current_prompt)
             total_inference_seconds += time.monotonic() - inference_started
+            backend_timings = decoded.get("timings_seconds")
+            if isinstance(backend_timings, dict):
+                self.last_timings["backend_queue_seconds"] = backend_timings.get("queue_seconds")
+                self.last_timings["backend_generation_seconds"] = backend_timings.get("generation_seconds")
             audit_entry = {
                 "attempt": validation_attempt,
                 "prompt_sha256": _sha256_text(current_prompt),
@@ -740,10 +962,59 @@ class HTTPJSONMedGemmaClient:
                 raise PipelineError(
                     "Backend não confirmou exatamente o modelo configurado; relatório descartado."
                 )
-            raw_report = decoded.get("report", decoded.get("output"))
+            if self.med.get("response_mode") == "choice_classification":
+                raw_choice = str(decoded.get("choice") or "")
+                probabilities = decoded.get("choice_probabilities") or {}
+                allowed_choices = {"POSITIVA", "NEGATIVA", "INCONCLUSIVA"}
+                if raw_choice not in allowed_choices:
+                    raise PipelineError("Backend não retornou uma escolha MedGemma autorizada.")
+                choice = raw_choice
+                try:
+                    probability = float(probabilities[choice])
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise PipelineError(
+                        "Backend não retornou probabilidade válida para a escolha."
+                    ) from exc
+                confidence = (
+                    "alta" if probability >= 0.75
+                    else "moderada" if probability >= 0.50
+                    else "baixa"
+                )
+                raw_report = {
+                    "resultado_hipotese": choice,
+                    "confianca": confidence,
+                    "ha_lesao_focal_suspeita": choice == "POSITIVA",
+                    "ha_variante_anatomica_benigna": False,
+                    "ha_pseudolesao_ou_artefato": False,
+                    "tipo_alteracao_nao_alvo": "none",
+                    "justificativa_da_separacao": (
+                        "Classificação rápida por escolha restrita; sem narrativa clínica gerada."
+                    ),
+                }
+                self.last_response_audit["choice_probabilities"] = {
+                    key: round(float(value), 6)
+                    for key, value in probabilities.items()
+                    if key in allowed_choices
+                }
+                self.last_response_audit["choice_aggregation"] = decoded.get(
+                    "choice_aggregation"
+                )
+            else:
+                raw_report = decoded.get("report", decoded.get("output"))
+            raw_audit_text = (
+                raw_report
+                if isinstance(raw_report, str)
+                else json.dumps(raw_report, sort_keys=True, ensure_ascii=False, default=str)
+            )
+            audit_entry.update(
+                raw_response_sha256=_sha256_text(raw_audit_text),
+                raw_response_chars=len(raw_audit_text),
+                raw_response_has_open_brace="{" in raw_audit_text,
+                raw_response_has_close_brace="}" in raw_audit_text,
+            )
             validation_started = time.monotonic()
             try:
-                validated = validate_medgemma_report(raw_report, self.config["report"])
+                validated = validate_configured_medgemma_report(raw_report, self.config)
             except PipelineError as exc:
                 total_validation_seconds += time.monotonic() - validation_started
                 last_validation_error = exc
@@ -764,7 +1035,12 @@ class HTTPJSONMedGemmaClient:
                     raise PipelineError(
                         f"Resposta MedGemma inválida após {validation_attempts} tentativa(s): {exc}"
                     ) from exc
-                current_prompt = _validation_retry_prompt(prompt, str(exc), max_prompt_chars)
+                current_prompt = _validation_retry_prompt(
+                    prompt,
+                    str(exc),
+                    max_prompt_chars,
+                    retry_number=validation_attempt,
+                )
                 continue
 
             total_validation_seconds += time.monotonic() - validation_started

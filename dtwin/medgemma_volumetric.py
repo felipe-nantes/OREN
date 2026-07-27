@@ -47,8 +47,12 @@ def effective_screening_timeout(
         if panel_strategy(panel_cfg) == "volumetric_blocks" else 1
     )
     med = config["medgemma"]
+    # Cada reparo de schema faz nova chamada HTTP, que pode ter retentativas de
+    # transporte. O timeout externo cobre ambos para não abortar uma recuperação.
+    request_attempts = int(med.get("max_retries", 0)) + 1
+    validation_attempts = int(med.get("response_validation_max_retries", 1)) + 1
     calculated = 60 + count * (
-        int(med["timeout_seconds"]) * (int(med.get("max_retries", 0)) + 1) + 30
+        int(med["timeout_seconds"]) * request_attempts * validation_attempts + 30
     )
     return max(int(configured_timeout), calculated), count
 

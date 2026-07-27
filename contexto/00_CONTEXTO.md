@@ -60,5 +60,5 @@ mapeado no `08_ROADMAP.md`.
 
 - Engenharia de Software: Nantes, Mateus
 - Biotecnologia: JM (provável responsável pela marcação manual de lesão)
-- Orientação clínica: Prof. Dr. (Anestesista) e Prof. Dr. (Cirurgião Geral)
+- Orientação clínica: Prof. Dr. (Anestesista)
 - Validação: cirurgiões de renome (ver `01_VISAO.md`)

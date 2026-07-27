@@ -6,11 +6,26 @@ import yaml
 from dtwin.core import PipelineError
 from dtwin.medgemma_client import (
     HTTPJSONMedGemmaClient,
+    _validation_retry_prompt,
     build_medgemma_prompt,
     load_screening_config,
     model_trace,
+    validate_configured_medgemma_report,
     validate_medgemma_report,
 )
+
+
+def test_json_retry_preserves_v1_and_v2_schema_boundaries():
+    error = "Resposta MedGemma não contém objeto JSON válido."
+    v1 = _validation_retry_prompt("triagem focal v1", error, 12000, retry_number=1)
+    v2 = _validation_retry_prompt(
+        'schema com "alvo_da_triagem" pathology target', error, 12000, retry_number=1
+    )
+
+    assert "alvo_da_triagem" not in v1
+    assert "variante anatômica" not in v1
+    assert '"alvo_da_triagem"' in v2
+    assert '"ha_lesao_focal_suspeita"' in v2
 
 
 def yaml_dump_config(config):
@@ -98,6 +113,146 @@ def test_volumetric_rag_config_preserves_volumetric_strategy():
     config = load_screening_config("configs/medgemma_local_4b_volumetric_rag.yaml")
     assert config["rag"]["enabled"] is True
     assert config["panel"]["strategy"] == "volumetric_blocks"
+    assert config["medgemma"]["timeout_seconds"] == 600
+    assert config["medgemma"]["max_output_tokens"] == 1024
+
+
+def test_pathology_target_volumetric_config_uses_4b_safe_limits():
+    config = load_screening_config("configs/medgemma_local_4b_volumetric_pathology_target.yaml")
+    assert config["panel"]["strategy"] == "volumetric_blocks"
+    assert config["medgemma"]["timeout_seconds"] == 600
+    assert config["medgemma"]["max_output_tokens"] == 1024
+
+
+def test_fast_pathology_config_is_prefilled_single_panel_and_no_retry():
+    config = load_screening_config("configs/medgemma_local_4b_fast_pathology.yaml")
+    prompt = build_medgemma_prompt(config)
+
+    assert config["panel"]["strategy"] == "uniform_9"
+    assert config["medgemma"]["response_mode"] == "prefilled_label"
+    assert config["medgemma"]["timeout_seconds"] == 120
+    assert config["medgemma"]["max_output_tokens"] == 64
+    assert config["medgemma"]["response_validation_max_retries"] == 0
+    assert config["rag"]["enabled"] is False
+    assert "estrutura tubular contínua" in prompt
+
+
+def test_compact_classification_expands_to_legacy_report_without_clinical_invention():
+    config = load_screening_config("configs/medgemma_local_4b_fast_pathology.yaml")
+    config["medgemma"]["response_mode"] = "compact_classification"
+    compact = {
+        "resultado_hipotese": "NEGATIVA",
+        "confianca": "moderada",
+        "ha_lesao_focal_suspeita": False,
+        "ha_variante_anatomica_benigna": True,
+        "ha_pseudolesao_ou_artefato": False,
+        "tipo_alteracao_nao_alvo": "vascular_variant",
+        "justificativa_da_separacao": "Estrutura tubular contínua compatível com vaso.",
+    }
+
+    report = validate_configured_medgemma_report(compact, config)
+
+    assert report["resultado_hipotese"] == "NEGATIVA"
+    assert report["ha_variante_anatomica_benigna"] is True
+    assert report["necessidade_de_revisao_humana"] is True
+    assert report["localizacao_aproximada"] == "Não determinada no modo de classificação rápida."
+    assert report["resumo_do_achado"] == compact["justificativa_da_separacao"]
+
+
+def test_compact_positive_without_suspicious_lesion_is_rejected():
+    config = load_screening_config("configs/medgemma_local_4b_fast_pathology.yaml")
+    config["medgemma"]["response_mode"] = "compact_classification"
+    compact = {
+        "resultado_hipotese": "POSITIVA",
+        "confianca": "alta",
+        "ha_lesao_focal_suspeita": False,
+        "ha_variante_anatomica_benigna": True,
+        "ha_pseudolesao_ou_artefato": False,
+        "tipo_alteracao_nao_alvo": "vascular_variant",
+        "justificativa_da_separacao": "Somente vaso calibroso.",
+    }
+
+    with pytest.raises(PipelineError, match="POSITIVA exige lesão focal"):
+        validate_configured_medgemma_report(compact, config)
+
+
+def test_compact_placeholder_evidence_is_rejected():
+    config = load_screening_config("configs/medgemma_local_4b_fast_pathology.yaml")
+    config["medgemma"]["response_mode"] = "compact_classification"
+    compact = {
+        "resultado_hipotese": "NEGATIVA",
+        "confianca": "baixa",
+        "ha_lesao_focal_suspeita": False,
+        "ha_variante_anatomica_benigna": False,
+        "ha_pseudolesao_ou_artefato": False,
+        "tipo_alteracao_nao_alvo": "none",
+        "justificativa_da_separacao": "uma evidência visual curta",
+    }
+
+    with pytest.raises(PipelineError, match="placeholder"):
+        validate_configured_medgemma_report(compact, config)
+
+
+def test_prefilled_http_request_generates_only_the_label_object(tmp_path, monkeypatch):
+    config = load_screening_config(
+        "configs/medgemma_local_4b_fast_pathology.yaml",
+        environ={
+            "MEDGEMMA_BACKEND_CONFIGURED": "true",
+            "MEDGEMMA_MODEL_AVAILABLE": "true",
+        },
+    )
+    panel = tmp_path / "panel.png"
+    panel.write_bytes(b"test-png-bytes")
+    requests = []
+    monkeypatch.setattr(
+        "dtwin.medgemma_client.socket.create_connection",
+        lambda *_args, **_kwargs: _Context(),
+    )
+
+    def fake_urlopen(request, timeout):
+        if request.data is None:
+            return _Context(json.dumps({
+                "status": "ready",
+                "model_id": config["medgemma"]["model_id"],
+                "model_version": config["medgemma"]["model_version"],
+                "contract": "dtwin-medgemma-v1",
+            }).encode("utf-8"))
+        payload = json.loads(request.data.decode("utf-8"))
+        requests.append(payload)
+        return _Context(json.dumps({
+            "model_id": config["medgemma"]["model_id"],
+            "model_version": config["medgemma"]["model_version"],
+            "output": '{"resultado_hipotese":"NEGATIVA"}',
+        }).encode("utf-8"))
+
+    monkeypatch.setattr("dtwin.medgemma_client.urlopen", fake_urlopen)
+    report = HTTPJSONMedGemmaClient(config).generate(panel, "research prompt")
+
+    assert report["resultado_hipotese"] == "NEGATIVA"
+    assert requests[0]["generation"]["response_prefix"] == '{"resultado_hipotese":"'
+    assert "choices" not in requests[0]["generation"]
+
+
+def test_prefilled_label_rejects_extra_model_fields():
+    config = load_screening_config("configs/medgemma_local_4b_fast_pathology.yaml")
+    with pytest.raises(PipelineError, match="schema mínimo autorizado"):
+        validate_configured_medgemma_report(
+            {"resultado_hipotese": "NEGATIVA", "diagnostico": "texto"}, config
+        )
+
+
+def test_prefilled_label_accepts_only_safe_minimal_fields():
+    config = load_screening_config("configs/medgemma_local_4b_fast_pathology.yaml")
+    report = validate_configured_medgemma_report({
+        "resultado_hipotese": "NEGATIVA",
+        "confianca": "moderada",
+        "necessidade_de_revisao_humana": True,
+    }, config)
+
+    assert report["resultado_hipotese"] == "NEGATIVA"
+    assert report["confianca"] == "moderada"
+    assert report["necessidade_de_revisao_humana"] is True
+    assert validate_configured_medgemma_report(report, config) == report
 
 
 def test_pathology_target_configs_preserve_volumetric_strategy_and_target_prompt():
@@ -366,6 +521,14 @@ def test_http_adapter_retries_invalid_schema_with_strict_prompt(tmp_path, monkey
     )
 
     def fake_urlopen(request, timeout):
+        if request.data is None:
+            health = {
+                "status": "ready",
+                "model_id": config["medgemma"]["model_id"],
+                "model_version": config["medgemma"]["model_version"],
+                "contract": "dtwin-medgemma-v1",
+            }
+            return _Context(json.dumps(health).encode("utf-8"))
         payload = json.loads(request.data.decode("utf-8"))
         prompts.append(payload["prompt"])
         report = valid_report("POSITIVA | NEGATIVA | INCONCLUSIVA") if len(prompts) == 1 else valid_report("POSITIVA")
@@ -388,6 +551,58 @@ def test_http_adapter_retries_invalid_schema_with_strict_prompt(tmp_path, monkey
     assert [a["status"] for a in client.last_response_audit["attempts"]] == ["invalid", "accepted"]
     assert client.last_timings["response_validation_attempts"] == 2
     assert client.last_timings["response_repair_used"] is True
+
+
+def test_http_adapter_uses_distinct_compact_retries_when_json_is_missing(tmp_path, monkeypatch):
+    config = load_screening_config(
+        "configs/medgemma_local_4b_volumetric_pathology_target.yaml",
+        environ={
+            "MEDGEMMA_BACKEND_CONFIGURED": "true",
+            "MEDGEMMA_MODEL_AVAILABLE": "true",
+        },
+    )
+    panel = tmp_path / "panel.png"
+    panel.write_bytes(b"test-png-bytes")
+    prompts = []
+    monkeypatch.setattr(
+        "dtwin.medgemma_client.socket.create_connection",
+        lambda *_args, **_kwargs: _Context(),
+    )
+
+    def fake_urlopen(request, timeout):
+        if request.data is None:
+            health = {
+                "status": "ready",
+                "model_id": config["medgemma"]["model_id"],
+                "model_version": config["medgemma"]["model_version"],
+                "contract": "dtwin-medgemma-v1",
+            }
+            return _Context(json.dumps(health).encode("utf-8"))
+        payload = json.loads(request.data.decode("utf-8"))
+        prompts.append(payload["prompt"])
+        output = "raciocínio sem objeto estruturado" if len(prompts) < 3 else json.dumps(valid_report("POSITIVA"))
+        body = json.dumps({
+            "model_id": config["medgemma"]["model_id"],
+            "model_version": config["medgemma"]["model_version"],
+            "output": output,
+        }).encode("utf-8")
+        return _Context(body)
+
+    monkeypatch.setattr("dtwin.medgemma_client.urlopen", fake_urlopen)
+    client = HTTPJSONMedGemmaClient(config)
+    report = client.generate(panel, "MARCADOR_DO_PROMPT_CLINICO_LONGO")
+
+    assert report["resultado_hipotese"] == "POSITIVA"
+    assert len(prompts) == 3
+    assert "MARCADOR_DO_PROMPT_CLINICO_LONGO" not in prompts[1]
+    assert "Comece a resposta com {" in prompts[1]
+    assert "tentativa 1" in prompts[1]
+    assert "tentativa 2" in prompts[2]
+    assert prompts[1] != prompts[2]
+    first_audit = client.last_response_audit["attempts"][0]
+    assert first_audit["raw_response_chars"] > 0
+    assert first_audit["raw_response_has_open_brace"] is False
+    assert len(first_audit["raw_response_sha256"]) == 64
 
 
 def test_http_adapter_retries_v2_inconsistent_report(tmp_path, monkeypatch):

@@ -77,8 +77,8 @@ def test_effective_timeout_scales_with_panels():
     }
     timeout, count = effective_screening_timeout(mask, config, configured_timeout=50)
     assert count == 3
-    # 60 + 3 * (100 * (1 + 1) + 30) = 60 + 3 * 230 = 750
-    assert timeout == 750
+    # 60 + 3 * (100 * transporte(2) * schema(2) + 30) = 1350
+    assert timeout == 1350
 
 
 def test_effective_timeout_uniform_is_single_panel_and_honours_floor():

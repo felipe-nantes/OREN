@@ -39,3 +39,19 @@ def test_mesh_from_empty_mask_is_none(tmp_path):
     path = tmp_path / "empty.nii.gz"
     save_image(array_to_image(m, ref, np.uint8), path)
     assert _mesh_from_mask(path, 0.5, 0, 60.0) is None
+
+
+def test_taubin_smoothing_preserves_volume(tmp_path):
+    # A suavização Taubin (windowed-sinc) deve preservar o volume do órgão:
+    # o resultado não pode encolher para uma "bolha" muito menor que a máscara.
+    m = make_sphere_mask((40, 40, 40), (20, 20, 20), 12)
+    ref = make_geo_image(m)
+    path = tmp_path / "mask.nii.gz"
+    save_image(array_to_image(m, ref, np.uint8), path)
+
+    raw = _mesh_from_mask(path, level=0.5, smooth_iter=0, feature_angle=60.0)
+    smoothed = _mesh_from_mask(path, level=0.5, smooth_iter=30, feature_angle=60.0, pass_band=0.1)
+
+    assert smoothed is not None and smoothed.n_points > 0
+    # Volume preservado dentro de 5% do da malha crua (sem encolhimento severo).
+    assert abs(smoothed.volume - raw.volume) / raw.volume < 0.05

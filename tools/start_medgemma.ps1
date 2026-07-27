@@ -1,4 +1,5 @@
 param(
+    [string]$Venv = ".venv-win",
     [string]$Config = "configs\medgemma_local_4b.yaml",
     [int]$Port = 8001,
     [int]$WaitSeconds = 360
@@ -6,7 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$Python = Join-Path $Root ".venv\Scripts\python.exe"
+$Python = Join-Path $Root "$Venv\Scripts\python.exe"
 $StateDir = Join-Path $Root ".medgemma"
 $PidFile = Join-Path $StateDir "server.pid"
 $OutLog = Join-Path $StateDir "server.out.log"

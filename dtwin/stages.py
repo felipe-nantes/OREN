@@ -125,7 +125,13 @@ def _refine_mask(mask_zyx, opening: bool, radius: int, min_voxels: int) -> np.nd
     return m.astype(np.uint8)
 
 
-def _mesh_from_mask(mask_path: Path, level: float, smooth_iter: int, feature_angle: float):
+def _mesh_from_mask(
+    mask_path: Path,
+    level: float,
+    smooth_iter: int,
+    feature_angle: float,
+    pass_band: float = 0.1,
+):
     img = read_image(mask_path)
     mask = array_from(img).astype(np.float32)
     if mask.max() < 0.5:
@@ -145,7 +151,15 @@ def _mesh_from_mask(mask_path: Path, level: float, smooth_iter: int, feature_ang
     ).ravel()
     mesh = pv.PolyData(verts_lps, faces_pv)
     if smooth_iter and int(smooth_iter) > 0:
-        mesh = mesh.smooth(n_iter=int(smooth_iter), feature_angle=float(feature_angle))
+        # Taubin (windowed-sinc) em vez do Laplaciano: remove a "escada" de
+        # voxels do marching cubes PRESERVANDO o volume. O Laplaciano encolhe a
+        # malha a cada iteração, deixando o fígado como uma bolha menor e menos
+        # fiel; o Taubin mantém as dimensões reais do órgão enquanto arredonda.
+        mesh = mesh.smooth_taubin(
+            n_iter=int(smooth_iter),
+            pass_band=float(pass_band),
+            feature_angle=float(feature_angle),
+        )
     return mesh
 
 
@@ -242,6 +256,55 @@ def stage2_normalize(case: Case, profile: dict) -> None:
     log.info("Estágio 2: volume normalizado (%s) salvo para referência.", method)
 
 
+def _anatomy_structures(profile: dict) -> list[tuple[str, dict]]:
+    """Lê estruturas internas opcionais do perfil de modo estritamente local.
+
+    O perfil, e não o DICOM ou o navegador, define os rótulos e os papéis que
+    podem ser exportados. Assim nenhuma estrutura inesperada é publicada.
+    """
+    config = profile.get("segmentacao_anatomia") or {}
+    if not config.get("habilitada", False):
+        return []
+    tasks = config.get("tarefas")
+    if not isinstance(tasks, list):
+        raise PipelineError("segmentacao_anatomia.tarefas deve ser uma lista.")
+    structures: list[tuple[str, dict]] = []
+    roles: set[str] = set()
+    for task_entry in tasks:
+        if not isinstance(task_entry, dict):
+            raise PipelineError("Cada tarefa anatômica deve ser um objeto.")
+        task = str(task_entry.get("motor_task") or "").strip()
+        entries = task_entry.get("estruturas")
+        if not task or not isinstance(entries, list):
+            raise PipelineError("Tarefa anatômica exige motor_task e estruturas.")
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise PipelineError("Cada estrutura anatômica deve ser um objeto.")
+            role = str(entry.get("papel") or "").strip()
+            label = str(entry.get("rotulo") or "").strip()
+            if (
+                not role
+                or not label
+                or not role.replace("_", "").isalnum()
+                or role in roles
+            ):
+                raise PipelineError("Estrutura anatômica possui papel/rótulo inválido ou duplicado.")
+            roles.add(role)
+            structures.append((task, dict(entry)))
+    return structures
+
+
+def _remove_anatomy_artifacts(case: Case, role: str) -> None:
+    """Remove somente artefatos derivados de uma estrutura opcional ausente."""
+    for path in (
+        case.anatomy_mask(role),
+        case.anatomy_mask(role, clean=True),
+        case.anatomy_mesh(role),
+    ):
+        if path.exists():
+            path.unlink()
+
+
 # --------------------------------------------------------------------------- #
 # (3) Segmentação do ÓRGÃO — automática (TotalSegmentator MRI). GATE CRÍTICO.
 # --------------------------------------------------------------------------- #
@@ -249,6 +312,7 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
     seg = profile["segmentacao_orgao"]
     task = seg.get("motor_task", "total_mr")
     label = seg["rotulo_alvo"]
+    anatomy = _anatomy_structures(profile)
 
     try:
         from totalsegmentator.python_api import totalsegmentator
@@ -260,20 +324,28 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
         ) from e
 
     case.seg_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        totalsegmentator(
-            input=str(case.volume),
-            output=str(case.seg_dir),
-            task=task,
-            roi_subset=[label],  # só o órgão-alvo: mais rápido e enxuto
-            device=device,
-            fast=fast,
-            quiet=True,
-        )
-    except Exception as e:  # noqa: BLE001
-        raise PipelineError(
-            f"Falha na segmentação automática ({task}/{label}): {e}"
-        ) from e
+    labels_by_task: dict[str, set[str]] = {str(task): {str(label)}}
+    for anatomy_task, entry in anatomy:
+        labels_by_task.setdefault(anatomy_task, set()).add(str(entry["rotulo"]))
+    for current_task, labels in labels_by_task.items():
+        try:
+            totalsegmentator(
+                input=str(case.volume),
+                output=str(case.seg_dir),
+                task=current_task,
+                roi_subset=sorted(labels),
+                device=device,
+                fast=fast,
+                quiet=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            if current_task == task:
+                raise PipelineError(
+                    f"Falha na segmentação automática ({task}/{label}): {e}"
+                ) from e
+            # Anatomia interna é complementar ao fígado principal; sua falha
+            # não cria dado sintético nem invalida um caso já segmentado.
+            log.warning("Anatomia interna não disponível (%s): %s", current_task, e)
 
     produced = case.seg_dir / f"{label}.nii.gz"
     if not produced.exists():
@@ -292,6 +364,16 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
 
     save_image(organ_img, case.mask_organ)
     log.info("Estágio 3: órgão '%s' segmentado automaticamente (task=%s).", label, task)
+
+    for anatomy_task, entry in anatomy:
+        role = str(entry["papel"])
+        produced = case.seg_dir / f"{entry['rotulo']}.nii.gz"
+        if not produced.exists() or int(array_from(read_image(produced)).sum()) == 0:
+            _remove_anatomy_artifacts(case, role)
+            log.info("Estágio 3: anatomia opcional ausente (%s/%s).", anatomy_task, role)
+            continue
+        shutil.copyfile(produced, case.anatomy_mask(role))
+        log.info("Estágio 3: anatomia interna '%s' disponível (%s).", role, anatomy_task)
 
 
 # --------------------------------------------------------------------------- #
@@ -408,23 +490,52 @@ def stage5_refine(case: Case, profile: dict) -> None:
     if lesion.sum() == 0:
         save_image(array_to_image(lesion, lesion_img, np.uint8), case.mask_lesion_clean)
         log.info("Estágio 5: sem lesão a refinar.")
-        return
-
-    lc = refino.get("lesao", {})
-    lesion_clean = _refine_mask(
-        lesion, lc.get("opening", False), lc.get("opening_radius", 1),
-        lc.get("min_volume_voxels", 30),
-    )
-    if lesion_clean.sum() == 0:
-        raise PipelineError(
-            "Refino zerou a máscara da lesão — afrouxe refino.lesao "
-            "(a lesão pode ser pequena)."
+    else:
+        lc = refino.get("lesao", {})
+        lesion_clean = _refine_mask(
+            lesion, lc.get("opening", False), lc.get("opening_radius", 1),
+            lc.get("min_volume_voxels", 30),
         )
-    save_image(array_to_image(lesion_clean, lesion_img, np.uint8), case.mask_lesion_clean)
-    log.info(
-        "Estágio 5: lesão refinada (%d -> %d voxels).",
-        int(lesion.sum()), int(lesion_clean.sum()),
-    )
+        if lesion_clean.sum() == 0:
+            raise PipelineError(
+                "Refino zerou a máscara da lesão — afrouxe refino.lesao "
+                "(a lesão pode ser pequena)."
+            )
+        save_image(array_to_image(lesion_clean, lesion_img, np.uint8), case.mask_lesion_clean)
+        log.info(
+            "Estágio 5: lesão refinada (%d -> %d voxels).",
+            int(lesion.sum()), int(lesion_clean.sum()),
+        )
+
+    # Anatomia interna é complementar: não pode apagar a máscara hepática nem
+    # bloquear a revisão quando um modelo auxiliar não encontra uma estrutura.
+    ac = refino.get("anatomia", {})
+    for _, entry in _anatomy_structures(profile):
+        role = str(entry["papel"])
+        raw_path = case.anatomy_mask(role)
+        clean_path = case.anatomy_mask(role, clean=True)
+        if not raw_path.exists():
+            if clean_path.exists():
+                clean_path.unlink()
+            continue
+        anatomy_img = read_image(raw_path)
+        anatomy = array_from(anatomy_img)
+        anatomy_clean = _refine_mask(
+            anatomy,
+            ac.get("opening", False),
+            ac.get("opening_radius", 1),
+            ac.get("min_volume_voxels", 20),
+        )
+        if anatomy.sum() > 0 and anatomy_clean.sum() == 0:
+            log.warning("Estágio 5: anatomia '%s' removida pelo refino; omitindo-a.", role)
+            if clean_path.exists():
+                clean_path.unlink()
+            continue
+        save_image(array_to_image(anatomy_clean, anatomy_img, np.uint8), clean_path)
+        log.info(
+            "Estágio 5: anatomia '%s' refinada (%d -> %d voxels).",
+            role, int(anatomy.sum()), int(anatomy_clean.sum()),
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -435,8 +546,9 @@ def stage6_mesh(case: Case, profile: dict) -> None:
     level = float(mesh_cfg.get("nivel_marching_cubes", 0.5))
     sm = int(mesh_cfg.get("suavizacao_iteracoes", 30))
     fa = float(mesh_cfg.get("feature_angle", 60.0))
+    pb = float(mesh_cfg.get("taubin_pass_band", 0.1))
 
-    organ_mesh = _mesh_from_mask(case.mask_organ_clean, level, sm, fa)
+    organ_mesh = _mesh_from_mask(case.mask_organ_clean, level, sm, fa, pass_band=pb)
     if organ_mesh is None:
         raise PipelineError(
             "Malha do órgão vazia — máscara do órgão sem conteúdo após refino."
@@ -447,7 +559,7 @@ def stage6_mesh(case: Case, profile: dict) -> None:
         organ_mesh.n_points, organ_mesh.n_cells,
     )
 
-    lesion_mesh = _mesh_from_mask(case.mask_lesion_clean, level, sm, fa)
+    lesion_mesh = _mesh_from_mask(case.mask_lesion_clean, level, sm, fa, pass_band=pb)
     if lesion_mesh is not None:
         lesion_mesh.save(str(case.mesh_lesion))
         log.info(
@@ -462,6 +574,25 @@ def stage6_mesh(case: Case, profile: dict) -> None:
             log.info("Estágio 6: malha de lesão obsoleta removida (caso sem lesão).")
         log.info("Estágio 6: sem malha de lesão (máscara vazia).")
 
+    for _, entry in _anatomy_structures(profile):
+        role = str(entry["papel"])
+        clean_path = case.anatomy_mask(role, clean=True)
+        mesh_path = case.anatomy_mesh(role)
+        if not clean_path.exists():
+            if mesh_path.exists():
+                mesh_path.unlink()
+            continue
+        anatomy_mesh = _mesh_from_mask(clean_path, level, sm, fa, pass_band=pb)
+        if anatomy_mesh is None:
+            if mesh_path.exists():
+                mesh_path.unlink()
+            continue
+        anatomy_mesh.save(str(mesh_path))
+        log.info(
+            "Estágio 6: malha anatômica '%s' (%d vértices, %d faces).",
+            role, anatomy_mesh.n_points, anatomy_mesh.n_cells,
+        )
+
 
 # --------------------------------------------------------------------------- #
 # (7) Exportação STL (LPS) + publicação para o visualizador web
@@ -469,13 +600,40 @@ def stage6_mesh(case: Case, profile: dict) -> None:
 def stage7_export_publish(case: Case, profile: dict) -> None:
     case.outputs.mkdir(parents=True, exist_ok=True)
     mesh_cfg = profile.get("mesh", {})
+    anatomy = _anatomy_structures(profile)
+    has_couinaud = any(
+        str(entry["papel"]).startswith("couinaud_") and case.anatomy_mesh(str(entry["papel"])).exists()
+        for _, entry in anatomy
+    )
     plan = [
-        ("orgao", case.mesh_organ, mesh_cfg.get("cor_orgao", "#C8A27D")),
-        ("lesao", case.mesh_lesion, mesh_cfg.get("cor_lesao", "#D7263D")),
+        {
+            "role": "orgao", "vtp": case.mesh_organ,
+            "color": mesh_cfg.get("cor_orgao", "#C8A27D"),
+            "label": "Fígado", "material": "organ", "opacity": 0.5,
+            "default_visible": not has_couinaud,
+        },
+        {
+            "role": "lesao", "vtp": case.mesh_lesion,
+            "color": mesh_cfg.get("cor_lesao", "#D7263D"),
+            "label": "Lesão marcada manualmente", "material": "lesion", "opacity": 1.0,
+            "default_visible": True,
+        },
     ]
+    for _, entry in anatomy:
+        role = str(entry["papel"])
+        plan.append({
+            "role": role,
+            "vtp": case.anatomy_mesh(role),
+            "color": str(entry.get("cor", "#C8A27D")),
+            "label": str(entry.get("nome", role)),
+            "material": str(entry.get("material", "anatomy")),
+            "opacity": float(entry.get("opacidade", 0.8)),
+            "default_visible": True,
+        })
 
     items = []
-    for role, vtp, color in plan:
+    for spec in plan:
+        role, vtp, color = spec["role"], spec["vtp"], spec["color"]
         stl = case.outputs / f"{profile['id']}_{role}.stl"
         if not vtp.exists():
             # Remove STL de execução anterior para este papel; sem isso, um caso
@@ -489,7 +647,15 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
             mesh.save(str(stl))  # API correta (corrige o pv.save_mesh_as inexistente)
         except Exception as e:  # noqa: BLE001
             raise PipelineError(f"Falha ao exportar STL {stl}: {e}") from e
-        items.append({"role": role, "stl": stl.name, "color": color})
+        items.append({
+            "role": role,
+            "stl": stl.name,
+            "color": color,
+            "label": spec["label"],
+            "material": spec["material"],
+            "opacity": spec["opacity"],
+            "default_visible": spec["default_visible"],
+        })
         log.info("Estágio 7: STL exportado -> %s", stl)
 
     if not items:

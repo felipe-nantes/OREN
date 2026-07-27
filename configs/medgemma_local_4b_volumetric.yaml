@@ -1,6 +1,16 @@
 # Cenário B: herda o backend 4B operacional e altera somente a estratégia do painel.
 extends: medgemma_local_4b.yaml
 medgemma_screening:
+  medgemma:
+    # Painéis volumétricos são executados um a um no 4B local. O baseline
+    # continua no arquivo pai; estes limites evitam abortar uma inferência válida
+    # de um painel pesado por um timeout curto ou uma resposta excessivamente longa.
+    timeout_seconds: 600
+    # O 4B pode emitir tokens internos de raciocínio antes do JSON. Abaixo de
+    # 1024 tokens a resposta pode terminar antes de abrir o objeto estruturado.
+    max_output_tokens: 1024
+    # Original + até duas correções de schema por painel; uniform_9 não é alterado.
+    response_validation_max_retries: 2
   panel:
     strategy: volumetric_blocks
     axial_tiles_per_panel: 9

@@ -29,6 +29,28 @@ segmentacao_orgao:
   motor_task: total_mr        # task de RM do TotalSegmentator (50 estruturas)
   rotulo_alvo: liver          # classe a extrair da saída do modelo
 
+# --- Anatomia interna para o visualizador 3D (automática, RM) ---------
+# Estruturas opcionais: uma ausência não invalida a máscara hepática nem a
+# triagem MedGemma. Todas são derivadas exclusivamente do exame do caso.
+segmentacao_anatomia:
+  habilitada: true
+  tarefas:
+    - motor_task: liver_segments_mr
+      estruturas:
+        - {papel: couinaud_i,    rotulo: liver_segment_1, nome: "Segmento Couinaud I",    cor: "#E69F00", material: segment, opacidade: 0.82}
+        - {papel: couinaud_ii,   rotulo: liver_segment_2, nome: "Segmento Couinaud II",   cor: "#56B4E9", material: segment, opacidade: 0.82}
+        - {papel: couinaud_iii,  rotulo: liver_segment_3, nome: "Segmento Couinaud III",  cor: "#009E73", material: segment, opacidade: 0.82}
+        - {papel: couinaud_iv,   rotulo: liver_segment_4, nome: "Segmento Couinaud IV",   cor: "#F0E442", material: segment, opacidade: 0.82}
+        - {papel: couinaud_v,    rotulo: liver_segment_5, nome: "Segmento Couinaud V",    cor: "#0072B2", material: segment, opacidade: 0.82}
+        - {papel: couinaud_vi,   rotulo: liver_segment_6, nome: "Segmento Couinaud VI",   cor: "#D55E00", material: segment, opacidade: 0.82}
+        - {papel: couinaud_vii,  rotulo: liver_segment_7, nome: "Segmento Couinaud VII",  cor: "#CC79A7", material: segment, opacidade: 0.82}
+        - {papel: couinaud_viii, rotulo: liver_segment_8, nome: "Segmento Couinaud VIII", cor: "#8C564B", material: segment, opacidade: 0.82}
+    - motor_task: total_mr
+      estruturas:
+        - {papel: vesicula_biliar, rotulo: gallbladder, nome: "Vesícula biliar", cor: "#62A65A", material: gallbladder, opacidade: 0.90}
+        - {papel: veia_porta_esplenica, rotulo: portal_vein_and_splenic_vein, nome: "Veia porta e esplênica", cor: "#16A6C9", material: vessel, opacidade: 0.92}
+        - {papel: veia_cava_inferior, rotulo: inferior_vena_cava, nome: "Veia cava inferior", cor: "#4D78C8", material: vessel, opacidade: 0.92}
+
 # --- Segmentação da LESÃO (manual no 3D Slicer no MVP) ----------------
 segmentacao_lesao:
   modo: manual_slicer
@@ -44,12 +66,17 @@ refino:
     opening: false            # NÃO erodir: lesão pequena é real
     opening_radius: 1
     min_volume_voxels: 30
+  anatomia:
+    opening: false            # não erodir segmentos ou vasos finos
+    opening_radius: 1
+    min_volume_voxels: 20
 
 # --- Geração de malha -------------------------------------------------
 mesh:
   nivel_marching_cubes: 0.5
   suavizacao_iteracoes: 30
   feature_angle: 60.0
+  taubin_pass_band: 0.1       # Taubin (windowed-sinc): menor = mais suave, preserva volume
   cor_orgao: "#C8A27D"        # consumido pelo manifesto do visualizador
   cor_lesao: "#D7263D"
 
@@ -63,7 +90,5 @@ flywheel:
 
 # =====================================================================
 # FUTURO (fase 2 — contexto/10_MATURIDADE_DIGITAL_TWIN.md):
-#   - motor_task: liver_segments_mr  -> segmentos de Couinaud (RM)
-#   - adicionar vasculatura hepática
 #   - tetraedralização (malha volumétrica) p/ FEA biomecânico (Nível 2)
 # =====================================================================

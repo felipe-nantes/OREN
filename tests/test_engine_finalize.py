@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 
 from dtwin.engine import Engine
+from dtwin.core import array_to_image, read_image, save_image
+from .conftest import make_sphere_mask
 
 
 def test_finalize_produces_stls_and_manifest(synthetic_case):
@@ -55,3 +57,22 @@ def test_refinalize_no_lesion_drops_prior_lesion(synthetic_case):
     assert "lesao" not in roles, "stale lesion survived a --no-lesion re-finalize"
     assert not (case.outputs / "figado_lesao.stl").exists()
     assert not case.mesh_lesion.exists()
+
+
+def test_finalize_exports_internal_anatomy_when_available(synthetic_case):
+    """Anatomia interna é publicada com metadados para o viewer, sem atlas externo."""
+    ref = read_image(synthetic_case.mask_organ)
+    shape = tuple(reversed(ref.GetSize()))
+    for role, center in (("couinaud_i", (20, 16, 20)), ("vesicula_biliar", (25, 23, 20))):
+        mask = make_sphere_mask(shape, center, 4)
+        save_image(array_to_image(mask, ref), synthetic_case.anatomy_mask(role))
+
+    case = Engine(Path("profiles/figado.yaml")).finalize(str(synthetic_case.root), no_lesion=False)
+    data = json.loads((case.outputs / "viewer_manifest.json").read_text(encoding="utf-8"))
+    roles = {item["role"]: item for item in data["meshes"]}
+
+    assert {"orgao", "lesao", "couinaud_i", "vesicula_biliar"} <= set(roles)
+    assert roles["couinaud_i"]["label"] == "Segmento Couinaud I"
+    assert roles["couinaud_i"]["material"] == "segment"
+    assert roles["orgao"]["default_visible"] is False
+    assert (case.outputs / roles["couinaud_i"]["stl"]).is_file()

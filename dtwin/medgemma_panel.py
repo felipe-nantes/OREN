@@ -111,14 +111,21 @@ def _render_tile(
     col_spacing: float,
     contour_width: int,
     contour_color: tuple[int, int, int],
+    crop_bbox: tuple[int, int, int, int] | None = None,
+    show_contour: bool = True,
 ) -> Image.Image:
+    if crop_bbox is not None:
+        row_start, row_end, col_start, col_end = crop_bbox
+        image_2d = image_2d[row_start:row_end, col_start:col_end]
+        mask_2d = mask_2d[row_start:row_end, col_start:col_end]
     gray = np.clip((image_2d.astype(np.float32) - lo) / (hi - lo), 0.0, 1.0)
     rgb = np.repeat((gray * 255.0).astype(np.uint8)[..., None], 3, axis=2)
-    boundary = find_boundaries(mask_2d.astype(bool), mode="inner")
-    if contour_width > 1:
-        boundary = binary_dilation(boundary, iterations=contour_width - 1)
-    # Contorno apenas: o sinal dentro do parênquima permanece integralmente visível.
-    rgb[boundary] = np.asarray(contour_color, dtype=np.uint8)
+    if show_contour:
+        boundary = find_boundaries(mask_2d.astype(bool), mode="inner")
+        if contour_width > 1:
+            boundary = binary_dilation(boundary, iterations=contour_width - 1)
+        # Contorno apenas: o sinal dentro do parênquima permanece integralmente visível.
+        rgb[boundary] = np.asarray(contour_color, dtype=np.uint8)
 
     source = Image.fromarray(np.flipud(rgb), mode="RGB")
     physical_w = max(1.0, source.width * float(col_spacing))
@@ -136,6 +143,22 @@ def _render_tile(
     draw.text((8, 6), label, fill=(235, 240, 246))
     draw.rectangle((0, 0, tile_size - 1, tile_size - 1), outline=(52, 61, 72))
     return tile
+
+
+def _mask_bbox_2d(mask_2d: np.ndarray, margin_fraction: float) -> tuple[int, int, int, int]:
+    rows, cols = np.where(np.asarray(mask_2d, dtype=bool))
+    if rows.size == 0:
+        raise PipelineError("Não foi possível calcular o recorte hepático.")
+    row_span = int(rows.max() - rows.min() + 1)
+    col_span = int(cols.max() - cols.min() + 1)
+    row_margin = max(2, int(np.ceil(row_span * margin_fraction)))
+    col_margin = max(2, int(np.ceil(col_span * margin_fraction)))
+    return (
+        max(0, int(rows.min()) - row_margin),
+        min(mask_2d.shape[0], int(rows.max()) + row_margin + 1),
+        max(0, int(cols.min()) - col_margin),
+        min(mask_2d.shape[1], int(cols.max()) + col_margin + 1),
+    )
 
 
 def generate_liver_panel(
@@ -218,6 +241,12 @@ def generate_liver_panel(
     if not isinstance(color_raw, list) or len(color_raw) != 3:
         raise PipelineError("panel.contour_color_rgb deve conter três inteiros RGB.")
     contour_color = tuple(int(np.clip(x, 0, 255)) for x in color_raw)
+    crop_to_liver = panel_cfg.get("crop_to_liver") is True
+    crop_margin = float(panel_cfg.get("crop_margin_fraction", 0.15))
+    show_contour = panel_cfg.get("overlay_mode", "contour") == "contour"
+    axial_bbox = _mask_bbox_2d(mask.any(axis=0), crop_margin) if crop_to_liver else None
+    coronal_bbox = _mask_bbox_2d(mask.any(axis=1), crop_margin) if crop_to_liver else None
+    sagittal_bbox = _mask_bbox_2d(mask.any(axis=2), crop_margin) if crop_to_liver else None
 
     sx, sy, sz = (float(x) for x in volume_img.GetSpacing())
     strategy = panel_strategy(panel_cfg)
@@ -230,15 +259,15 @@ def generate_liver_panel(
             index_offset_zyx=(0, 0, 0),
             render_axial=lambda z, label: _render_tile(
                 volume[z], mask[z], label, tile_size, lo, hi, sy, sx,
-                contour_width, contour_color,
+                contour_width, contour_color, axial_bbox, show_contour,
             ),
             render_coronal=lambda y, label: _render_tile(
                 volume[:, y, :], mask[:, y, :], label, tile_size, lo, hi, sz, sx,
-                contour_width, contour_color,
+                contour_width, contour_color, coronal_bbox, show_contour,
             ),
             render_sagittal=lambda x, label: _render_tile(
                 volume[:, :, x], mask[:, :, x], label, tile_size, lo, hi, sz, sy,
-                contour_width, contour_color,
+                contour_width, contour_color, sagittal_bbox, show_contour,
             ),
             notice_text=(
                 "MODO PESQUISA\n\nCobertura volumetrica.\nHipotese visual apenas.\n"
@@ -252,7 +281,11 @@ def generate_liver_panel(
             "schema_version": "dtwin-medgemma-panel-set-v2",
             "case_id": case_manifest["case_id"], "organ": expected_organ,
             "modality": "MRI", "regulatory_mode": "RESEARCH",
-            "input_type": "mri_with_liver_contour", "lesion_pre_marked": False,
+            "input_type": (
+                "mri_liver_crop_without_overlay"
+                if crop_to_liver and not show_contour else "mri_with_liver_contour"
+            ),
+            "lesion_pre_marked": False,
             "panel_strategy": strategy,
             "panel_image": first_path.name,
             "panel_sha256": sha256_of(first_path),
@@ -268,6 +301,9 @@ def generate_liver_panel(
             },
             "coverage": panel_set.coverage,
             "liver_mask_voxels": mask_voxels,
+            "crop_to_liver": crop_to_liver,
+            "crop_margin_fraction": crop_margin if crop_to_liver else None,
+            "overlay_mode": "contour" if show_contour else "none",
             "png_metadata_keys": list(panel_set.png_metadata_keys),
             "phi_metadata_removed": True,
             "visible_phi_review_required": True,
@@ -302,19 +338,21 @@ def generate_liver_panel(
         tiles.append(
             _render_tile(
                 volume[z], mask[z], f"AXIAL {number}/9", tile_size, lo, hi,
-                sy, sx, contour_width, contour_color,
+                sy, sx, contour_width, contour_color, axial_bbox, show_contour,
             )
         )
     tiles.append(
         _render_tile(
             volume[:, yc, :], mask[:, yc, :], "CORONAL (CENTROIDE)",
             tile_size, lo, hi, sz, sx, contour_width, contour_color,
+            coronal_bbox, show_contour,
         )
     )
     tiles.append(
         _render_tile(
             volume[:, :, xc], mask[:, :, xc], "SAGITAL (CENTROIDE)",
             tile_size, lo, hi, sz, sy, contour_width, contour_color,
+            sagittal_bbox, show_contour,
         )
     )
 
@@ -348,7 +386,10 @@ def generate_liver_panel(
         "organ": expected_organ,
         "modality": "MRI",
         "regulatory_mode": "RESEARCH",
-        "input_type": "mri_with_liver_contour",
+        "input_type": (
+            "mri_liver_crop_without_overlay"
+            if crop_to_liver and not show_contour else "mri_with_liver_contour"
+        ),
         "lesion_pre_marked": False,
         "panel_image": panel_path.name,
         "panel_sha256": panel_sha256,
@@ -361,6 +402,9 @@ def generate_liver_panel(
             "sagittal_centroid_x": xc,
         },
         "liver_mask_voxels": mask_voxels,
+        "crop_to_liver": crop_to_liver,
+        "crop_margin_fraction": crop_margin if crop_to_liver else None,
+        "overlay_mode": "contour" if show_contour else "none",
         "png_metadata_keys": metadata_keys,
         "phi_metadata_removed": True,
         "visible_phi_review_required": True,

@@ -27,7 +27,6 @@ import platform
 import shutil
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 import uuid
@@ -49,6 +48,15 @@ from dtwin.benchmark.metrics import compute_benchmark_metrics
 from dtwin.benchmark.hashing import git_state
 from dtwin.benchmark.reporting import write_run_outputs
 from dtwin.benchmark.runner import classify_screening_failure
+from dtwin.benchmark.dataset_audit import (
+    describe_selected_series,
+    select_best_mr_series,
+)
+from dtwin.benchmark.operational_timing import (
+    DEFAULT_REPORT_BUDGET_SECONDS,
+    build_operational_timing,
+    persist_operational_timing,
+)
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import (
     OPTIONAL_REPORT_V2_FIELDS,
@@ -56,6 +64,7 @@ from dtwin.medgemma_client import (
     load_screening_config,
 )
 from dtwin.medgemma_volumetric import effective_screening_timeout
+from dtwin.segmentation_subprocess import run_segmentation_subprocess
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 log = logging.getLogger("dtwin.webapp")
@@ -80,10 +89,21 @@ PATHOLOGY_TARGET_MEDGEMMA_CONFIG = os.environ.get(
     "WEBAPP_PATHOLOGY_TARGET_MEDGEMMA_CONFIG",
     "configs/medgemma_local_4b_volumetric_pathology_target.yaml",
 )
+FAST_PATHOLOGY_MEDGEMMA_CONFIG = os.environ.get(
+    "WEBAPP_FAST_PATHOLOGY_MEDGEMMA_CONFIG",
+    "configs/medgemma_local_4b_fast_pathology.yaml",
+)
 BENCHMARK_SCENARIOS = {
     "baseline": MEDGEMMA_CONFIG,
     "volumetric": VOLUMETRIC_MEDGEMMA_CONFIG,
     "rag": RAG_MEDGEMMA_CONFIG,
+    "volumetric_rag": VOLUMETRIC_RAG_MEDGEMMA_CONFIG,
+    "pathology_target": PATHOLOGY_TARGET_MEDGEMMA_CONFIG,
+    "fast_pathology": FAST_PATHOLOGY_MEDGEMMA_CONFIG,
+}
+# A tela de exame individual só expõe modos que foram avaliados e versionados.
+# O navegador envia apenas a chave; nunca um caminho de configuração.
+INDIVIDUAL_SCREENING_SCENARIOS = {
     "volumetric_rag": VOLUMETRIC_RAG_MEDGEMMA_CONFIG,
     "pathology_target": PATHOLOGY_TARGET_MEDGEMMA_CONFIG,
 }
@@ -105,24 +125,14 @@ DISCLAIMER = (
 )
 
 PY = sys.executable
-# A segmentação roda por um launcher a partir de um diretório TEMPORÁRIO (fora do
-# OneDrive/repo), senão os workers spawnados do nnU-Net falham no Windows (ver
-# webapp/seg_worker.py). Instalamos uma cópia do launcher no %TEMP% na subida.
-_SEG_DIR = Path(tempfile.gettempdir()) / "dtwin_webapp"
-_SEG_LAUNCHER = _SEG_DIR / "seg_worker.py"
-
-
-def _install_seg_launcher() -> None:
-    try:
-        _SEG_DIR.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(ROOT / "seg_worker.py", _SEG_LAUNCHER)
-    except Exception:  # noqa: BLE001
-        log.exception("Não foi possível instalar o launcher de segmentação")
-
-
 _jobs: dict[str, dict] = {}
 _benchmarks: dict[str, dict] = {}
 _lock = threading.Lock()
+# O gateway MedGemma executa uma inferência por vez. Sem esta trava, dois jobs
+# podem competir pelo mesmo gateway e o tempo de fila conta como timeout HTTP do
+# segundo job. Segmentação e renderização continuam paralelas; só a triagem é
+# serializada.
+_medgemma_screening_lock = threading.Lock()
 
 
 def _set(job_id: str, **kw) -> None:
@@ -200,6 +210,16 @@ def _modality_ok(names: list[str], expected: set[str]) -> bool:
 
 
 def find_best_series(root: Path) -> tuple[list[str], int]:
+    """Seleciona a série MR tecnicamente válida e mais informativa.
+
+    A ordem é determinística e considera modalidade, geometria e classe provável
+    da sequência. Labels e ground truth nunca participam da seleção.
+    """
+    files, frames, _metadata = select_best_mr_series(root, min_slices=MIN_SLICES)
+    return files, frames
+
+
+def _find_largest_compatible_series_legacy(root: Path) -> tuple[list[str], int]:
     """Acha a maior série DICOM COMPATÍVEL com o perfil, em qualquer estrutura:
 
     1) enumera TODAS as séries de cada diretório (uma pasta pode ter várias séries);
@@ -249,15 +269,37 @@ def find_best_series(root: Path) -> tuple[list[str], int]:
     return best_files, len(best_files)
 
 
+def _persist_series_selection(case_dir: Path, files: list[str]) -> Path:
+    """Persiste somente metadata sanitizada da série usada pela inferência."""
+    output = case_dir / "outputs" / "series_selection.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    payload = describe_selected_series(files)
+    temporary = output.with_name(f".{output.name}.tmp")
+    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    temporary.replace(output)
+    return output
+
+
 def _run(cmd: list[str], timeout: int, cwd: str | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=cwd or str(REPO), capture_output=True, text=True, timeout=timeout)
 
 
-def _segment(series_dir: str, case_dir: Path, device: str, timeout: int) -> subprocess.CompletedProcess:
-    """Roda a segmentação pelo launcher, a partir do %TEMP% (fora do OneDrive)."""
-    prof = str((REPO / PROFILE).resolve())
-    return _run([PY, str(_SEG_LAUNCHER), str(REPO), prof, series_dir, str(case_dir), device],
-                timeout=timeout, cwd=str(_SEG_DIR))
+def _segment(
+    series_dir: str, case_dir: Path, device: str, timeout: int, *, fast: bool
+) -> subprocess.CompletedProcess:
+    """Roda a segmentação pelo launcher, a partir do %TEMP% (fora do OneDrive).
+
+    `fast=False` (exame individual) usa full-res (~1.5mm) para uma máscara mais
+    fiel; `fast=True` (benchmark) mantém 3mm por throughput."""
+    return run_segmentation_subprocess(
+        dicom_dir=Path(series_dir),
+        case_dir=case_dir,
+        profile_path=REPO / PROFILE,
+        device=device,
+        fast=fast,
+        timeout_seconds=timeout,
+        python_executable=PY,
+    )
 
 
 def _cli_reason(proc: subprocess.CompletedProcess) -> str:
@@ -269,6 +311,48 @@ def _cli_reason(proc: subprocess.CompletedProcess) -> str:
             return line.split("PREP_FAIL:", 1)[1].strip()
     tail = (proc.stderr or proc.stdout or "").strip()
     return tail[-300:] if tail else f"código de saída {proc.returncode}"
+
+
+def _safe_screening_log_text(value: str | None, case_dir: Path) -> str:
+    """Conserva diagnóstico operacional sem expor caminhos locais do caso.
+
+    A saída não é uma resposta do modelo e nunca é usada como achado clínico.
+    Limitamos seu tamanho e removemos os dois caminhos conhecidos que poderiam
+    revelar estrutura de arquivos de upload no artefato de benchmark.
+    """
+    text = str(value or "")[-12000:]
+    for path, replacement in ((case_dir, "[CASE_DIR]"), (REPO, "[REPO]")):
+        try:
+            text = text.replace(str(path.resolve()), replacement)
+        except OSError:
+            text = text.replace(str(path), replacement)
+    return text
+
+
+def _persist_screening_diagnostics(
+    case_dir: Path, process: subprocess.CompletedProcess
+) -> dict[str, str]:
+    """Persiste stdout/stderr sanitizados quando a triagem não gera relatório."""
+    output_dir = case_dir / "outputs" / "medgemma"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stdout_path = output_dir / "screening_subprocess.stdout.log"
+    stderr_path = output_dir / "screening_subprocess.stderr.log"
+    stdout_path.write_text(_safe_screening_log_text(process.stdout, case_dir), encoding="utf-8")
+    stderr_path.write_text(_safe_screening_log_text(process.stderr, case_dir), encoding="utf-8")
+    metadata_path = output_dir / "screening_subprocess.json"
+    metadata_path.write_text(json.dumps({
+        "schema": "argos-screening-subprocess-diagnostics-v1",
+        "returncode": process.returncode,
+        "reason": _safe_screening_log_text(_cli_reason(process), case_dir),
+        "stdout_file": stdout_path.name,
+        "stderr_file": stderr_path.name,
+    }, indent=2, ensure_ascii=False), encoding="utf-8")
+    relative = output_dir.relative_to(case_dir)
+    return {
+        "stdout": str(relative / stdout_path.name),
+        "stderr": str(relative / stderr_path.name),
+        "metadata": str(relative / metadata_path.name),
+    }
 
 
 def _seg_done(case_dir: Path) -> bool:
@@ -286,7 +370,13 @@ def _success_result(report: dict) -> dict:
     return {**report, "status": "concluido"}
 
 
-def _viewer_result(report: dict, job_id: str, viewer_ready: bool) -> dict:
+def _viewer_result(
+    report: dict,
+    job_id: str,
+    viewer_ready: bool,
+    *,
+    analysis_scenario: str = "volumetric_rag",
+) -> dict:
     """Acrescenta a visualizacao sem alterar o contrato do relatorio MedGemma."""
     result = _success_result(report)
     result.update(
@@ -297,6 +387,7 @@ def _viewer_result(report: dict, job_id: str, viewer_ready: bool) -> dict:
             else None
         ),
         approval={"status": "pending"} if viewer_ready else None,
+        analysis_scenario=analysis_scenario,
     )
     return result
 
@@ -364,64 +455,142 @@ class ApprovalPayload(BaseModel):
     status: Literal["approved", "revision_requested"]
 
 
-def process_job(job_id: str, raw_dir: Path) -> None:
+def process_job(
+    job_id: str,
+    raw_dir: Path,
+    medgemma_config: str = VOLUMETRIC_RAG_MEDGEMMA_CONFIG,
+    analysis_scenario: str = "volumetric_rag",
+) -> None:
     # case_dir e raw_dir (_upload) são IRMÃOS sob WORKSPACE/job_id; nunca aninhados,
     # senão limpar o case_dir apagaria o DICOM enviado (necessário no fallback CPU).
     case_dir = (WORKSPACE / job_id / "case").resolve()
+    worker_started = time.monotonic()
+    started_at_utc = datetime.now(timezone.utc).isoformat()
+    durations_seconds: dict[str, float] = {}
+    outcome = "failed"
+    failure_stage: str | None = "series_selection_and_copy"
+    segmentation_device: str | None = None
+    report_available = False
+    viewer_ready = False
     try:
         _set(job_id, state="processing", step="ingestao", progress=15)
+        series_started = time.monotonic()
         best_files, n = find_best_series(raw_dir)
         if not best_files or n < MIN_SLICES:
+            durations_seconds["series_selection_and_copy"] = round(
+                time.monotonic() - series_started, 4
+            )
+            outcome = "not_completed"
             _set(job_id, state="done", result=_graceful(
                 "Não encontramos uma série DICOM de RM válida no envio.",
                 "Envie a pasta de um exame de RM (DICOM) com múltiplos cortes — "
                 "ou um único arquivo DICOM multi-frame."))
             return
+
         # Copia a série escolhida para um diretório limpo: isola de estruturas
         # bagunçadas / múltiplas séries e garante que o prepare veja só esta série.
         series_dir_path = WORKSPACE / job_id / "_series"
         series_dir_path.mkdir(parents=True, exist_ok=True)
-        for i, f in enumerate(best_files):
-            shutil.copyfile(f, series_dir_path / f"{i:05d}_{os.path.basename(f)}")
+        for i, source in enumerate(best_files):
+            shutil.copyfile(source, series_dir_path / f"{i:05d}_{os.path.basename(source)}")
         series_dir = str(series_dir_path.resolve())
+        durations_seconds["series_selection_and_copy"] = round(
+            time.monotonic() - series_started, 4
+        )
 
-        # --- Fase 1: ingestão + des-identificação + segmentação (launcher isolado) ---
-        # Sucesso medido pelos ARTEFATOS, não pelo returncode (crash de shutdown de
-        # libs nativas no Windows não invalida um volume+máscara já gravados).
-        _set(job_id, step="segmentacao", progress=45)
-        prep = _segment(series_dir, case_dir, "gpu", PREP_TIMEOUT_GPU)
-        if not _seg_done(case_dir):
-            reason = _cli_reason(prep)
-            log.warning("Segmentação na GPU falhou (%s); tentando CPU...", reason[:100])
-            shutil.rmtree(case_dir, ignore_errors=True)
-            _set(job_id, step="segmentacao", progress=55)
-            prep = _segment(series_dir, case_dir, "cpu", PREP_TIMEOUT_CPU)
+        # Fase 1: ingestão + des-identificação + segmentação (launcher isolado).
+        failure_stage = "preparation_and_segmentation"
+        segmentation_started = time.monotonic()
+        try:
+            _set(job_id, step="segmentacao", progress=45)
+            segmentation_device = "gpu"
+            prep = _segment(series_dir, case_dir, "gpu", PREP_TIMEOUT_GPU, fast=False)
             if not _seg_done(case_dir):
                 reason = _cli_reason(prep)
-                _set(job_id, state="done", result=_graceful(_friendly_text(reason), reason))
-                return
+                log.warning("Segmentação na GPU falhou (%s); tentando CPU...", reason[:100])
+                shutil.rmtree(case_dir, ignore_errors=True)
+                _set(job_id, step="segmentacao", progress=55)
+                segmentation_device = "cpu_fallback"
+                prep = _segment(series_dir, case_dir, "cpu", PREP_TIMEOUT_CPU, fast=False)
+                if not _seg_done(case_dir):
+                    reason = _cli_reason(prep)
+                    outcome = "not_completed"
+                    _set(job_id, state="done", result=_graceful(_friendly_text(reason), reason))
+                    return
+        finally:
+            durations_seconds["preparation_and_segmentation"] = round(
+                time.monotonic() - segmentation_started, 4
+            )
 
-        # --- Fase 2: montagem 2D + MedGemma (subprocesso isolado) ---
+        # Fase 2: montagem 2D + MedGemma (subprocesso isolado).
+        _persist_series_selection(case_dir, best_files)
+        failure_stage = "medgemma_screening"
         _set(job_id, step="medgemma", progress=80)
-        screening_config = load_screening_config(REPO / MEDGEMMA_CONFIG)
-        screening_timeout, _panel_count = effective_screening_timeout(
-            sitk.GetArrayFromImage(sitk.ReadImage(str(case_dir / "mask_organ.nii.gz"))) > 0,
-            screening_config,
-            SCREEN_TIMEOUT,
-        )
-        scr = _run([PY, "-m", "dtwin.medgemma_screening", "--case-dir", str(case_dir),
-                    "--medgemma-config", MEDGEMMA_CONFIG, "--confirm-no-visible-phi"],
-                   timeout=screening_timeout)
+        screening_started = time.monotonic()
+        try:
+            screening_config = load_screening_config(REPO / medgemma_config)
+            screening_timeout, _panel_count = effective_screening_timeout(
+                sitk.GetArrayFromImage(
+                    sitk.ReadImage(str(case_dir / "mask_organ.nii.gz"))
+                ) > 0,
+                screening_config,
+                SCREEN_TIMEOUT,
+            )
+            with _medgemma_screening_lock:
+                scr = _run(
+                    [
+                        PY,
+                        "-m",
+                        "dtwin.medgemma_screening",
+                        "--case-dir",
+                        str(case_dir),
+                        "--medgemma-config",
+                        medgemma_config,
+                        "--confirm-no-visible-phi",
+                    ],
+                    timeout=screening_timeout,
+                )
+        finally:
+            durations_seconds["screening_subprocess"] = round(
+                time.monotonic() - screening_started, 4
+            )
+
         report = _load_report(case_dir / "outputs" / "medgemma" / "medgemma_report.json")
         if report is None:
             reason = _cli_reason(scr)
+            outcome = "not_completed"
             _set(job_id, state="done", result=_graceful(_friendly_text(reason), reason))
             return
-        # Fase 3: mascara hepatica -> malha/STL para revisao humana.
+
+        report_available = True
+        outcome = "report_completed"
+        durations_seconds.update({
+            str(key): float(value)
+            for key, value in (report.get("durations_seconds") or {}).items()
+            if isinstance(value, (int, float)) and float(value) >= 0
+        })
+        durations_seconds["time_to_report"] = round(time.monotonic() - worker_started, 4)
+
+        # Fase 3: máscara hepática -> malha/STL para revisão humana.
+        failure_stage = "model_3d"
         _set(job_id, step="modelo_3d", progress=92)
-        viewer_ready, viewer_error = _build_model(case_dir)
+        model_started = time.monotonic()
+        try:
+            viewer_ready, viewer_error = _build_model(case_dir)
+        finally:
+            durations_seconds["model_3d"] = round(time.monotonic() - model_started, 4)
+
         if not viewer_ready:
-            log.warning("Job %s: relatorio concluido, mas modelo 3D falhou: %s", job_id, viewer_error)
+            log.warning(
+                "Job %s: relatório concluído, mas modelo 3D falhou: %s",
+                job_id,
+                viewer_error,
+            )
+            outcome = "report_completed_viewer_failed"
+        else:
+            outcome = "completed"
+            failure_stage = None
+
         _set(
             job_id,
             state="done",
@@ -429,19 +598,54 @@ def process_job(job_id: str, raw_dir: Path) -> None:
             progress=100,
             viewer_error=viewer_error or None,
             approval={"status": "pending"} if viewer_ready else None,
-            result=_viewer_result(report, job_id, viewer_ready),
+            result=_viewer_result(
+                report,
+                job_id,
+                viewer_ready,
+                analysis_scenario=analysis_scenario,
+            ),
         )
     except subprocess.TimeoutExpired:
+        outcome = "timeout"
         _set(job_id, state="done", result=_graceful(
             "O processamento excedeu o tempo limite.", "timeout"))
     except Exception as exc:  # noqa: BLE001
+        outcome = "failed"
         log.exception("Job %s: falha inesperada", job_id)
         _set(job_id, state="done", result=_graceful(
             "Ocorreu um erro inesperado no processamento.", type(exc).__name__))
     finally:
+        durations_seconds["total_with_3d"] = round(time.monotonic() - worker_started, 4)
+        try:
+            config_path = REPO / medgemma_config
+            config_sha256 = sha256_of(config_path) if config_path.is_file() else "unavailable"
+            timing = build_operational_timing(
+                job_id=job_id,
+                analysis_scenario=analysis_scenario,
+                medgemma_config=medgemma_config,
+                medgemma_config_sha256=config_sha256,
+                started_at_utc=started_at_utc,
+                finished_at_utc=datetime.now(timezone.utc).isoformat(),
+                durations_seconds=durations_seconds,
+                outcome=outcome,
+                report_available=report_available,
+                viewer_ready=viewer_ready,
+                failure_stage=failure_stage,
+                segmentation_device=segmentation_device,
+                report_budget_seconds=DEFAULT_REPORT_BUDGET_SECONDS,
+            )
+            timing_path = persist_operational_timing(case_dir, timing)
+            _set(
+                job_id,
+                operational_timing=timing,
+                operational_timing_artifact=str(
+                    timing_path.relative_to((WORKSPACE / job_id).resolve())
+                ),
+            )
+        except Exception:  # noqa: BLE001
+            log.exception("Job %s: não foi possível persistir a auditoria de tempo", job_id)
         shutil.rmtree(raw_dir, ignore_errors=True)
         shutil.rmtree(WORKSPACE / job_id / "_series", ignore_errors=True)
-
 
 def calculate_benchmark_metrics(results: list[dict]) -> dict:
     """Adaptador retrocompatível para o núcleo compartilhado do benchmark."""
@@ -454,6 +658,18 @@ def _benchmark_config(scenario: str) -> str:
     if scenario not in BENCHMARK_SCENARIOS:
         raise PipelineError(f"Cenário de benchmark não autorizado: {scenario!r}")
     configured = BENCHMARK_SCENARIOS[scenario]
+    resolved = (REPO / configured).resolve()
+    configs_root = (REPO / "configs").resolve()
+    if resolved.parent != configs_root or not resolved.is_file():
+        raise PipelineError(f"Configuração autorizada não encontrada: {configured}")
+    return configured
+
+
+def _individual_screening_config(scenario: str) -> str:
+    """Resolve um modo autorizado da tela de exame individual."""
+    if scenario not in INDIVIDUAL_SCREENING_SCENARIOS:
+        raise PipelineError(f"Modo de exame individual não autorizado: {scenario!r}")
+    configured = INDIVIDUAL_SCREENING_SCENARIOS[scenario]
     resolved = (REPO / configured).resolve()
     configs_root = (REPO / "configs").resolve()
     if resolved.parent != configs_root or not resolved.is_file():
@@ -522,15 +738,16 @@ def _run_benchmark_case(
         base["durations_seconds"]["import"] = round(time.monotonic() - import_started, 4)
 
         preparation_started = time.monotonic()
-        prep = _segment(str(series_dir.resolve()), case_dir, "gpu", PREP_TIMEOUT_GPU)
+        prep = _segment(str(series_dir.resolve()), case_dir, "gpu", PREP_TIMEOUT_GPU, fast=True)
         if not _seg_done(case_dir):
             reason = _cli_reason(prep)
             log.warning("Benchmark %s/%s: GPU falhou (%s); tentando CPU", benchmark_id, item["id"], reason[:100])
             shutil.rmtree(case_dir, ignore_errors=True)
-            prep = _segment(str(series_dir.resolve()), case_dir, "cpu", PREP_TIMEOUT_CPU)
+            prep = _segment(str(series_dir.resolve()), case_dir, "cpu", PREP_TIMEOUT_CPU, fast=True)
             if not _seg_done(case_dir):
                 base["error"] = _friendly_text(_cli_reason(prep))
                 return base
+        _persist_series_selection(case_dir, best_files)
         base["durations_seconds"]["preparation_and_segmentation"] = round(
             time.monotonic() - preparation_started, 4
         )
@@ -542,23 +759,29 @@ def _run_benchmark_case(
             screening_config,
             SCREEN_TIMEOUT,
         )
-        screening = _run(
-            [
-                PY,
-                "-m",
-                "dtwin.medgemma_screening",
-                "--case-dir",
-                str(case_dir),
-                "--medgemma-config",
-                medgemma_config,
-                "--confirm-no-visible-phi",
-            ],
-            timeout=effective_timeout,
-        )
+        with _medgemma_screening_lock:
+            screening = _run(
+                [
+                    PY,
+                    "-m",
+                    "dtwin.medgemma_screening",
+                    "--case-dir",
+                    str(case_dir),
+                    "--medgemma-config",
+                    medgemma_config,
+                    "--confirm-no-visible-phi",
+                ],
+                timeout=effective_timeout,
+            )
         envelope = _load_report(case_dir / "outputs" / "medgemma" / "medgemma_report.json")
         if envelope is None:
-            base["error"] = _friendly_text(_cli_reason(screening))
-            base["status"] = classify_screening_failure(_cli_reason(screening)).value
+            reason = _cli_reason(screening)
+            base["error"] = _friendly_text(reason)
+            base["status"] = classify_screening_failure(reason).value
+            base["screening_diagnostics"] = _persist_screening_diagnostics(case_dir, screening)
+            failure_path = case_dir / "outputs" / "medgemma" / "medgemma_failure.json"
+            if failure_path.is_file():
+                base["failure_artifact"] = str(failure_path.relative_to(case_dir))
             return base
 
         report = envelope["report"]
@@ -860,6 +1083,11 @@ async def analyze(request: Request) -> dict:
     files = [v for v in form.getlist("files") if not isinstance(v, str)]
     if not files:
         raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
+    scenario = str(form.get("scenario") or "volumetric_rag")
+    try:
+        medgemma_config = _individual_screening_config(scenario)
+    except PipelineError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     relpaths = form.get("relpaths")
     job_id = uuid.uuid4().hex[:12]
     raw_dir = WORKSPACE / job_id / "_upload"
@@ -877,9 +1105,16 @@ async def analyze(request: Request) -> dict:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(await uf.read())
     with _lock:
-        _jobs[job_id] = {"state": "queued", "step": "recebendo", "progress": 5, "result": None}
-    threading.Thread(target=process_job, args=(job_id, raw_dir), daemon=True).start()
-    return {"job_id": job_id}
+        _jobs[job_id] = {
+            "state": "queued", "step": "recebendo", "progress": 5, "result": None,
+            "analysis_scenario": scenario,
+        }
+    threading.Thread(
+        target=process_job,
+        args=(job_id, raw_dir, medgemma_config, scenario),
+        daemon=True,
+    ).start()
+    return {"job_id": job_id, "analysis_scenario": scenario}
 
 
 @app.get("/api/status/{job_id}")
@@ -892,8 +1127,11 @@ def status(job_id: str) -> dict:
         "state": job["state"],
         "step": job["step"],
         "progress": job["progress"],
+        "analysis_scenario": job.get("analysis_scenario"),
         "result": job["result"] if job["state"] == "done" else None,
         "approval": job.get("approval"),
+        "operational_timing": job.get("operational_timing"),
+        "operational_timing_artifact": job.get("operational_timing_artifact"),
     }
 
 
@@ -1035,7 +1273,6 @@ def approve_model(job_id: str, payload: ApprovalPayload) -> dict:
 
 
 STATIC.mkdir(parents=True, exist_ok=True)
-_install_seg_launcher()
 app.mount("/viewer", StaticFiles(directory=str(VIEWER), html=True), name="viewer")
 app.mount("/", StaticFiles(directory=str(STATIC), html=True), name="static")
 
@@ -1050,3 +1287,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+

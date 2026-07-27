@@ -169,11 +169,21 @@ class Case:
     @property
     def mask_lesion_clean(self) -> Path: return self.root / "mask_lesion_clean.nii.gz"
 
+    # Anatomia interna opcional (segmentos hepáticos, vasos e vesícula). Os
+    # nomes de papel vêm exclusivamente do perfil versionado; não são aceitos
+    # do upload nem do navegador.
+    def anatomy_mask(self, role: str, *, clean: bool = False) -> Path:
+        suffix = "_clean" if clean else ""
+        return self.root / f"mask_anatomy_{role}{suffix}.nii.gz"
+
     # Malhas intermediárias (PyVista .vtp; o STL é produto do estágio 7)
     @property
     def mesh_organ(self) -> Path: return self.root / "mesh_organ.vtp"
     @property
     def mesh_lesion(self) -> Path: return self.root / "mesh_lesion.vtp"
+
+    def anatomy_mesh(self, role: str) -> Path:
+        return self.root / f"mesh_anatomy_{role}.vtp"
 
     # Manifesto e saídas finais
     @property

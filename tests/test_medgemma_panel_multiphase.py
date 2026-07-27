@@ -71,6 +71,15 @@ def test_multiphase_config_validates_and_is_fusion_mode():
     assert config["medgemma"]["max_output_tokens"] == 1536
 
 
+def test_lld_v23_config_enables_only_explicit_partial_fov_fallback():
+    config = load_screening_config("configs/medgemma_local_4b_lld_v23_uniform9_choice.yaml")
+    assert config["panel"]["strategy"] == "uniform_9"
+    assert config["panel"]["short_liver_policy"] == "blank_tiles"
+    assert config["panel"]["fusion"]["partial_fov_policy"] == "venous_grayscale"
+    assert config["panel"]["fusion"]["partial_fov_fallback_phase"] == "pv"
+    assert config["rag"]["enabled"] is False
+
+
 def test_single_phase_config_still_validates():
     # regression: existing grayscale config must keep loading unchanged.
     config = load_screening_config("configs/medgemma_4b.yaml")
@@ -99,6 +108,56 @@ def test_multiphase_generates_11_rgb_views_without_phi_or_lesion(multiphase_case
     assert any("No lesion mask was read" in n for n in manifest["notes"])
 
 
+def test_lld_short_liver_uses_blank_tiles_without_duplicating_slices(
+    multiphase_case, tmp_path
+):
+    case, phase_paths = multiphase_case
+    mask_image = sitk.ReadImage(str(case.mask_organ))
+    mask = sitk.GetArrayFromImage(mask_image)
+    present = np.flatnonzero(np.any(mask > 0, axis=(1, 2)))
+    keep = present[len(present) // 2 - 3 : len(present) // 2 + 3]
+    short = np.zeros_like(mask)
+    short[keep] = mask[keep]
+    short_image = sitk.GetImageFromArray(short)
+    short_image.CopyInformation(mask_image)
+    sitk.WriteImage(short_image, str(case.mask_organ), useCompression=True)
+    config = load_screening_config(
+        "configs/medgemma_local_4b_lld_v23_uniform9_choice.yaml"
+    )
+
+    result = _gen(
+        case,
+        phase_paths,
+        tmp_path,
+        screening_config=config,
+        output_dir=tmp_path / "short_liver",
+    )
+    assert len(result.axial_indices) == 6
+    assert len(set(result.axial_indices)) == 6
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["short_liver_policy"] == "blank_tiles"
+    assert manifest["short_liver_real_axial_count"] == 6
+    assert manifest["short_liver_blank_tile_count"] == 3
+    assert manifest["views"]["axial_indices_zyx_cropped"] == list(
+        result.axial_indices
+    )
+    with Image.open(result.panel_path) as image:
+        assert image.info == {}
+
+
+def test_default_multiphase_still_rejects_short_liver(multiphase_case, tmp_path):
+    case, phase_paths = multiphase_case
+    mask_image = sitk.ReadImage(str(case.mask_organ))
+    mask = sitk.GetArrayFromImage(mask_image)
+    short = np.zeros_like(mask)
+    short[20:26] = mask[20:26]
+    short_image = sitk.GetImageFromArray(short)
+    short_image.CopyInformation(mask_image)
+    sitk.WriteImage(short_image, str(case.mask_organ), useCompression=True)
+    with pytest.raises(PipelineError, match="fatias axiais"):
+        _gen(case, phase_paths, tmp_path, output_dir=tmp_path / "short_rejected")
+
+
 def test_multiphase_fails_when_a_required_phase_is_missing(multiphase_case, tmp_path):
     case, phase_paths = multiphase_case
     partial = {k: v for k, v in phase_paths.items() if k != "del"}
@@ -114,6 +173,44 @@ def test_multiphase_fails_on_incompatible_phase_geometry(multiphase_case, tmp_pa
     broken = dict(phase_paths, art=bad)
     with pytest.raises(PipelineError, match="geometria incompatível"):
         _gen(case, broken, tmp_path)
+
+
+def test_partial_fov_requires_explicit_safe_policy(multiphase_case, tmp_path):
+    case, phase_paths = multiphase_case
+    with pytest.raises(PipelineError, match="campo de visão parcial"):
+        _gen(
+            case,
+            phase_paths,
+            tmp_path,
+            phase_support_fractions={"art": 1.0, "pv": 1.0, "del": 0.5},
+        )
+
+
+def test_partial_fov_uses_venous_grayscale_and_records_audit(multiphase_case, tmp_path):
+    case, phase_paths = multiphase_case
+    delayed = sitk.ReadImage(str(phase_paths["del"]))
+    delayed_array = sitk.GetArrayFromImage(delayed)
+    delayed_array[: delayed_array.shape[0] // 2] = 0
+    delayed_partial = sitk.GetImageFromArray(delayed_array)
+    delayed_partial.CopyInformation(delayed)
+    sitk.WriteImage(delayed_partial, str(phase_paths["del"]), useCompression=True)
+    config = load_screening_config(CONFIG)
+    config["panel"]["fusion"]["partial_fov_policy"] = "venous_grayscale"
+    config["panel"]["fusion"]["partial_fov_fallback_phase"] = "pv"
+    result = _gen(
+        case,
+        phase_paths,
+        tmp_path,
+        screening_config=config,
+        output_dir=tmp_path / "partial_safe",
+        phase_support_fractions={"art": 1.0, "pv": 1.0, "del": 0.5},
+    )
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["partial_fov_roles"] == ["del"]
+    assert manifest["partial_fov_policy"] == "venous_grayscale"
+    assert manifest["partial_fov_fallback_phase"] == "pv"
+    assert manifest["partial_fov_grayscale_fallback_voxels"] > 0
+    assert manifest["phase_support_fractions"] == {"art": 1.0, "del": 0.5, "pv": 1.0}
 
 
 def test_config_rejects_multiphase_without_channel_map(tmp_path):

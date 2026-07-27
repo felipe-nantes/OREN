@@ -43,6 +43,15 @@
             <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17.5V6.5A2.5 2.5 0 0 1 6.5 4h3l2 2h6A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2h-11A2.5 2.5 0 0 1 4 17.5Z" stroke="currentColor" stroke-width="1.7"/><path d="m9 13 3-3 3 3M12 10v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <div><h2>Novo exame</h2><p>Selecione uma pasta ou os arquivos DICOM da ressonância.</p></div>
           </div>
+          <div class="scenario-toggle" id="scenarioToggle" role="group" aria-label="Modo de análise do exame">
+            <button type="button" class="scenario-btn active" data-scenario="volumetric_rag" aria-pressed="true">
+              <b>RAG + volumétrico</b><span>100% do fígado + contexto textual auditável</span>
+            </button>
+            <button type="button" class="scenario-btn" data-scenario="pathology_target" aria-pressed="false">
+              <b>Alvo patológico</b><span>Separa variante benigna de lesão focal suspeita</span>
+            </button>
+          </div>
+          <div class="note" id="scenarioNote">Modo selecionado: RAG + volumétrico.</div>
           <div class="drop" id="drop">
             <div class="drop-content">
               <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -131,6 +140,20 @@ function fromInput(input){
 }
 
 let polling=null;
+let selectedScenario='volumetric_rag';
+const SCENARIO_LABELS={
+  volumetric_rag:'RAG + volumétrico',
+  pathology_target:'Alvo patológico'
+};
+document.querySelectorAll('#scenarioToggle .scenario-btn').forEach(btn=>btn.addEventListener('click',()=>{
+  selectedScenario=btn.dataset.scenario;
+  document.querySelectorAll('#scenarioToggle .scenario-btn').forEach(item=>{
+    const active=item===btn;
+    item.classList.toggle('active',active);
+    item.setAttribute('aria-pressed',String(active));
+  });
+  $('#scenarioNote').textContent='Modo selecionado: '+SCENARIO_LABELS[selectedScenario]+'.';
+}));
 async function startAnalysis(items){
   const dicoms = items.filter(x=>x.file.size>0);
   if(!dicoms.length){ return; }
@@ -140,6 +163,7 @@ async function startAnalysis(items){
   const rels=[];
   for(const {file,rel} of dicoms){ fd.append('files', file, file.name); rels.push(rel); }
   fd.append('relpaths', JSON.stringify(rels));
+  fd.append('scenario', selectedScenario);
   let job;
   try{
     job = await (await fetch('/api/analyze',{method:'POST',body:fd})).json();
@@ -181,10 +205,19 @@ function renderResult(result){
   c.appendChild(conf);
   c.appendChild(field('Limitações da análise', list(rep.limitacoes_da_analise)));
   const meta = el('div','meta');
+  meta.appendChild(el('span','chip','Modo: <b>'+escapeHtml(SCENARIO_LABELS[result.analysis_scenario]||result.analysis_scenario||'—')+'</b>'));
   meta.appendChild(el('span','chip','Modelo: <b>'+escapeHtml(result.model_version||'MedGemma')+'</b>'));
   meta.appendChild(el('span','chip','Escala: <b>'+escapeHtml(result.model_parameter_scale||'—')+'</b>'));
   meta.appendChild(el('span','chip','Status: <b>revisão humana obrigatória</b>'));
   c.appendChild(meta);
+  if(rep.alvo_da_triagem){
+    c.appendChild(field('Alvo da triagem', 'Lesão focal hepática suspeita'));
+    const nonTarget=rep.tipo_alteracao_nao_alvo&&rep.tipo_alteracao_nao_alvo!=='none'
+      ? rep.tipo_alteracao_nao_alvo.replaceAll('_',' ')
+      : 'nenhuma alteração não alvo registrada';
+    c.appendChild(field('Separação de alteração não alvo', escapeHtml(nonTarget)));
+    c.appendChild(field('Justificativa da separação', escapeHtml(rep.justificativa_da_separacao||'—')));
+  }
   c.appendChild(el('div','note', escapeHtml(result.disclaimer||'')));
   if(result.viewer_ready && result.viewer_url){
     const actions=el('div','btns');
