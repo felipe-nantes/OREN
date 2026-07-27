@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pydicom
 import pytest
 import SimpleITK as sitk
 
@@ -39,6 +40,27 @@ def test_dicom_mr_dataset_generates_registry_record_without_raw_uid(tmp_path):
     assert data["positive_subtype"] == "hcc_suspicious"
     assert "1.2.826" not in encoded
     assert data["metadata"]["dicom_file_count"] == 3
+
+
+def test_registry_preserves_same_uid_in_distinct_physical_directories(tmp_path):
+    first_dir = tmp_path / "subject/T1DUAL/DICOM_anon/InPhase"
+    second_dir = tmp_path / "subject/T1DUAL/DICOM_anon/OutPhase"
+    write_dicom_series(first_dir, np.ones((3, 8, 8), dtype=np.int16), modality="MR")
+    write_dicom_series(second_dir, np.ones((3, 8, 8), dtype=np.int16), modality="MR")
+    first = pydicom.dcmread(next(first_dir.glob("*.dcm")), stop_before_pixels=True)
+    for path in second_dir.glob("*.dcm"):
+        dataset = pydicom.dcmread(path)
+        dataset.SeriesInstanceUID = first.SeriesInstanceUID
+        dataset.save_as(path, enforce_file_format=True)
+
+    records = _records("chaos_mri.yaml", tmp_path)
+
+    assert len(records) == 2
+    assert {record.raw_path for record in records} == {
+        "subject/T1DUAL/DICOM_anon/InPhase",
+        "subject/T1DUAL/DICOM_anon/OutPhase",
+    }
+    assert len({record.series_id for record in records}) == 2
 
 
 def test_tcga_lihc_mr_ignores_ct_and_accepts_only_mr(tmp_path):

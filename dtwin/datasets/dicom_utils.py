@@ -39,8 +39,8 @@ def read_dicom_header(path: Path):
 
 def discover_dicom_series(root: Path, *, modality: str = "MR") -> list[DicomSeries]:
     root = Path(root)
-    grouped: dict[str, list[Path]] = {}
-    metadata: dict[str, dict[str, str | None]] = {}
+    grouped: dict[tuple[str, str], list[Path]] = {}
+    metadata: dict[tuple[str, str], dict[str, str | None]] = {}
     ignored_non_matching = 0
     malformed = 0
     for path in iter_candidate_dicom_files(root):
@@ -56,9 +56,14 @@ def discover_dicom_series(root: Path, *, modality: str = "MR") -> list[DicomSeri
         series_uid = str(getattr(ds, "SeriesInstanceUID", "") or "").strip()
         if not series_uid:
             series_uid = f"path:{path.parent.resolve()}"
-        grouped.setdefault(series_uid, []).append(path)
+        try:
+            parent_token = path.parent.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError as exc:
+            raise PipelineError("Arquivo DICOM fora da raiz autorizada.") from exc
+        key = (series_uid, parent_token)
+        grouped.setdefault(key, []).append(path)
         metadata.setdefault(
-            series_uid,
+            key,
             {
                 "modality": current_modality,
                 "series_description": str(getattr(ds, "SeriesDescription", "") or "").strip() or None,
@@ -68,15 +73,26 @@ def discover_dicom_series(root: Path, *, modality: str = "MR") -> list[DicomSeri
     if malformed and not grouped:
         raise PipelineError(f"Nenhuma série DICOM válida encontrada em {root}.")
     series: list[DicomSeries] = []
-    for series_uid, files in sorted(grouped.items(), key=lambda item: stable_hash(item[0])):
+    uid_directory_count: dict[str, int] = {}
+    for series_uid, _parent_token in grouped:
+        uid_directory_count[series_uid] = uid_directory_count.get(series_uid, 0) + 1
+    for key, files in sorted(
+        grouped.items(), key=lambda item: stable_hash("\0".join(item[0]))
+    ):
+        series_uid, parent_token = key
         common = Path(files[0]).parent
+        identity = (
+            series_uid
+            if uid_directory_count[series_uid] == 1
+            else f"{series_uid}\0directory:{parent_token}"
+        )
         series.append(
             DicomSeries(
-                series_uid_hash=stable_hash(series_uid, length=24),
-                modality=str(metadata[series_uid]["modality"] or modality),
+                series_uid_hash=stable_hash(identity, length=24),
+                modality=str(metadata[key]["modality"] or modality),
                 files=tuple(sorted(files)),
                 series_dir=common,
-                series_description=metadata[series_uid]["series_description"],
+                series_description=metadata[key]["series_description"],
             )
         )
     if not series:

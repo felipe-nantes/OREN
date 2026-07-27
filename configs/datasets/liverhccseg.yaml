@@ -11,7 +11,7 @@ modality: MR
 source_format: dicom
 sequence_or_phase: unknown
 body_region: abdomen_liver
-source_url: https://www.cancerimagingarchive.net/
+source_url: https://zenodo.org/records/8179129
 clinical_use_allowed: false
 research_only: true
 has_segmentation_default: false
