@@ -97,3 +97,14 @@ UIDs DICOM e identificadores de paciente são recusados na geração.
 - UIDs DICOM brutos não são persistidos.
 - O GraphRAG futuro deve ser alimentado a partir desses JSONL, não diretamente dos DICOMs/NIfTIs.
 - Nenhum dado de paciente deve ser versionado no Git.
+
+## Coorte pública independente v21
+
+O registry também alimenta o construtor descrito em
+`docs/80_COORTE_PUBLICA_INDEPENDENTE_V21.md`. Ele mantém separados o manifesto
+cego, o mapa operacional e os labels protegidos, agrupa séries por sujeito e
+vincula os arquivos-fonte por SHA-256.
+
+O piloto LiverHccSeg + CHAOS possui possível confusão entre classe e dataset.
+Portanto, serve como teste de generalização/estresse e não como evidência clínica
+final isolada.

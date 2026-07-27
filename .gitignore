@@ -12,6 +12,9 @@ build/
 venv/
 .medgemma/
 .claude/
+.codex-tmp/
+.pytest-tmp*/
+.tmp-*/
 
 # Pipeline artifacts (patient/output data never committed)
 casos/
@@ -37,6 +40,10 @@ __MACOSX/
 # Generated RAG corpora/indexes and private transfer artifacts
 /rag/
 /artifacts/
+/casos/qualification/hybrid_v1/
+/ARGOS_INTERNAL_BLIND_BENCHMARK_120_V1/
+/benchmarks/rm_normais_*.yaml
+/benchmarks/experiments/volumetric_rag_rm_normais_*.yaml
 
 # OS / editor
 .DS_Store
