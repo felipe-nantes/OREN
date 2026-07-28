@@ -119,6 +119,12 @@ VISUAL_PANEL_CONFIG = os.environ.get(
 VISUAL_EMBEDDING_CONFIG = os.environ.get(
     "WEBAPP_VISUAL_EMBEDDING_CONFIG", "configs/training/medsiglip_frozen_v1.yaml"
 )
+# Índice server-side autorizado para o benchmark interno. O navegador nunca
+# envia esse caminho e o conteúdo privado nunca é encaminhado ao modelo.
+VISUAL_AUTHORIZED_PHASE_AUDIT = os.environ.get(
+    "WEBAPP_VISUAL_AUTHORIZED_PHASE_AUDIT",
+    "ARGOS_INTERNAL_BLIND_BENCHMARK_120_V1/private_reference/conversion_audit.json",
+)
 # A tela de exame individual só expõe modos que foram avaliados e versionados.
 # O navegador envia apenas a chave; nunca um caminho de configuração.
 INDIVIDUAL_SCREENING_SCENARIOS = {
@@ -750,6 +756,28 @@ def _visual_model_info(scenario: str) -> dict:
     }
 
 
+def _authorized_visual_phase_resolution(case_id: str, raw_case_dir: Path):
+    """Resolve séries opacas apenas para IDs do benchmark cego autorizado.
+
+    Casos comuns continuam usando as subpastas arterial/venous/delayed. O
+    caminho do índice vem exclusivamente da configuração do servidor.
+    """
+    from dtwin.learning.internal_blind_phase_adapter import (
+        BLIND_CASE_PATTERN,
+        resolve_authorized_blind_phase_folders,
+    )
+
+    if not BLIND_CASE_PATTERN.fullmatch(str(case_id)):
+        return None
+    configured = Path(VISUAL_AUTHORIZED_PHASE_AUDIT)
+    audit_path = configured if configured.is_absolute() else REPO / configured
+    return resolve_authorized_blind_phase_folders(
+        case_id=str(case_id),
+        case_dir=Path(raw_case_dir),
+        audit_path=audit_path.resolve(),
+    )
+
+
 def _run_visual_benchmark_case(
     benchmark_id: str, index: int, item: dict, raw_case_dir: Path, scenario: str
 ) -> dict:
@@ -784,6 +812,12 @@ def _run_visual_benchmark_case(
     }
     try:
         bundle = load_production_bundle(_visual_bundle_root(scenario))
+        authorized_resolution = _authorized_visual_phase_resolution(
+            str(item["id"]), Path(raw_case_dir)
+        )
+        if authorized_resolution is not None:
+            base["input_format"] = "DICOM_MULTIPHASE_AUTHORIZED_INDEX"
+            base["phase_resolution"] = authorized_resolution.safe_manifest()
 
         def segment_venous(venous_dir: Path, work_dir: Path) -> Path:
             work_dir = Path(work_dir).resolve()
@@ -802,6 +836,11 @@ def _run_visual_benchmark_case(
             case_upload_dir=Path(raw_case_dir),
             output_dir=case_dir / "multiphase",
             segment_venous=segment_venous,
+            phase_dirs=(
+                authorized_resolution.phase_dirs
+                if authorized_resolution is not None
+                else None
+            ),
         )
         base["durations_seconds"]["multiphase_ingest_and_segmentation"] = round(
             time.monotonic() - ingest_started, 4
@@ -1066,18 +1105,36 @@ def process_benchmark(benchmark_id: str, manifest: dict, raw_dir: Path) -> None:
         temp = benchmark_root / ".benchmark_report.json.tmp"
         temp.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
         temp.replace(report_path)
-        config_path = (REPO / medgemma_config).resolve()
+        config_path = (
+            None
+            if visual
+            else (REPO / str(medgemma_config)).resolve()
+        )
         run_manifest = {
             "schema_version": 1,
             "run_id": benchmark_id,
             "created_at": started_at,
             **git_state(REPO),
-            "model_family": "MedGemma",
+            "model_family": "MedSigLIP" if visual else "MedGemma",
             **model_info,
             "medgemma_config_path": medgemma_config,
-            "medgemma_config_hash": effective_config_sha256(
-                load_screening_config(config_path)
-            ) if config_path.is_file() else None,
+            "medgemma_config_hash": (
+                effective_config_sha256(load_screening_config(config_path))
+                if config_path is not None and config_path.is_file()
+                else None
+            ),
+            "visual_panel_config_path": VISUAL_PANEL_CONFIG if visual else None,
+            "visual_embedding_config_path": VISUAL_EMBEDDING_CONFIG if visual else None,
+            "visual_panel_config_sha256": (
+                sha256_of((REPO / VISUAL_PANEL_CONFIG).resolve())
+                if visual and (REPO / VISUAL_PANEL_CONFIG).is_file()
+                else None
+            ),
+            "visual_embedding_config_sha256": (
+                sha256_of((REPO / VISUAL_EMBEDDING_CONFIG).resolve())
+                if visual and (REPO / VISUAL_EMBEDDING_CONFIG).is_file()
+                else None
+            ),
             "dataset_names": [manifest["dataset_name"]],
             "num_cases_total": len(cases),
             "num_cases_positive": sum(item["label"] == "positive" for item in cases),
@@ -1481,5 +1538,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-

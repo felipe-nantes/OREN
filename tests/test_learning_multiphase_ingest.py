@@ -80,6 +80,37 @@ def _image(size=(8, 8, 4), origin=(0.0, 0.0, 0.0), spacing=(1.0, 1.0, 2.0), valu
     return image
 
 
+def test_squeeze_collapses_trailing_singleton_preserving_geometry():
+    # Séries DICOM derivadas costumam ser montadas como (X, Y, Z, 1). O eixo
+    # extra precisa ser colapsado sem deslocar origem/spacing/direção.
+    volume = np.arange(4 * 3 * 2, dtype=np.float32).reshape(2, 3, 4)
+    image3d = sitk.GetImageFromArray(volume)
+    image3d.SetSpacing((1.5, 1.5, 3.0))
+    image3d.SetOrigin((10.0, 20.0, 30.0))
+    image4d = sitk.JoinSeries(image3d)  # -> (4, 3, 2, 1)
+    assert image4d.GetDimension() == 4
+
+    squeezed = mi._squeeze_trailing_singleton(image4d, "series_x")
+    assert squeezed.GetDimension() == 3
+    assert squeezed.GetSize() == image3d.GetSize()
+    assert np.allclose(squeezed.GetSpacing(), image3d.GetSpacing())
+    assert np.allclose(squeezed.GetOrigin(), image3d.GetOrigin())
+    assert np.allclose(sitk.GetArrayFromImage(squeezed), volume)
+
+
+def test_squeeze_is_noop_for_plain_3d_image():
+    image = _image()
+    assert mi._squeeze_trailing_singleton(image, "series_x") is image
+
+
+def test_squeeze_rejects_multiple_temporal_volumes():
+    # Mais de um volume temporal não é ambiguidade a resolver silenciosamente.
+    stacked = sitk.JoinSeries([_image(), _image()])
+    assert stacked.GetSize()[3] == 2
+    with pytest.raises(PipelineError, match="volumes temporais"):
+        mi._squeeze_trailing_singleton(stacked, "series_x")
+
+
 def test_harmonize_resamples_onto_reference_grid_with_full_coverage():
     reference = _image()  # 8x8x4 @ (1,1,2) -> 8x8x8 mm
     # Finer grid over the SAME physical extent: half the spacing needs twice the
@@ -170,4 +201,59 @@ def test_build_multiphase_case_requires_segmentation_outputs(tmp_path):
             case_upload_dir=case_upload,
             output_dir=tmp_path / "out",
             segment_venous=lambda venous_dir, work_dir: empty,
+        )
+
+
+def test_build_multiphase_case_accepts_explicit_authorized_phase_mapping(
+    tmp_path, monkeypatch
+):
+    case_upload = tmp_path / "caso-opaco"
+    explicit = {}
+    for phase, number in zip(mi.REQUIRED_PHASES, (7, 11, 19)):
+        directory = case_upload / f"series_{number:03d}"
+        _touch(directory, "volume.dcm")
+        explicit[phase] = directory
+
+    reference = _image()
+    segmented = tmp_path / "seg-explicit"
+    segmented.mkdir()
+    sitk.WriteImage(reference, str(segmented / "volume.nii.gz"))
+    sitk.WriteImage(
+        sitk.Cast(reference, sitk.sitkUInt8),
+        str(segmented / "mask_organ.nii.gz"),
+    )
+    seen = {}
+
+    def segment_venous(directory, _work):
+        seen["venous"] = Path(directory)
+        return segmented
+
+    monkeypatch.setattr(
+        mi,
+        "discover_phase_folders",
+        lambda _path: pytest.fail("não deve inferir pastas quando o mapa é explícito"),
+    )
+    monkeypatch.setattr(mi, "read_phase_series", lambda _d, **_k: _image(value=4.0))
+
+    result = mi.build_multiphase_case(
+        case_id="caso-opaco",
+        case_upload_dir=case_upload,
+        output_dir=tmp_path / "out-explicit",
+        segment_venous=segment_venous,
+        phase_dirs=explicit,
+    )
+    assert seen["venous"] == explicit[mi.VENOUS].resolve()
+    assert set(result.phase_paths) == set(mi.REQUIRED_PHASES)
+
+
+def test_build_multiphase_case_rejects_incomplete_explicit_mapping(tmp_path):
+    phase_dir = tmp_path / "series_001"
+    _touch(phase_dir)
+    with pytest.raises(PipelineError, match="Mapeamento explícito"):
+        mi.build_multiphase_case(
+            case_id="caso-incompleto",
+            case_upload_dir=tmp_path,
+            output_dir=tmp_path / "out-incompleto",
+            segment_venous=lambda *_args: tmp_path,
+            phase_dirs={mi.ARTERIAL: phase_dir},
         )

@@ -396,6 +396,182 @@ def test_visual_scenario_requires_trained_bundle(monkeypatch, tmp_path):
         server._visual_bundle_root("hybrid_supervised")
 
 
+def test_authorized_visual_phase_resolution_ignores_regular_case(tmp_path):
+    assert server._authorized_visual_phase_resolution("caso-comum", tmp_path) is None
+
+
+def test_authorized_visual_phase_resolution_uses_only_server_config(
+    monkeypatch, tmp_path
+):
+    import hashlib
+    import json
+
+    from pydicom.dataset import FileDataset, FileMetaDataset
+    from pydicom.uid import ExplicitVRLittleEndian, MRImageStorage, generate_uid
+
+    case_id = "ARGOS-BLIND-0001"
+    upload = tmp_path / "uploaded"
+    rows = []
+    for number, role in (
+        (1, "t1_arterial"),
+        (2, "t1_venous"),
+        (3, "t1_delayed"),
+    ):
+        path = upload / f"series_{number:03d}" / "volume.dcm"
+        path.parent.mkdir(parents=True)
+        file_meta = FileMetaDataset()
+        file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
+        file_meta.MediaStorageSOPClassUID = MRImageStorage
+        file_meta.MediaStorageSOPInstanceUID = generate_uid()
+        ds = FileDataset(str(path), {}, file_meta=file_meta, preamble=b"\0" * 128)
+        ds.SOPClassUID = MRImageStorage
+        ds.SOPInstanceUID = file_meta.MediaStorageSOPInstanceUID
+        ds.PatientID = case_id
+        ds.Modality = "MR"
+        ds.SeriesNumber = number
+        ds.save_as(str(path), enforce_file_format=True)
+        rows.append(
+            {
+                "blind_case_id": case_id,
+                "series_number": number,
+                "role_private": role,
+                "output_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+        )
+    audit = tmp_path / "authorized" / "conversion_audit.json"
+    audit.parent.mkdir()
+    audit.write_text(json.dumps(rows), encoding="utf-8")
+    monkeypatch.setattr(server, "REPO", tmp_path)
+    monkeypatch.setattr(
+        server,
+        "VISUAL_AUTHORIZED_PHASE_AUDIT",
+        "authorized/conversion_audit.json",
+    )
+
+    resolved = server._authorized_visual_phase_resolution(case_id, upload)
+    assert resolved is not None
+    assert resolved.safe_manifest()["private_paths_persisted"] is False
+
+
+def test_visual_benchmark_finalization_does_not_require_medgemma_config(
+    monkeypatch, tmp_path
+):
+    captured = {}
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path / "workspace")
+    monkeypatch.setattr(
+        server,
+        "_run_visual_benchmark_case",
+        lambda *_args, **_kwargs: {
+            "case_id": "caso-visual",
+            "prediction": "NEGATIVA",
+            "status": "decisive",
+            "duration_seconds": 1.0,
+            "durations_seconds": {"total": 1.0},
+        },
+    )
+    monkeypatch.setattr(
+        server,
+        "_visual_model_info",
+        lambda _scenario: {
+            "model_id": "medsiglip_multiclass_production_bundle",
+            "model_version": "test",
+        },
+    )
+    monkeypatch.setattr(
+        server,
+        "write_run_outputs",
+        lambda _root, run_manifest, _results, _metrics: captured.update(
+            run_manifest=run_manifest
+        ),
+    )
+    server._benchmarks["visual-run"] = {
+        "state": "queued",
+        "progress": 0,
+        "processed": 0,
+        "total": 1,
+        "current_case": None,
+        "report": None,
+        "error": None,
+    }
+    server.process_benchmark(
+        "visual-run",
+        {
+            "dataset_name": "visual",
+            "dataset_kind": "negative",
+            "scenario": "hybrid_supervised",
+            "cases": [
+                {
+                    "id": "caso-visual",
+                    "label": "negative",
+                    "file_indices": [0],
+                }
+            ],
+        },
+        raw,
+    )
+    assert server._benchmarks["visual-run"]["state"] == "done"
+    assert captured["run_manifest"]["model_family"] == "MedSigLIP"
+    assert captured["run_manifest"]["medgemma_config_path"] is None
+    assert captured["run_manifest"]["medgemma_config_hash"] is None
+    assert captured["run_manifest"]["visual_panel_config_sha256"] is not None
+    assert captured["run_manifest"]["visual_embedding_config_sha256"] is not None
+
+
+def test_visual_upload_preserves_opaque_series_tree_for_authorized_adapter(
+    monkeypatch, tmp_path
+):
+    import json
+
+    monkeypatch.setattr(server, "process_benchmark", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    client = TestClient(server.app)
+    case_id = "ARGOS-BLIND-0001"
+    manifest = {
+        "dataset_name": "ARGOS internal blind",
+        "dataset_kind": "negative",
+        "scenario": "hybrid_supervised",
+        "cases": [
+            {
+                "id": case_id,
+                "label": "negative",
+                "file_indices": [0, 1, 2],
+            }
+        ],
+    }
+    relpaths = [
+        f"webapp_input/{case_id}/series_001/volume.dcm",
+        f"webapp_input/{case_id}/series_002/volume.dcm",
+        f"webapp_input/{case_id}/series_003/volume.dcm",
+    ]
+    response = client.post(
+        "/api/benchmarks",
+        files=[
+            ("files", ("volume.dcm", b"one", "application/dicom")),
+            ("files", ("volume.dcm", b"two", "application/dicom")),
+            ("files", ("volume.dcm", b"three", "application/dicom")),
+        ],
+        data={
+            "manifest": json.dumps(manifest),
+            "relpaths": json.dumps(relpaths),
+        },
+    )
+    assert response.status_code == 200
+    benchmark_id = response.json()["benchmark_id"]
+    uploaded_case = (
+        tmp_path
+        / "benchmarks"
+        / benchmark_id
+        / "_upload"
+        / "0001"
+        / case_id
+    )
+    assert (uploaded_case / "series_001" / "volume.dcm").read_bytes() == b"one"
+    assert (uploaded_case / "series_002" / "volume.dcm").read_bytes() == b"two"
+    assert (uploaded_case / "series_003" / "volume.dcm").read_bytes() == b"three"
+
+
 def test_benchmark_upload_accepts_more_than_default_starlette_file_cap(monkeypatch, tmp_path):
     """Starlette limita multipart a max_files=1000 por padrão; um dataset de
     benchmark real (muitos exames x muitas fatias) estoura isso facilmente.

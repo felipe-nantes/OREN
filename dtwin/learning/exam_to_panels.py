@@ -20,6 +20,7 @@ input contract here (see docs/123).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import tempfile
@@ -29,13 +30,72 @@ from typing import Any, Mapping
 
 from dtwin.core import PipelineError
 from dtwin.medgemma_client import load_screening_config, model_trace
-from dtwin.medgemma_panel_liver_enriched import generate_liver_enriched_panel_set_multiphase
+from dtwin.medgemma_panel_liver_enriched import (
+    LIVER_ENRICHED_POLICY,
+    generate_liver_enriched_panel_set_multiphase,
+)
 
 # The exact liver-enriched panel config used to render the training panels. Using
 # any other panel config would shift the input distribution away from what the
 # production bundle was trained on.
 DEFAULT_LIVER_ENRICHED_PANEL_CONFIG = "configs/medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml"
-LIVER_ENRICHED_POLICY = "liver_enriched_full_fov"
+# ``LIVER_ENRICHED_POLICY`` is imported from the renderer rather than restated
+# here: the value written into the manifest ("coarse_liver_localized_full_fov_
+# interleaved_2or3x9_v1") is NOT the config's ``spatial_focus``
+# ("liver_enriched_full_fov"), and duplicating it silently broke the contract
+# check against correctly rendered panels.
+
+# The renderer keys phases by the SHORT names its channel map uses (art/pv/del),
+# while the ingestion pipeline speaks the canonical DICOM-ish role names. The
+# training pipelines translate with this exact table
+# (`dtwin/benchmark/lld_mmri_v23_full_fov_pilot.ROLE_TO_PHASE`), so it is
+# reproduced here to keep inference byte-compatible with how the panels the
+# model was trained on were rendered.
+CANONICAL_ROLE_TO_PANEL_PHASE = {
+    "t1_arterial": "art",
+    "t1_venous": "pv",
+    "t1_delayed": "del",
+}
+
+
+def anonymous_manifest_case_id(case_id: str) -> str:
+    """Anonymous ``anon-*`` id for the panel case manifest.
+
+    The renderer refuses any identifier that is not anonymized
+    (`dtwin/medgemma_panel.py`), and the ingestion-side id may be a cohort
+    identifier (e.g. a blind benchmark id) that should not be written into panel
+    metadata. Already-anonymous ids pass through unchanged; anything else is
+    hashed. The derivation is deterministic — unlike stage 1's random UUID — so
+    re-running the same case reproduces the same manifest.
+    """
+    token = str(case_id).strip()
+    if token.startswith("anon-"):
+        return token
+    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()[:12]
+    return f"anon-{digest}"
+
+
+def _to_panel_phase_keys(
+    phase_paths: Mapping[str, Path], required_phases: set[str]
+) -> dict[str, Path]:
+    """Translate canonical role names onto the keys the panel config expects.
+
+    Only renames what the config actually asks for, and leaves keys already in
+    the renderer's vocabulary untouched, so a config using either naming works.
+    """
+    translated: dict[str, Path] = {}
+    for name, path in phase_paths.items():
+        key = str(name)
+        if key not in required_phases and key in CANONICAL_ROLE_TO_PANEL_PHASE:
+            key = CANONICAL_ROLE_TO_PANEL_PHASE[key]
+        translated[key] = Path(path)
+    missing = sorted(required_phases - set(translated))
+    if missing:
+        raise PipelineError(
+            f"Fases exigidas pela config de painel ausentes após tradução: {missing}. "
+            f"Recebidas: {sorted(phase_paths)}."
+        )
+    return translated
 
 
 @dataclass(frozen=True)
@@ -83,6 +143,7 @@ def build_exam_panels(
     case_id = str(case_id).strip()
     if not case_id:
         raise PipelineError("build_exam_panels exige case_id.")
+    manifest_case_id = anonymous_manifest_case_id(case_id)
     config = load_screening_config(Path(panel_config_path))
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -90,14 +151,17 @@ def build_exam_panels(
     _atomic_write_json(
         case_manifest,
         {
-            "case_id": case_id,
+            "case_id": manifest_case_id,
             "policy": "anonymize",
             "regulatory_state": "PESQUISA",
             "modality": "MRI",
         },
     )
+    from dtwin.medgemma_panel_multiphase import _resolve_channel_map
+
+    required_phases = set(_resolve_channel_map(config.get("panel", {})).values())
     result = generate_liver_enriched_panel_set_multiphase(
-        phase_paths={str(name): Path(path) for name, path in phase_paths.items()},
+        phase_paths=_to_panel_phase_keys(phase_paths, required_phases),
         coarse_liver_mask_path=Path(coarse_liver_mask_path),
         case_manifest_path=case_manifest,
         screening_config=config,

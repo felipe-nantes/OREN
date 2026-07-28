@@ -31,7 +31,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 import numpy as np
 import SimpleITK as sitk
@@ -108,6 +108,27 @@ def discover_phase_folders(case_dir: Path) -> dict[str, Path]:
     return {phase: paths[0] for phase, paths in found.items() if phase in REQUIRED_PHASES}
 
 
+def _squeeze_trailing_singleton(image: sitk.Image, label: str) -> sitk.Image:
+    """Collapse a trailing singleton 4th dimension, preserving geometry.
+
+    Some DICOM series (notably derived/multi-frame exports) are assembled by
+    ``ImageSeriesReader`` as ``(X, Y, Z, 1)``. The main ingest path never trips
+    on this because it round-trips through NIfTI, which silently drops the
+    singleton; here the image is consumed in memory, so it must be collapsed
+    explicitly. ``Extract`` with size 0 on that axis drops it while carrying the
+    origin/spacing/direction of the remaining axes — no resampling, no shift.
+    """
+    if image.GetDimension() != 4:
+        return image
+    size = list(image.GetSize())
+    if size[3] != 1:
+        raise PipelineError(
+            f"Série de {label} tem {size[3]} volumes temporais; esperado um único volume."
+        )
+    size[3] = 0  # 0 = colapsa o eixo em vez de recortá-lo
+    return sitk.Extract(image, size, [0, 0, 0, 0])
+
+
 def read_phase_series(phase_dir: Path, *, min_slices: int = 3) -> sitk.Image:
     """Read the best MR series inside a phase folder as a 3D image."""
     from dtwin.benchmark.dataset_audit import select_best_mr_series
@@ -120,6 +141,7 @@ def read_phase_series(phase_dir: Path, *, min_slices: int = 3) -> sitk.Image:
     reader = sitk.ImageSeriesReader()
     reader.SetFileNames([str(path) for path in files])
     image = reader.Execute()
+    image = _squeeze_trailing_singleton(image, phase_dir.name)
     if image.GetDimension() != 3:
         raise PipelineError(f"Série de {phase_dir.name} não é volumétrica.")
     return image
@@ -165,6 +187,7 @@ def build_multiphase_case(
     output_dir: Path,
     segment_venous: Callable[[Path, Path], Path],
     minimum_coverage: float = MINIMUM_COVERAGE,
+    phase_dirs: Mapping[str, Path] | None = None,
 ) -> MultiphaseCase:
     """Turn an uploaded multiphase case folder into panel-ready inputs.
 
@@ -174,11 +197,30 @@ def build_multiphase_case(
     ``mask_organ.nii.gz``. Injecting it keeps this module testable and avoids
     duplicating the webapp's GPU/CPU fallback logic.
     """
-    phase_dirs = discover_phase_folders(Path(case_upload_dir))
+    if phase_dirs is None:
+        resolved_phase_dirs = discover_phase_folders(Path(case_upload_dir))
+    else:
+        keys = set(phase_dirs)
+        if keys != set(REQUIRED_PHASES):
+            missing = sorted(set(REQUIRED_PHASES) - keys)
+            extra = sorted(keys - set(REQUIRED_PHASES))
+            raise PipelineError(
+                f"Mapeamento explícito de fases inválido; ausentes={missing}, extras={extra}."
+            )
+        resolved_phase_dirs = {
+            phase: Path(phase_dirs[phase]).resolve()
+            for phase in REQUIRED_PHASES
+        }
+        if not all(path.is_dir() for path in resolved_phase_dirs.values()):
+            raise PipelineError("Mapeamento explícito contém diretório de fase inexistente.")
+        if len(set(resolved_phase_dirs.values())) != len(REQUIRED_PHASES):
+            raise PipelineError("Mapeamento explícito reutiliza um diretório em mais de uma fase.")
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    segmented_dir = Path(segment_venous(phase_dirs[VENOUS], output_dir / "segmentation"))
+    segmented_dir = Path(
+        segment_venous(resolved_phase_dirs[VENOUS], output_dir / "segmentation")
+    )
     reference_path = segmented_dir / "volume.nii.gz"
     mask_path = segmented_dir / "mask_organ.nii.gz"
     for path, label in ((reference_path, "volume venoso"), (mask_path, "máscara hepática")):
@@ -189,7 +231,7 @@ def build_multiphase_case(
     phase_paths: dict[str, Path] = {VENOUS: reference_path}
     coverage: dict[str, float] = {VENOUS: 1.0}
     for phase in (ARTERIAL, DELAYED):
-        image = read_phase_series(phase_dirs[phase])
+        image = read_phase_series(resolved_phase_dirs[phase])
         harmonized, covered = harmonize_to_reference(image, reference)
         if covered < float(minimum_coverage):
             raise PipelineError(
