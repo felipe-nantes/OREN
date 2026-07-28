@@ -737,6 +737,45 @@ def _visual_bundle_root(scenario: str) -> Path:
     return root
 
 
+def _provenance_summary(results: list[dict]) -> dict:
+    """Resume a procedência dos casos e diz se as métricas são interpretáveis.
+
+    Sem isto, a tela apresenta acurácia/sensibilidade com o mesmo destaque de um
+    resultado limpo mesmo quando todos os casos podem ter sido vistos no treino
+    — que é exatamente como um número inflado vira conclusão. O veredito por
+    caso vem do guard de três estados (`in_sample_verdict`).
+    """
+    counts = {"in_sample": 0, "out_of_sample": 0, "unknown": 0}
+    for row in results:
+        verdict = str(row.get("in_sample_verdict") or "unknown")
+        counts[verdict if verdict in counts else "unknown"] += 1
+    total = sum(counts.values())
+    messages = []
+    if counts["in_sample"]:
+        messages.append(
+            f"{counts['in_sample']} de {total} caso(s) foram vistos no treino do modelo: "
+            "as métricas incluem desempenho in-sample, que é inflado."
+        )
+    if counts["unknown"]:
+        messages.append(
+            f"{counts['unknown']} de {total} caso(s) têm procedência NÃO verificável "
+            "contra o conjunto de treino (identificadores de nomenclatura distinta). "
+            "Eles podem ser in-sample."
+        )
+    clean = counts["out_of_sample"] == total and total > 0
+    if not clean:
+        messages.append(
+            "Portanto estas métricas NÃO são estimativa de generalização. "
+            "A estimativa honesta do modelo é o nested-OOF da Etapa C "
+            "(75,91% sens. / 76,11% esp., docs/121)."
+        )
+    return {
+        "counts": counts,
+        "metrics_are_generalization_estimate": clean,
+        "warning": " ".join(messages) or None,
+    }
+
+
 def _visual_model_info(scenario: str) -> dict:
     """Identidade do classificador visual, com o enquadramento honesto embutido."""
     try:
@@ -1101,6 +1140,7 @@ def process_benchmark(benchmark_id: str, manifest: dict, raw_dir: Path) -> None:
             "completed_at": completed_at,
             "model": model_info,
             "metrics": metrics,
+            "provenance": _provenance_summary(results) if visual else None,
             "cases": results,
             "disclaimer": DISCLAIMER,
         }

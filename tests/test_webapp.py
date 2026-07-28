@@ -377,6 +377,40 @@ def test_benchmark_manifest_accepts_visual_scenario():
     assert server._is_visual_scenario("pathology_target") is False
 
 
+def test_provenance_summary_flags_unknown_and_in_sample():
+    # unknown NAO pode ser lido como limpo: o caso pode ter sido visto no treino.
+    only_unknown = server._provenance_summary([
+        {"in_sample_verdict": "unknown"}, {"in_sample_verdict": "unknown"},
+    ])
+    assert only_unknown["counts"]["unknown"] == 2
+    assert only_unknown["metrics_are_generalization_estimate"] is False
+    lowered = only_unknown["warning"].lower()
+    assert "procedência não verificável" in lowered
+    assert "não são estimativa de generalização" in lowered
+
+    seen = server._provenance_summary([
+        {"in_sample_verdict": "in_sample"}, {"in_sample_verdict": "out_of_sample"},
+    ])
+    assert seen["counts"]["in_sample"] == 1
+    assert seen["metrics_are_generalization_estimate"] is False
+    assert "vistos no treino" in seen["warning"]
+
+
+def test_provenance_summary_clean_only_when_all_out_of_sample():
+    clean = server._provenance_summary([
+        {"in_sample_verdict": "out_of_sample"}, {"in_sample_verdict": "out_of_sample"},
+    ])
+    assert clean["metrics_are_generalization_estimate"] is True
+    assert clean["warning"] is None
+
+
+def test_provenance_summary_treats_missing_verdict_as_unknown():
+    # Caso legado, sem o campo: nunca assumir que e limpo.
+    legacy = server._provenance_summary([{"case_id": "x"}])
+    assert legacy["counts"]["unknown"] == 1
+    assert legacy["metrics_are_generalization_estimate"] is False
+
+
 def test_visual_scenario_rejects_unauthorized_key():
     from dtwin.core import PipelineError
 

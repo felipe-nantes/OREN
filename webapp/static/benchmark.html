@@ -198,8 +198,15 @@ function renderReport(report){show($('#progressCard'),false);const card=$('#repo
     const label=technical[c.status]||(c.status==='inconclusive'?'INCONCLUSIVO':c.correct?'CORRETO':'INCORRETO');return`<tr><td>${esc(c.case_id)}</td><td>${c.truth==='positive'?'Positivo':'Negativo'}</td><td>${esc(c.prediction||'—')}</td><td><span class="status ${state}">${label}</span></td><td>${esc(c.confidence||'—')}</td><td>${c.duration_seconds}s</td></tr>`}).join('');
   const gate=m.target?.met===true?'<span class="status s-ok">META 75% ATINGIDA</span>':'<span class="status s-bad">META 75% NÃO ATINGIDA</span>';
   const scenarioName=SCENARIO_LABEL[report.scenario]||report.scenario||'—';
+  // Procedencia ANTES das metricas: se os casos podem ter sido vistos no treino,
+  // o leitor precisa saber disso antes de ler a acuracia, nao depois.
+  const prov=report.provenance;
+  const provBanner=(prov&&prov.warning)
+    ? `<div class="provenance-warning" role="alert"><b>Estas métricas não são estimativa de generalização.</b> ${esc(prov.warning)}</div>`
+    : '';
   card.innerHTML=`<div class="report-head"><div><h3>${esc(report.dataset_name)}</h3><div class="hint">${m.total_cases} exames · <b>${esc(scenarioName)}</b> · ${esc(report.model.model_version||report.model.model_id||'MedGemma')} · ${gate}</div></div>
     <div class="download"><a href="/api/benchmarks/${currentBenchmark}/report.json">Baixar JSON</a><a href="/api/benchmarks/${currentBenchmark}/report.csv">Baixar CSV</a></div></div>
+    ${provBanner}
     <div class="metrics">${metric('Acurácia',pct(m.accuracy),ci(m,'accuracy'),'primary-m')}${metric('Sensibilidade',pct(m.sensitivity),ci(m,'sensitivity'))}
       ${metric('Especificidade',pct(m.specificity),ci(m,'specificity'))}${metric('F1-score',pct(m.f1_score),'inconclusivos/falhas penalizados')}
       ${metric('Precisão',pct(m.precision),'valor preditivo positivo')}${metric('Cobertura',pct(m.coverage_rate),`${m.decisive_cases} de ${m.total_cases} decisivos`,'good')}
