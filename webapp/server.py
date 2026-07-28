@@ -862,6 +862,9 @@ def _run_visual_benchmark_case(
         decision = classify_embeddings(bundle, embeddings)
         base["durations_seconds"]["visual_inference"] = round(time.monotonic() - inference_started, 4)
 
+        # Sem mapa de proveniência, um identificador de coorte com nomenclatura
+        # própria (ex.: benchmark cego) cai em 'unknown' — que NÃO é o mesmo que
+        # out-of-sample e não deve ser lido como tal.
         status = in_sample_status(bundle, case_id=str(item["id"]))
         base.update(
             prediction="POSITIVA" if decision["prediction"] == "POSITIVE" else "NEGATIVA",
@@ -871,6 +874,7 @@ def _run_visual_benchmark_case(
             visual_threshold=decision["threshold"],
             panel_count=decision["panel_count"],
             in_sample=status["in_sample"],
+            in_sample_verdict=status["verdict"],
         )
         return base
     except subprocess.TimeoutExpired:

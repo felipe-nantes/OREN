@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -124,42 +124,115 @@ def infer_case_from_panels(
     return classify_embeddings(bundle, embeddings)
 
 
+IN_SAMPLE_YES = "in_sample"
+IN_SAMPLE_NO = "out_of_sample"
+IN_SAMPLE_UNKNOWN = "unknown"
+
+
+def _namespace(identifier: str) -> str:
+    """Leading token of an identifier, used as its naming namespace.
+
+    Training ids look like ``anon-lld-…`` / ``anon-openswiss-…`` (namespace
+    ``anon``); a blind benchmark id looks like ``ARGOS-BLIND-0001`` (namespace
+    ``argos``). Ids from different namespaces are simply not comparable.
+    """
+    return str(identifier).strip().split("-", 1)[0].lower()
+
+
+def training_namespaces(bundle: ProductionBundle) -> set[str]:
+    return {
+        _namespace(value)
+        for value in (*bundle.training_case_ids, *bundle.training_patient_group_ids)
+        if str(value).strip()
+    }
+
+
 def in_sample_status(
-    bundle: ProductionBundle, *, case_id: str, patient_group_id: str | None = None
+    bundle: ProductionBundle,
+    *,
+    case_id: str,
+    patient_group_id: str | None = None,
+    provenance: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Whether a benchmark case was seen during the bundle's training.
 
-    In-sample cases produce inflated, non-generalization numbers and must be
-    labeled as such — never mixed into a clean metric.
+    Returns a THREE-state verdict, because "not found in the training set" and
+    "cannot be compared to the training set" are different facts and conflating
+    them is dangerous: an unmatched identifier from a foreign namespace (e.g. a
+    blind benchmark id compared against ``anon-*`` training ids) would otherwise
+    be silently reported as out-of-sample, certifying an in-sample — and
+    therefore inflated — number as clean. That exact false negative happened on
+    the 120-case blind collection, where 86/100 cases were in fact in training
+    while every report claimed ``in_sample=False``.
+
+    ``provenance`` maps a benchmark identifier onto the original cohort
+    identifier (from an authorized index). When supplied, the comparison becomes
+    definitive; without it, a foreign-namespace identifier yields ``unknown``.
     """
+    case_id = str(case_id)
     group = str(patient_group_id or case_id)
-    by_case = str(case_id) in bundle.training_case_ids
-    by_group = group in bundle.training_patient_group_ids
+    resolved_case = str((provenance or {}).get(case_id, case_id))
+    resolved_group = str((provenance or {}).get(group, group))
+
+    by_case = resolved_case in bundle.training_case_ids
+    by_group = resolved_group in bundle.training_patient_group_ids
+    if by_case or by_group:
+        verdict = IN_SAMPLE_YES
+    else:
+        namespaces = training_namespaces(bundle)
+        comparable = (
+            _namespace(resolved_case) in namespaces
+            or _namespace(resolved_group) in namespaces
+        )
+        verdict = IN_SAMPLE_NO if comparable else IN_SAMPLE_UNKNOWN
+
     return {
-        "in_sample": bool(by_case or by_group),
+        "verdict": verdict,
+        # True only when provably seen in training; never True on `unknown`.
+        "in_sample": verdict == IN_SAMPLE_YES,
+        # Explicit: callers must not read `not in_sample` as "out-of-sample".
+        "provably_out_of_sample": verdict == IN_SAMPLE_NO,
         "matched_by_case_id": by_case,
         "matched_by_patient_group_id": by_group,
+        "provenance_resolved": bool(provenance) and resolved_case != case_id,
+        "reason": (
+            "identificador de namespace estranho ao conjunto de treino; "
+            "sem proveniência não é possível decidir"
+            if verdict == IN_SAMPLE_UNKNOWN
+            else ""
+        ),
     }
 
 
 def partition_in_sample(
-    bundle: ProductionBundle, cases: list[dict[str, Any]]
+    bundle: ProductionBundle,
+    cases: list[dict[str, Any]],
+    *,
+    provenance: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Split a list of case records ({case_id, patient_group_id?}) into in-sample
-    vs out-of-sample, so a benchmark report can present them separately."""
-    in_sample: list[str] = []
-    out_of_sample: list[str] = []
+    """Split case records into in-sample / out-of-sample / unknown.
+
+    ``unknown`` is deliberately NOT folded into out-of-sample: doing so is what
+    lets an inflated number pass as a generalization estimate.
+    """
+    buckets: dict[str, list[str]] = {
+        IN_SAMPLE_YES: [], IN_SAMPLE_NO: [], IN_SAMPLE_UNKNOWN: []
+    }
     for case in cases:
         status = in_sample_status(
             bundle,
             case_id=str(case["case_id"]),
             patient_group_id=case.get("patient_group_id"),
+            provenance=provenance,
         )
-        (in_sample if status["in_sample"] else out_of_sample).append(str(case["case_id"]))
+        buckets[status["verdict"]].append(str(case["case_id"]))
     return {
-        "in_sample_case_ids": sorted(in_sample),
-        "out_of_sample_case_ids": sorted(out_of_sample),
-        "in_sample_count": len(in_sample),
-        "out_of_sample_count": len(out_of_sample),
-        "any_in_sample": bool(in_sample),
+        "in_sample_case_ids": sorted(buckets[IN_SAMPLE_YES]),
+        "out_of_sample_case_ids": sorted(buckets[IN_SAMPLE_NO]),
+        "unknown_case_ids": sorted(buckets[IN_SAMPLE_UNKNOWN]),
+        "in_sample_count": len(buckets[IN_SAMPLE_YES]),
+        "out_of_sample_count": len(buckets[IN_SAMPLE_NO]),
+        "unknown_count": len(buckets[IN_SAMPLE_UNKNOWN]),
+        "any_in_sample": bool(buckets[IN_SAMPLE_YES]),
+        "any_unknown": bool(buckets[IN_SAMPLE_UNKNOWN]),
     }

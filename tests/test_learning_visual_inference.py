@@ -96,21 +96,68 @@ def test_classify_rejects_empty_embeddings(tmp_path):
 
 
 def test_in_sample_status_matches_by_case_or_group(tmp_path):
-    root = _write_bundle(tmp_path, training_case_ids={"train1"}, training_group_ids={"grp1"})
+    root = _write_bundle(
+        tmp_path, training_case_ids={"anon-train1"}, training_group_ids={"anon-grp1"}
+    )
     bundle = visual_inference.load_production_bundle(root)
-    assert visual_inference.in_sample_status(bundle, case_id="train1")["in_sample"] is True
-    assert visual_inference.in_sample_status(bundle, case_id="new", patient_group_id="grp1")["in_sample"] is True
-    fresh = visual_inference.in_sample_status(bundle, case_id="new", patient_group_id="grpX")
+    assert visual_inference.in_sample_status(bundle, case_id="anon-train1")["in_sample"] is True
+    seen_group = visual_inference.in_sample_status(
+        bundle, case_id="anon-new", patient_group_id="anon-grp1"
+    )
+    assert seen_group["in_sample"] is True
+    # mesmo namespace e sem correspondencia -> comprovadamente out-of-sample
+    fresh = visual_inference.in_sample_status(
+        bundle, case_id="anon-new", patient_group_id="anon-grpX"
+    )
+    assert fresh["verdict"] == visual_inference.IN_SAMPLE_NO
     assert fresh["in_sample"] is False
+    assert fresh["provably_out_of_sample"] is True
 
 
-def test_partition_in_sample_separates_seen_from_unseen(tmp_path):
-    root = _write_bundle(tmp_path, training_case_ids={"a", "b"}, training_group_ids={"a", "b"})
+def test_foreign_namespace_is_unknown_not_out_of_sample(tmp_path):
+    # Regressao do defeito real: ids cegos (ARGOS-BLIND-*) comparados contra um
+    # treino anon-* nunca casam, e antes eram reportados como out-of-sample --
+    # certificando como limpo um lote que era 86% in-sample.
+    root = _write_bundle(
+        tmp_path,
+        training_case_ids={"anon-lld-001", "anon-openswiss-002"},
+        training_group_ids={"anon-lld-001", "anon-openswiss-002"},
+    )
+    bundle = visual_inference.load_production_bundle(root)
+    status = visual_inference.in_sample_status(bundle, case_id="ARGOS-BLIND-0001")
+    assert status["verdict"] == visual_inference.IN_SAMPLE_UNKNOWN
+    assert status["in_sample"] is False           # nao afirma que viu
+    assert status["provably_out_of_sample"] is False  # nem que nao viu
+    assert "proveniência" in status["reason"]
+
+
+def test_provenance_map_resolves_foreign_identifier(tmp_path):
+    root = _write_bundle(
+        tmp_path, training_case_ids={"anon-lld-001"}, training_group_ids={"anon-lld-001"}
+    )
+    bundle = visual_inference.load_production_bundle(root)
+    # com proveniencia, o id cego e resolvido e o veredito vira definitivo
+    seen = visual_inference.in_sample_status(
+        bundle, case_id="ARGOS-BLIND-0001", provenance={"ARGOS-BLIND-0001": "anon-lld-001"}
+    )
+    assert seen["verdict"] == visual_inference.IN_SAMPLE_YES
+    assert seen["provenance_resolved"] is True
+    unseen = visual_inference.in_sample_status(
+        bundle, case_id="ARGOS-BLIND-0002", provenance={"ARGOS-BLIND-0002": "anon-lld-999"}
+    )
+    assert unseen["verdict"] == visual_inference.IN_SAMPLE_NO
+
+
+def test_partition_separates_three_states(tmp_path):
+    root = _write_bundle(
+        tmp_path, training_case_ids={"anon-a", "anon-b"}, training_group_ids={"anon-a", "anon-b"}
+    )
     bundle = visual_inference.load_production_bundle(root)
     part = visual_inference.partition_in_sample(
         bundle,
-        [{"case_id": "a"}, {"case_id": "z"}, {"case_id": "b"}],
+        [{"case_id": "anon-a"}, {"case_id": "anon-z"}, {"case_id": "ARGOS-BLIND-0001"}],
     )
-    assert part["in_sample_case_ids"] == ["a", "b"]
-    assert part["out_of_sample_case_ids"] == ["z"]
-    assert part["any_in_sample"] is True
+    assert part["in_sample_case_ids"] == ["anon-a"]
+    assert part["out_of_sample_case_ids"] == ["anon-z"]
+    assert part["unknown_case_ids"] == ["ARGOS-BLIND-0001"]  # nunca em out_of_sample
+    assert part["any_unknown"] is True

@@ -68,11 +68,13 @@ def _fakes():
 
 
 def test_out_of_sample_only_in_headline_and_in_sample_separated(tmp_path):
-    bundle_root = _bundle(tmp_path, training_case_ids={"seen1"})
+    # Ids no MESMO namespace do treino: so assim "nao encontrado" significa de
+    # fato out-of-sample (do contrario o veredito correto seria 'unknown').
+    bundle_root = _bundle(tmp_path, training_case_ids={"anon-seen1"})
     cases = [
-        _case("seen1", "POSITIVE", 5.0),   # in-sample, correct
-        _case("new_pos", "POSITIVE", 5.0),  # out-of-sample, correct
-        _case("new_neg", "NEGATIVE", -5.0),  # out-of-sample, correct
+        _case("anon-seen1", "POSITIVE", 5.0),   # in-sample, correct
+        _case("anon-new_pos", "POSITIVE", 5.0),  # out-of-sample, correct
+        _case("anon-new_neg", "NEGATIVE", -5.0),  # out-of-sample, correct
     ]
     feature_by_case = {c["case_id"]: c["_feature"] for c in cases}
 
@@ -103,8 +105,8 @@ def test_out_of_sample_only_in_headline_and_in_sample_separated(tmp_path):
 
 
 def test_case_failure_becomes_technical_error_not_fabricated_decision(tmp_path):
-    bundle_root = _bundle(tmp_path, training_case_ids=set())
-    cases = [_case("boom", "POSITIVE", 5.0)]
+    bundle_root = _bundle(tmp_path, training_case_ids={"anon-other"})
+    cases = [_case("anon-boom", "POSITIVE", 5.0)]
 
     def panel_fn(case_id, phase_paths, mask_path, out_dir):
         raise RuntimeError("render exploded")
@@ -147,6 +149,59 @@ def test_all_in_sample_has_no_out_of_sample_headline(tmp_path):
     assert report["out_of_sample_metrics"] is None
     assert report["out_of_sample_count"] == 0
     assert report["warning"] is not None
+
+
+def test_unknown_provenance_never_enters_the_headline(tmp_path):
+    # Cenario real do lote cego: ids de namespace estranho ao treino. Antes eles
+    # entravam no out-of-sample e o relatorio anunciava como generalizacao um
+    # numero que podia ser inteiramente in-sample.
+    bundle_root = _bundle(tmp_path, training_case_ids={"anon-lld-001"})
+    cases = [_case("ARGOS-BLIND-0001", "POSITIVE", 5.0)]
+
+    def panel_fn(case_id, phase_paths, mask_path, out_dir):
+        from pathlib import Path
+
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        return [Path(out_dir) / "p.png"]
+
+    def embed_fn(panel_paths):
+        return np.array([[5.0]])
+
+    report = visual_benchmark.run_visual_benchmark(
+        bundle_root=bundle_root, cases=cases, work_dir=tmp_path / "work",
+        panel_config_path="unused", embedding_config_path="unused",
+        panel_fn=panel_fn, embed_fn=embed_fn,
+    )
+    assert report["unknown_provenance_count"] == 1
+    assert report["out_of_sample_count"] == 0
+    assert report["out_of_sample_metrics"] is None          # headline vazio
+    assert report["unknown_provenance_metrics_not_a_generalization_estimate"] is not None
+    assert "procedência" in report["warning"]
+    assert report["cases"][0]["in_sample_verdict"] == "unknown"
+
+
+def test_provenance_map_rescues_unknown_into_a_verdict(tmp_path):
+    bundle_root = _bundle(tmp_path, training_case_ids={"anon-lld-001"})
+    cases = [_case("ARGOS-BLIND-0001", "POSITIVE", 5.0)]
+
+    def panel_fn(case_id, phase_paths, mask_path, out_dir):
+        from pathlib import Path
+
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        return [Path(out_dir) / "p.png"]
+
+    def embed_fn(panel_paths):
+        return np.array([[5.0]])
+
+    report = visual_benchmark.run_visual_benchmark(
+        bundle_root=bundle_root, cases=cases, work_dir=tmp_path / "work",
+        panel_config_path="unused", embedding_config_path="unused",
+        panel_fn=panel_fn, embed_fn=embed_fn,
+        provenance={"ARGOS-BLIND-0001": "anon-lld-001"},
+    )
+    assert report["unknown_provenance_count"] == 0
+    assert report["in_sample_count"] == 1        # resolvido: estava no treino
+    assert report["out_of_sample_metrics"] is None
 
 
 def test_empty_cases_rejected(tmp_path):

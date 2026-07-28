@@ -20,13 +20,16 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
 
 from dtwin.core import PipelineError
 from dtwin.learning.exam_to_panels import build_exam_panels
 from dtwin.learning.visual_inference import (
+    IN_SAMPLE_NO,
+    IN_SAMPLE_UNKNOWN,
+    IN_SAMPLE_YES,
     ProductionBundle,
     classify_embeddings,
     embed_panels,
@@ -149,9 +152,15 @@ def run_visual_benchmark(
     embedding_config_path: Path | str,
     panel_fn: PanelFn | None = None,
     embed_fn: EmbedFn | None = None,
+    provenance: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run the visual benchmark over ``cases`` and return a report that keeps
-    in-sample and out-of-sample metrics strictly separate."""
+    in-sample, out-of-sample and unknown-provenance metrics strictly separate.
+
+    ``provenance`` maps benchmark identifiers onto the original cohort ids, so a
+    collection that renames its cases (e.g. a blind benchmark) can still be
+    checked against the training set instead of landing in ``unknown``.
+    """
     if not cases:
         raise PipelineError("Benchmark visual exige ao menos um caso.")
     bundle = load_production_bundle(bundle_root)
@@ -165,14 +174,22 @@ def run_visual_benchmark(
             panel_fn=panel_fn, embed_fn=embed_fn,
         )
         status = in_sample_status(
-            bundle, case_id=record["case_id"], patient_group_id=record["patient_group_id"]
+            bundle,
+            case_id=record["case_id"],
+            patient_group_id=record["patient_group_id"],
+            provenance=provenance,
         )
         record["in_sample"] = status["in_sample"]
+        record["in_sample_verdict"] = status["verdict"]
         record["label"] = str(case["label"]).upper()
         per_case.append(record)
 
-    out_rows = [r for r in per_case if not r["in_sample"]]
-    in_rows = [r for r in per_case if r["in_sample"]]
+    # `unknown` NUNCA entra no headline: um identificador que não pode ser
+    # comparado ao conjunto de treino pode perfeitamente ser in-sample, e
+    # tratá-lo como out-of-sample certifica número inflado como limpo.
+    out_rows = [r for r in per_case if r["in_sample_verdict"] == IN_SAMPLE_NO]
+    in_rows = [r for r in per_case if r["in_sample_verdict"] == IN_SAMPLE_YES]
+    unknown_rows = [r for r in per_case if r["in_sample_verdict"] == IN_SAMPLE_UNKNOWN]
 
     report = {
         "schema": "argos-hybrid-visual-benchmark-report-v1",
@@ -181,19 +198,33 @@ def run_visual_benchmark(
         "case_count": len(per_case),
         "in_sample_count": len(in_rows),
         "out_of_sample_count": len(out_rows),
-        # The headline number is ONLY the out-of-sample metric; in-sample is
-        # reported apart and explicitly flagged as inflated.
+        "unknown_provenance_count": len(unknown_rows),
+        # The headline number is ONLY the provably out-of-sample metric.
+        # In-sample and unknown are reported apart and explicitly flagged.
         "out_of_sample_metrics": _metrics(out_rows) if out_rows else None,
         "in_sample_metrics_inflated_do_not_report_as_generalization": (
             _metrics(in_rows) if in_rows else None
         ),
-        "warning": (
-            "Contém casos in-sample (vistos no treino do bundle): as métricas "
-            "in-sample são infladas e estão separadas. Só o out-of-sample é "
-            "estimativa de generalização."
-            if in_rows
-            else None
+        "unknown_provenance_metrics_not_a_generalization_estimate": (
+            _metrics(unknown_rows) if unknown_rows else None
         ),
+        "warning": " ".join(filter(None, [
+            (
+                "Contém casos in-sample (vistos no treino do bundle): as métricas "
+                "in-sample são infladas e estão separadas."
+                if in_rows else ""
+            ),
+            (
+                f"Contém {len(unknown_rows)} caso(s) cuja procedência NÃO pôde ser "
+                "comparada ao conjunto de treino (namespace de identificador "
+                "distinto). Esses casos podem ser in-sample; não são estimativa "
+                "de generalização e ficam fora do headline. Forneça um mapa de "
+                "proveniência para decidir."
+                if unknown_rows else ""
+            ),
+            "Só o out-of-sample comprovado é estimativa de generalização."
+            if (in_rows or unknown_rows) else "",
+        ])) or None,
         "generalization_estimate_reference_oof": "Etapa C nested-OOF 75,91%/76,11% (docs/121)",
         "research_only": True,
         "clinical_use_allowed": False,
