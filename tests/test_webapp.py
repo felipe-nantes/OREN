@@ -359,6 +359,43 @@ def test_benchmark_manifest_accepts_authorized_rag_scenarios():
         assert parsed["scenario"] == scenario
 
 
+def test_benchmark_manifest_accepts_visual_scenario():
+    import json
+
+    parsed = server._parse_benchmark_manifest(
+        json.dumps({
+            "dataset_name": "Coorte multifásica",
+            "dataset_kind": "mixed",
+            "scenario": "hybrid_supervised",
+            "cases": [{"id": "c1", "label": "positive", "file_indices": [0]}],
+        }),
+        file_count=1,
+    )
+    assert parsed["scenario"] == "hybrid_supervised"
+    assert server._is_visual_scenario("hybrid_supervised") is True
+    # cenários MedGemma continuam não-visuais
+    assert server._is_visual_scenario("pathology_target") is False
+
+
+def test_visual_scenario_rejects_unauthorized_key():
+    from dtwin.core import PipelineError
+
+    with pytest.raises(PipelineError, match="não autorizado"):
+        server._visual_bundle_root("../etc/passwd")
+
+
+def test_visual_scenario_requires_trained_bundle(monkeypatch, tmp_path):
+    from dtwin.core import PipelineError
+
+    # aponta para um diretório sem bundle_manifest.json
+    monkeypatch.setattr(server, "REPO", tmp_path)
+    monkeypatch.setattr(
+        server, "VISUAL_BENCHMARK_SCENARIOS", {"hybrid_supervised": "sem_bundle"}
+    )
+    with pytest.raises(PipelineError, match="train-production"):
+        server._visual_bundle_root("hybrid_supervised")
+
+
 def test_benchmark_upload_accepts_more_than_default_starlette_file_cap(monkeypatch, tmp_path):
     """Starlette limita multipart a max_files=1000 por padrão; um dataset de
     benchmark real (muitos exames x muitas fatias) estoura isso facilmente.

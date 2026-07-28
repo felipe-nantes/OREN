@@ -101,6 +101,24 @@ BENCHMARK_SCENARIOS = {
     "pathology_target": PATHOLOGY_TARGET_MEDGEMMA_CONFIG,
     "fast_pathology": FAST_PATHOLOGY_MEDGEMMA_CONFIG,
 }
+# Cenários que NÃO usam o MedGemma: classificador visual supervisionado da
+# Etapa C (melhor resultado do projeto). Exige entrada MULTIFÁSICA — cada caso
+# envia as fases identificadas em subpastas (arterial/venous/delayed), porque
+# identificar a fase a partir de DICOM bruto é problema não resolvido (docs/123).
+# É modo de PESQUISA: retrospectivo, não estável por dataset, não validado.
+VISUAL_BENCHMARK_SCENARIOS = {
+    "hybrid_supervised": os.environ.get(
+        "WEBAPP_VISUAL_BUNDLE",
+        "casos/qualification/hybrid_v1/medsiglip_multiclass_production_bundle_v1",
+    ),
+}
+VISUAL_PANEL_CONFIG = os.environ.get(
+    "WEBAPP_VISUAL_PANEL_CONFIG",
+    "configs/medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml",
+)
+VISUAL_EMBEDDING_CONFIG = os.environ.get(
+    "WEBAPP_VISUAL_EMBEDDING_CONFIG", "configs/training/medsiglip_frozen_v1.yaml"
+)
 # A tela de exame individual só expõe modos que foram avaliados e versionados.
 # O navegador envia apenas a chave; nunca um caminho de configuração.
 INDIVIDUAL_SCREENING_SCENARIOS = {
@@ -696,6 +714,142 @@ def _benchmark_model_info(config_path: str | None = None) -> dict:
         return {"model_id": None, "model_version": None, "config": config_path}
 
 
+def _is_visual_scenario(scenario: str) -> bool:
+    return scenario in VISUAL_BENCHMARK_SCENARIOS
+
+
+def _visual_bundle_root(scenario: str) -> Path:
+    """Resolve o bundle do classificador visual, sem aceitar caminho do navegador."""
+    if scenario not in VISUAL_BENCHMARK_SCENARIOS:
+        raise PipelineError(f"Cenário visual não autorizado: {scenario!r}")
+    root = (REPO / VISUAL_BENCHMARK_SCENARIOS[scenario]).resolve()
+    if not (root / "bundle_manifest.json").is_file():
+        raise PipelineError(
+            "Bundle do classificador visual não encontrado. Gere-o com: "
+            "python -m tools.train_medsiglip_multiclass train-production"
+        )
+    return root
+
+
+def _visual_model_info(scenario: str) -> dict:
+    """Identidade do classificador visual, com o enquadramento honesto embutido."""
+    try:
+        manifest = json.loads((_visual_bundle_root(scenario) / "bundle_manifest.json").read_text("utf-8"))
+    except (PipelineError, OSError, json.JSONDecodeError):
+        return {"model_id": "medsiglip_multiclass", "model_version": "indisponível"}
+    return {
+        "model_id": "medsiglip_multiclass_production_bundle",
+        "model_version": str(manifest.get("candidate_id") or "hybrid_v1"),
+        "bundle_signature": manifest.get("bundle_signature"),
+        "decision_threshold": manifest.get("decision_threshold"),
+        "generalization_estimate_source": manifest.get("generalization_estimate_source"),
+        "oof_reference": "Etapa C nested-OOF 75,91%/76,11% (docs/121)",
+        "gate_75_75_stable_by_dataset": False,
+        "research_only": True,
+        "clinical_use_allowed": False,
+    }
+
+
+def _run_visual_benchmark_case(
+    benchmark_id: str, index: int, item: dict, raw_case_dir: Path, scenario: str
+) -> dict:
+    """Executa o fluxo visual da Etapa C para UM exame multifásico.
+
+    fases (subpastas) -> harmonização na grade venosa + segmentação hepática ->
+    painéis liver-enriched -> embeddings MedSigLIP -> bundle de produção.
+    Qualquer falha vira falha técnica (conta como erro), nunca decisão fabricada.
+    """
+    from dtwin.learning.exam_to_panels import build_exam_panels
+    from dtwin.learning.multiphase_ingest import build_multiphase_case
+    from dtwin.learning.visual_inference import (
+        classify_embeddings,
+        embed_panels,
+        in_sample_status,
+        load_production_bundle,
+    )
+
+    benchmark_root = WORKSPACE / "benchmarks" / benchmark_id
+    case_dir = (benchmark_root / "cases" / f"{index:04d}").resolve()
+    started = time.monotonic()
+    base = {
+        "case_id": item["id"],
+        "dataset": item.get("dataset", "web_upload"),
+        "input_format": "DICOM_MULTIPHASE",
+        "prediction": None,
+        "confidence": None,
+        "status": "failed",
+        "error": None,
+        "input_hashes": {},
+        "durations_seconds": {},
+    }
+    try:
+        bundle = load_production_bundle(_visual_bundle_root(scenario))
+
+        def segment_venous(venous_dir: Path, work_dir: Path) -> Path:
+            work_dir = Path(work_dir).resolve()
+            prep = _segment(str(Path(venous_dir).resolve()), work_dir, "gpu", PREP_TIMEOUT_GPU, fast=False)
+            if not _seg_done(work_dir):
+                log.warning("Benchmark visual %s/%s: GPU falhou; tentando CPU", benchmark_id, item["id"])
+                shutil.rmtree(work_dir, ignore_errors=True)
+                prep = _segment(str(Path(venous_dir).resolve()), work_dir, "cpu", PREP_TIMEOUT_CPU, fast=False)
+                if not _seg_done(work_dir):
+                    raise PipelineError(_friendly_text(_cli_reason(prep)))
+            return work_dir
+
+        ingest_started = time.monotonic()
+        multiphase = build_multiphase_case(
+            case_id=str(item["id"]),
+            case_upload_dir=Path(raw_case_dir),
+            output_dir=case_dir / "multiphase",
+            segment_venous=segment_venous,
+        )
+        base["durations_seconds"]["multiphase_ingest_and_segmentation"] = round(
+            time.monotonic() - ingest_started, 4
+        )
+        base["phase_coverage"] = multiphase.coverage
+
+        panel_started = time.monotonic()
+        panels = build_exam_panels(
+            case_id=str(item["id"]),
+            phase_paths=multiphase.phase_paths,
+            coarse_liver_mask_path=multiphase.coarse_liver_mask_path,
+            output_dir=case_dir / "panels",
+            panel_config_path=REPO / VISUAL_PANEL_CONFIG,
+        )
+        base["durations_seconds"]["panel_generation"] = round(time.monotonic() - panel_started, 4)
+
+        inference_started = time.monotonic()
+        embeddings = embed_panels(REPO / VISUAL_EMBEDDING_CONFIG, panels.panel_paths)
+        decision = classify_embeddings(bundle, embeddings)
+        base["durations_seconds"]["visual_inference"] = round(time.monotonic() - inference_started, 4)
+
+        status = in_sample_status(bundle, case_id=str(item["id"]))
+        base.update(
+            prediction="POSITIVA" if decision["prediction"] == "POSITIVE" else "NEGATIVA",
+            confidence=None,
+            status="decisive",
+            visual_score=decision["score"],
+            visual_threshold=decision["threshold"],
+            panel_count=decision["panel_count"],
+            in_sample=status["in_sample"],
+        )
+        return base
+    except subprocess.TimeoutExpired:
+        base["error"] = "O processamento excedeu o tempo limite."
+        base["status"] = "timeout"
+        return base
+    except PipelineError as exc:
+        base["error"] = str(exc)
+        return base
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Benchmark visual %s/%s: falha inesperada", benchmark_id, item["id"])
+        base["error"] = f"Falha inesperada: {type(exc).__name__}"
+        return base
+    finally:
+        base["duration_seconds"] = round(time.monotonic() - started, 2)
+        base["durations_seconds"]["total"] = round(time.monotonic() - started, 4)
+
+
 def _run_benchmark_case(
     benchmark_id: str,
     index: int,
@@ -865,7 +1019,9 @@ def process_benchmark(benchmark_id: str, manifest: dict, raw_dir: Path) -> None:
     started_at = datetime.now(timezone.utc).isoformat()
     results: list[dict] = []
     try:
-        medgemma_config = _benchmark_config(manifest.get("scenario", "baseline"))
+        scenario = manifest.get("scenario", "baseline")
+        visual = _is_visual_scenario(scenario)
+        medgemma_config = None if visual else _benchmark_config(scenario)
         _set_benchmark(benchmark_id, state="processing", started_at=started_at)
         for index, item in enumerate(cases, start=1):
             progress = 5 + int(((index - 1) / max(len(cases), 1)) * 90)
@@ -875,18 +1031,22 @@ def process_benchmark(benchmark_id: str, manifest: dict, raw_dir: Path) -> None:
                 processed=index - 1,
                 progress=progress,
             )
-            inference_result = _run_benchmark_case(
-                benchmark_id,
-                index,
-                {"id": item["id"], "dataset": manifest["dataset_name"]},
-                raw_dir / f"{index:04d}",
-                medgemma_config,
-            )
+            case_item = {"id": item["id"], "dataset": manifest["dataset_name"]}
+            if visual:
+                inference_result = _run_visual_benchmark_case(
+                    benchmark_id, index, case_item, raw_dir / f"{index:04d}", scenario
+                )
+            else:
+                inference_result = _run_benchmark_case(
+                    benchmark_id, index, case_item, raw_dir / f"{index:04d}", medgemma_config
+                )
             results.append(_evaluate_benchmark_result(inference_result, item["label"]))
             _set_benchmark(benchmark_id, processed=index, progress=5 + int(index / len(cases) * 90))
 
         completed_at = datetime.now(timezone.utc).isoformat()
-        model_info = _benchmark_model_info(medgemma_config)
+        model_info = (
+            _visual_model_info(scenario) if visual else _benchmark_model_info(medgemma_config)
+        )
         metrics = calculate_benchmark_metrics(results)
         report = {
             "schema_version": 1,
@@ -969,7 +1129,7 @@ def _parse_benchmark_manifest(raw: str, file_count: int) -> dict:
         raise HTTPException(status_code=400, detail="Informe o nome do dataset.")
     if dataset_kind not in {"positive", "negative", "mixed"}:
         raise HTTPException(status_code=400, detail="Tipo de dataset inválido.")
-    if scenario not in BENCHMARK_SCENARIOS:
+    if scenario not in BENCHMARK_SCENARIOS and scenario not in VISUAL_BENCHMARK_SCENARIOS:
         raise HTTPException(status_code=400, detail="Cenário de benchmark inválido.")
     if not isinstance(cases, list) or not cases:
         raise HTTPException(status_code=400, detail="Nenhum exame foi identificado no dataset.")
@@ -1147,6 +1307,26 @@ async def create_benchmark(request: Request) -> dict:
     parsed = _parse_benchmark_manifest(manifest, len(files))
     benchmark_id = uuid.uuid4().hex[:12]
     raw_dir = WORKSPACE / "benchmarks" / benchmark_id / "_upload"
+    # O cenário visual precisa saber de QUAL subpasta cada arquivo veio (a fase),
+    # então a estrutura relativa é preservada em vez de achatada. Os cenários
+    # MedGemma continuam achatando: eles escolhem uma única série por caso e a
+    # estrutura é irrelevante para eles.
+    preserve_structure = _is_visual_scenario(parsed["scenario"])
+    relpaths_raw = form.get("relpaths")
+    try:
+        relpaths = json.loads(relpaths_raw) if isinstance(relpaths_raw, str) else []
+        if not isinstance(relpaths, list):
+            relpaths = []
+    except json.JSONDecodeError:
+        relpaths = []
+    if preserve_structure and not relpaths:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "O cenário visual exige as fases em subpastas (arterial/venous/delayed). "
+                "Reenvie selecionando a pasta do dataset."
+            ),
+        )
     try:
         for case_index, item in enumerate(parsed["cases"], start=1):
             case_upload = raw_dir / f"{case_index:04d}"
@@ -1154,6 +1334,20 @@ async def create_benchmark(request: Request) -> dict:
             for local_index, file_index in enumerate(item["file_indices"]):
                 upload = files[file_index]
                 original_name = Path(upload.filename or f"file_{file_index}").name
+                if preserve_structure:
+                    relative = relpaths[file_index] if file_index < len(relpaths) else ""
+                    parts = [
+                        part
+                        for part in str(relative or "").replace("\\", "/").split("/")
+                        if part not in ("", ".", "..")
+                    ]
+                    # descarta o primeiro nível (pasta do caso): a fase é o resto
+                    destination = case_upload.joinpath(*parts[1:]) if len(parts) > 1 else (
+                        case_upload / f"{local_index:06d}_{original_name}"
+                    )
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(await upload.read())
+                    continue
                 destination = case_upload / f"{local_index:06d}_{original_name}"
                 destination.write_bytes(await upload.read())
     except Exception as exc:  # noqa: BLE001

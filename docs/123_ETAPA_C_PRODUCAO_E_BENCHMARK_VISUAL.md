@@ -120,18 +120,57 @@ qualquer caso vira falha técnica (conta como erro), nunca decisão fabricada.
 
 ---
 
-## 7. Estado da integração no webapp (pendência declarada)
+## 7. Integração no webapp — ingestão multifásica (ENTREGUE)
 
-O botão de cenário `hybrid_supervised` no benchmark do **webapp** é o único item
-não entregue neste incremento. Motivo honesto: `webapp/server.py` está com
-alterações **não commitadas e extensas** na exata região do benchmark
-(`_benchmark_config`, `_run_benchmark_case`). Editá-lo agora entrelaçaria o
-trabalho e violaria a decisão de versionar "só a linha Etapa C". Assim que essas
-mudanças assentarem, o handler entra como um edit pequeno e isolado:
-`BENCHMARK_SCENARIOS` tipado (`medgemma` | `visual_classifier`) + um ramo em
-`_run_benchmark_case` que, para o cenário visual, chama o pipeline dos itens 4–6
-em subprocess. O contrato de upload por caso: **subpastas de fase** identificadas
-(arterial/venoso/tardio), pela mesma razão da §3.
+O cenário `hybrid_supervised` está disponível no benchmark do webapp. Como o
+fluxo era single-series (uma pasta → uma série por caso), a ingestão multifásica
+foi construída:
+
+**Contrato de upload.** Cada caso envia as fases em subpastas:
+
+```text
+caso-001/arterial/*.dcm
+caso-001/venous/*.dcm
+caso-001/delayed/*.dcm
+```
+
+Os aliases aceitos são tolerantes a acento/idioma/separador (`arterial|art|ap`,
+`venous|venoso|portal|pv`, `delayed|tardio|late|equilibrio`), e uma pasta
+extra de estudo em volta é tolerada. Duas pastas para a mesma fase **falham
+fechado** — é erro de curadoria, não algo a resolver silenciosamente.
+
+**Preservação da estrutura.** O upload do benchmark achatava os diretórios
+(`Path(filename).name`), destruindo a informação de fase. Agora, *apenas* para o
+cenário visual, os `relpaths` são preservados (como o endpoint de exame
+individual já fazia). Os cenários MedGemma seguem achatando — para eles a
+estrutura é irrelevante, e assim o comportamento existente fica intocado.
+
+**Harmonização de grade (o ponto não óbvio).** O renderizador de painéis exige
+que as três fases e a máscara compartilhem uma única grade 3D, mas aquisições
+dinâmicas distintas geralmente **não** compartilham. A fase venosa é a
+referência (é nela que a segmentação roda, então máscara e fases se alinham por
+construção) e arterial/tardia são reamostradas na grade venosa por transformação
+física identidade — a mesma convenção usada para construir os dados de treino.
+A **cobertura** resultante é medida: abaixo de 50% o caso falha com mensagem
+explícita, em vez de produzir silenciosamente uma fase quase vazia.
+
+**Fluxo por caso** (`_run_visual_benchmark_case` em `webapp/server.py`):
+
+```text
+subpastas de fase → harmonização + segmentação hepática (venosa, full-res)
+  → painéis liver-enriched → embeddings MedSigLIP → bundle → decisão
+```
+
+Falha em qualquer etapa vira falha técnica (conta como erro), nunca decisão
+fabricada. O cenário **não** depende do gateway MedGemma (não o usa), então o
+gate de backend da UI é dispensado para ele.
+
+**Enquadramento na UI.** O botão é rotulado "Classificador visual · Pesquisa" e
+exibe aviso de que é o melhor resultado retrospectivo (75,9%/76,1% OOF) porém
+**não estável por dataset e não validado clinicamente**. O `model_info` do
+relatório carrega `gate_75_75_stable_by_dataset: false` e a referência OOF.
+
+Módulo: `dtwin/learning/multiphase_ingest.py` (testável sem webapp/GPU).
 
 ---
 

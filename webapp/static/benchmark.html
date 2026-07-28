@@ -49,7 +49,16 @@
           <button type="button" class="scenario-btn" data-scenario="pathology_target" aria-pressed="false">
             <b>Alvo patológico</b><span>100% do fígado + separa variante benigna</span>
           </button>
+          <button type="button" class="scenario-btn" data-scenario="hybrid_supervised" aria-pressed="false">
+            <b>Classificador visual</b><span>Pesquisa · exige fases em subpastas</span>
+          </button>
         </div>
+        <p class="hint" id="visualScenarioHint" style="display:none">
+          Modo de <b>pesquisa</b>: classificador visual supervisionado — melhor resultado
+          retrospectivo do projeto (75,9%/76,1% out-of-fold), porém <b>não estável por
+          dataset e não validado clinicamente</b>. Exige exame multifásico: cada caso deve
+          conter as subpastas <code>arterial</code>, <code>venous</code> e <code>delayed</code>.
+        </p>
         <div class="types">
           <label class="type"><input type="radio" name="kind" value="positive"><b>Positivo</b><span>Todos os exames são alterados.</span></label>
           <label class="type"><input type="radio" name="kind" value="negative"><b>Negativo</b><span>Todos os exames são normais.</span></label>
@@ -96,13 +105,20 @@ function selectedKind(){return document.querySelector('input[name=kind]:checked'
     volumetric:'Volumétrico (100%)',
     rag:'RAG textual',
     volumetric_rag:'Volumétrico + RAG',
-    pathology_target:'Alvo patológico'
+    pathology_target:'Alvo patológico',
+    hybrid_supervised:'Classificador visual (pesquisa)'
   };
+// Cenários que não usam o MedGemma: rodam o classificador visual supervisionado.
+const VISUAL_SCENARIOS=new Set(['hybrid_supervised']);
+const isVisualScenario=()=>VISUAL_SCENARIOS.has(selectedScenario);
 
-// --- Toggle de cenario autorizado (baseline / volumetrico / RAG / alvo patologico) ---
+// --- Toggle de cenario autorizado (baseline / volumetrico / RAG / alvo patologico / visual) ---
 document.querySelectorAll('.scenario-btn').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('.scenario-btn').forEach(b=>{const on=b===btn;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on)});
   selectedScenario=btn.dataset.scenario;
+  const hint=$('#visualScenarioHint');
+  if(hint)hint.style.display=isVisualScenario()?'block':'none';
+  validate();
 });
 
 // --- Estado do backend MedGemma (benchmark invalido se o modelo nao estiver pronto) ---
@@ -154,13 +170,18 @@ $('#startBtn').onclick=async()=>{
   validate();if($('#startBtn').disabled)return;
   // Validade: nao inicia um benchmark inteiro contra um backend desligado (todos
   // os exames falhariam). Reconfirma o estado do modelo no momento do clique.
-  await refreshBackend();
-  if(!backendReady){show($('#setupCard'),false);show($('#uploadCard'),false);
-    renderError('O modelo MedGemma não está pronto (backend desligado ou carregando). Suba o gateway e aguarde "Backend pronto" antes de iniciar o benchmark.');return;}
+  // O cenario visual NAO usa o MedGemma, entao nao depende do gateway.
+  if(!isVisualScenario()){
+    await refreshBackend();
+    if(!backendReady){show($('#setupCard'),false);show($('#uploadCard'),false);
+      renderError('O modelo MedGemma não está pronto (backend desligado ou carregando). Suba o gateway e aguarde "Backend pronto" antes de iniciar o benchmark.');return;}
+  }
   $('#startBtn').disabled=true;show($('#setupCard'),false);show($('#uploadCard'),false);show($('#progressCard'),true);
   $('#currentCase').textContent=`Preparando dataset (${SCENARIO_LABEL[selectedScenario]})…`;
   const manifest={dataset_name:$('#datasetName').value.trim(),dataset_kind:selectedKind(),scenario:selectedScenario,cases:detectedCases};const fd=new FormData();
   uploadedItems.forEach(x=>fd.append('files',x.file,x.file.name));fd.append('manifest',JSON.stringify(manifest));
+  // O cenario visual precisa saber de qual subpasta (fase) cada arquivo veio.
+  fd.append('relpaths',JSON.stringify(uploadedItems.map(x=>x.rel||x.file.name)));
   try{const res=await fetch('/api/benchmarks',{method:'POST',body:fd});const data=await res.json();if(!res.ok)throw new Error(data.detail||'Falha no envio.');
     currentBenchmark=data.benchmark_id;$('#processed').textContent=`0 / ${data.total_cases}`;pollBenchmark()}
   catch(e){renderError(e.message)}
