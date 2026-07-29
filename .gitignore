@@ -48,3 +48,6 @@ __MACOSX/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# Mascaras de lesao LLD (ground truth, so' avaliacao) e artefatos de qualificacao grandes
+casos/qualification/lld_mmri_v23/lesion_masks_cv_v1/

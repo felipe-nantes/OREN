@@ -47,6 +47,7 @@ from typing import Any
 
 import numpy as np
 from PIL import Image, ImageDraw
+from scipy.ndimage import gaussian_gradient_magnitude
 
 _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in sys.path:
@@ -57,7 +58,7 @@ from dtwin.medgemma_panel_multiphase import _render_color_tile  # noqa: E402
 
 PANEL_SCHEMA = "argos-lld-mmri-v23-relative-enhancement-panel-manifest-v1"
 BUILD_SCHEMA = "argos-lld-mmri-v23-relative-enhancement-build-v1"
-ALGORITHM_VERSION = "relative-enhancement-fixed-window-v1"
+ALGORITHM_VERSION = "relative-enhancement-confidence-weighted-v2"
 
 # Realce relativo mapeado para [0,1] por uma janela FIXA, igual em todos os casos.
 # -0,15 deixa margem para ruido negativo; 1,60 (160% de ganho sobre o pre) cobre
@@ -71,6 +72,18 @@ RE_WINDOW_HIGH = 1.60
 # valor neutro de realce zero.
 PRE_NOISE_PERCENTILE = 60.0
 PRE_NOISE_FRACTION = 0.08
+
+# Ponderacao de confianca (v2). As fases sao harmonizadas na grade mas SEM
+# correcao de movimento, entao bordas de orgao viram aneis de realce falso na
+# subtracao, e regioes de baixo sinal amplificam a razao. Duas atenuacoes, ambas
+# derivadas da propria imagem (referencia interna, exigencia de docs/131):
+#   - borda: cai onde o gradiente espacial do pre e' alto (onde a subtracao e'
+#     dominada por desalinhamento, nao por realce real);
+#   - tecido: cai onde o sinal venoso e' baixo (ruido/ar residual), preservando
+#     parenquima e lesao, que tem sinal substancial.
+# O produto das duas multiplica o realce antes da janela fixa.
+EDGE_GRADIENT_SIGMA = 1.0
+EDGE_GRADIENT_PERCENTILE = 80.0
 
 CHANNEL_ROLES = (("red", "t1_arterial"), ("green", "t1_venous"), ("blue", "t1_delayed"))
 NATIVE_ROLE = "t1_native"
@@ -111,6 +124,7 @@ def build_case(
     harmonized_case_dir: Path,
     panel_manifest_path: Path,
     output_dir: Path,
+    tissue_weighting: bool = True,
 ) -> dict[str, Any]:
     roles = [NATIVE_ROLE, *(role for _, role in CHANNEL_ROLES)]
     paths = {role: harmonized_case_dir / f"{role}.nii.gz" for role in roles}
@@ -134,8 +148,26 @@ def build_case(
     floor = float(np.percentile(positive, PRE_NOISE_PERCENTILE)) * PRE_NOISE_FRACTION
     support = pre > floor
 
+    # Confianca (v2): atenua aneis de desalinhamento e ruido de baixo sinal.
+    # O tissue_weight suprime realce onde o sinal venoso e' baixo -- mas cisto E'
+    # conteudo fluido de sinal T1 baixo, entao esse peso APAGA a classe que a
+    # hipotese queria destacar (docs/137). A flag edge_only o desliga para isolar
+    # o efeito.
+    eps = 1e-3
+    gradient = gaussian_gradient_magnitude(pre, sigma=EDGE_GRADIENT_SIGMA)
+    grad_ref = max(float(np.percentile(gradient[support], EDGE_GRADIENT_PERCENTILE)), eps)
+    edge_weight = 1.0 / (1.0 + (gradient / grad_ref) ** 2)
+    if tissue_weighting:
+        venous = arrays["t1_venous"]
+        tissue_ref = max(float(np.median(venous[support])), eps)
+        tissue_weight = np.clip(venous / tissue_ref, 0.0, 1.0)
+        confidence = (edge_weight * tissue_weight).astype(np.float32)
+    else:
+        confidence = edge_weight.astype(np.float32)
+    confidence[~support] = 0.0
+
     enhancement = {
-        channel: _relative_enhancement(arrays[role], pre, support)
+        channel: _relative_enhancement(arrays[role], pre, support) * confidence
         for channel, role in CHANNEL_ROLES
     }
     span = RE_WINDOW_HIGH - RE_WINDOW_LOW
@@ -222,7 +254,13 @@ def build_case(
         "reference_role": "t1_venous",
         "native_role": NATIVE_ROLE,
         "fusion_channel_map": {channel: role for channel, role in CHANNEL_ROLES},
-        "enhancement_formula": "(post - pre) / max(pre, 1e-3)",
+        "enhancement_formula": "((post - pre) / max(pre, 1e-3)) * edge_weight * tissue_weight",
+        "confidence_weighting": {
+            "edge_weight": "1 / (1 + (|grad(pre)| / p80)^2)",
+            "tissue_weight": "clip(venous / median(venous), 0, 1)",
+            "edge_gradient_sigma": EDGE_GRADIENT_SIGMA,
+            "edge_gradient_percentile": EDGE_GRADIENT_PERCENTILE,
+        },
         "display_window": [RE_WINDOW_LOW, RE_WINDOW_HIGH],
         "display_window_is_fixed_across_cases": True,
         "pre_support_percentile": PRE_NOISE_PERCENTILE,
@@ -266,7 +304,12 @@ def main(argv=None) -> int:
         default="casos/qualification/lld_mmri_v23/prepared/external_relative_enhancement_v1",
     )
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument(
+        "--no-tissue-weight", action="store_true",
+        help="diagnostico (docs/137): so' atenuacao de borda, sem suprimir baixo sinal",
+    )
     args = parser.parse_args(argv)
+    tissue_weighting = not args.no_tissue_weight
 
     harmonized_root = (_REPO / args.harmonized_root).resolve() / "cases"
     panels_root = (_REPO / args.panels_root).resolve()
@@ -295,6 +338,7 @@ def main(argv=None) -> int:
                     harmonized_case_dir=harmonized_root / case_id,
                     panel_manifest_path=panels_root / case_id / "medgemma_liver_screening_manifest.json",
                     output_dir=staging / "cases" / case_id,
+                    tissue_weighting=tissue_weighting,
                 )
                 rows.append(row)
             except Exception as exc:  # noqa: BLE001
