@@ -53,3 +53,5 @@ Thumbs.db
 casos/qualification/lld_mmri_v23/lesion_masks_cv_v1/
 casos/qualification/lld_mmri_v23/lesion_localizer_pred_v1/
 casos/qualification/hybrid_v1/localizer_recall_full_v1/
+casos/qualification/hybrid_v1/localizer_arterial_v1/
+casos/qualification/lld_mmri_v23/lesion_localizer_pred_arterial_v1/
