@@ -59,3 +59,5 @@ casos/qualification/hybrid_v1/roi_ceiling_t2dwi_v1/
 casos/qualification/hybrid_v1/roi_features_t2dwi_v1/
 casos/qualification/hybrid_v1/roi_ceiling_crop_v1/
 casos/qualification/hybrid_v1/crop_embeddings_v1/
+casos/qualification/hybrid_v1/localizer_delayed_v1/
+casos/qualification/lld_mmri_v23/lesion_localizer_pred_delayed_v1/
