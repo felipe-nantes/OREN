@@ -61,3 +61,5 @@ casos/qualification/hybrid_v1/roi_ceiling_crop_v1/
 casos/qualification/hybrid_v1/crop_embeddings_v1/
 casos/qualification/hybrid_v1/localizer_delayed_v1/
 casos/qualification/lld_mmri_v23/lesion_localizer_pred_delayed_v1/
+casos/qualification/hybrid_v1/passo2_medicao_honesta_v1/
+casos/qualification/hybrid_v1/predicted_roi_embeddings_v1/
