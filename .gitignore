@@ -70,3 +70,7 @@ casos/qualification/hybrid_v1/passo1_fusao_v1/
 casos/qualification/hybrid_v1/passo2_ajuste_v1/
 casos/qualification/hybrid_v1/passo3_mil_v1/
 casos/qualification/hybrid_v1/mil_component_embeddings_v1/
+casos/qualification/hybrid_v1/openswiss_roi_embeddings_v1/
+casos/qualification/hybrid_v1/openswiss_fusao_v1/
+casos/qualification/hybrid_v1/fusao_estimador_oficial_v1/
+casos/qualification/hybrid_v1/fusao_estimador_oficial_v2/

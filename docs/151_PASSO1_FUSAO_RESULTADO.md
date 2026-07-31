@@ -4,6 +4,20 @@
 **Artefatos:** `casos/qualification/hybrid_v1/passo1_fusao_v1/`
 **Passo 1** de [docs/150](150_PLANO_FINAL_METAS_75.md)
 
+> **EMENDA — 31 de julho de 2026.** A afirmação da §1 e da §3 de que *"o OpenSwiss
+> nunca teve fases harmonizadas"* **está errada**. Elas existem em
+> `prepared/{development,holdout}_alignment_v1/`, sob o contrato
+> `openswisshcc-pairwise-or-identity-v1`, compartilhando a grade venosa exata,
+> com cobertura de 85/88 e 43/44. O que faltava eram recortes, e faltavam porque
+> **meus scripts fixaram caminhos do LLD** — suposição minha, não lacuna de dado.
+> A "dependência estrutural de duas linhas de trabalho" da §3 era um bloqueio que
+> eu mesmo inventei, e a recomendação derivada dela não tinha base. Ver
+> [docs/154](154_OPENSWISS_FUSAO_BINARIO_COMPLETO.md), onde a fusão é finalmente
+> medida no endpoint binário completo.
+>
+> O restante deste documento — o viés de seleção de +2,75 pts e a comparação
+> interna entre representações — permanece válido.
+
 ---
 
 ## 1. Aviso antes dos números

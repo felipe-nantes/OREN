@@ -123,9 +123,15 @@ ruído de 318 casos e o Passo 3 não rendeu nada.
 
 ## 7. O que resta
 
-1. **Harmonizar as fases do OpenSwiss.** Dependência estrutural de duas linhas
-   (docs/151 §3): sem isso, nem a fusão no binário nem a especificidade do
-   experimento FNH podem ser medidas.
+> **EMENDA — 31 de julho de 2026.** O item 1 abaixo partia da premissa de
+> docs/151 §3 de que o OpenSwiss não tinha fases harmonizadas. **A premissa é
+> falsa** — as fases existem em `prepared/*_alignment_v1/`. Ver
+> [docs/154](154_OPENSWISS_FUSAO_BINARIO_COMPLETO.md). O item 1 fica sem efeito;
+> os itens 2 e 3 permanecem, e o item 3 ganhou peso: o próximo passo definido é
+> rodar os localizadores arterial e tardio no OpenSwiss para igualar a qualidade
+> do recorte à do LLD.
+
+1. ~~**Harmonizar as fases do OpenSwiss.**~~ Ver emenda acima.
 2. **Passo 4 — segunda coorte.** Aquisição, não engenharia. Continua sendo o
    único caminho para 75% de subtipo, e agora com um argumento a mais: o teto
    por seleção está demonstrado como fechado.
