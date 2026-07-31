@@ -74,3 +74,7 @@ casos/qualification/hybrid_v1/openswiss_roi_embeddings_v1/
 casos/qualification/hybrid_v1/openswiss_fusao_v1/
 casos/qualification/hybrid_v1/fusao_estimador_oficial_v1/
 casos/qualification/hybrid_v1/fusao_estimador_oficial_v2/
+casos/qualification/hybrid_v1/remedicao_uniao_v1/
+casos/qualification/hybrid_v1/openswiss_roi_union_embeddings_v1/
+casos/qualification/openswisshcc_v1/calibration/dev_v22_arterial_union_chunk_*/
+casos/qualification/openswisshcc_v1/prepared/dev_v22_union_chunk_totalseg_runtime_*/
