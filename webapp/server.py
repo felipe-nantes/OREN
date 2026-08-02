@@ -391,6 +391,43 @@ def _seg_done(case_dir: Path) -> bool:
     return (case_dir / "mask_organ.nii.gz").is_file() and (case_dir / "volume.nii.gz").is_file()
 
 
+# Motivos do gate anatômico, em português, para a tela.
+_MOTIVOS_MASCARA = {
+    "mask_missing": "a máscara do fígado não foi gerada",
+    "geometry_mismatch": "a máscara não está na mesma grade do exame",
+    "physical_volume_below_minimum": "o volume segmentado é pequeno demais para um fígado adulto",
+    "axial_extent_below_minimum": "a altura do fígado segmentado é pequena demais",
+    "inplane_extent_below_minimum": "a largura do fígado segmentado é pequena demais",
+    "excessive_fragmentation": "a segmentação ficou fragmentada em várias partes",
+}
+
+
+def _mask_quality(case_dir: Path) -> dict:
+    """Aplica ao webapp o MESMO gate de plausibilidade anatômica da pesquisa.
+
+    Sem isso, o webapp reportava resultados que o pipeline de pesquisa contaria
+    como falha técnica: um fígado segmentado pela metade produz painéis errados,
+    e uma classificação a partir deles não é confiável, mesmo quando acerta.
+
+    Caso real que motivou: um exame cujo fígado saiu com 283 mL e 69 mm de altura
+    craniocaudal — menos da metade de um fígado adulto, sem tocar a borda do
+    volume (ou seja, não era corte de campo de visão, era sub-segmentação).
+    """
+    from dtwin.benchmark.lld_mmri_v23_mask_quality import evaluate_liver_mask_quality
+
+    import SimpleITK as sitk
+
+    referencia = sitk.ReadImage(str(case_dir / "volume.nii.gz"))
+    return evaluate_liver_mask_quality(case_dir / "mask_organ.nii.gz", referencia)
+
+
+def _motivo_mascara(qualidade: dict) -> str:
+    motivos = [
+        _MOTIVOS_MASCARA.get(r, r) for r in qualidade.get("failure_reasons", [])
+    ]
+    return "; ".join(motivos) if motivos else "a máscara não passou na verificação"
+
+
 def _success_result(report: dict) -> dict:
     """Monta o resultado de sucesso para o frontend.
 
@@ -499,6 +536,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
     case_dir = (WORKSPACE / job_id / "case").resolve()
     started = time.monotonic()
     duracoes: dict[str, float] = {}
+    qualidade_mascara: dict | None = None
     try:
         _set(job_id, state="processing", step="ingestao_multifasica", progress=15)
         bundle = load_production_bundle(_visual_bundle_root("hybrid_supervised"))
@@ -516,6 +554,19 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
                                 PREP_TIMEOUT_CPU, fast=False)
                 if not _seg_done(case_dir):
                     raise PipelineError(_friendly_text(_cli_reason(proc)))
+            # Gate anatômico: uma máscara implausível invalida tudo a jusante --
+            # os painéis são recortados a partir dela.
+            qualidade = _mask_quality(case_dir)
+            if not qualidade["gate_passed"]:
+                log.warning("Job visual %s: máscara reprovada (%s)",
+                            job_id, qualidade["failure_reasons"])
+                raise PipelineError(
+                    "A segmentação do fígado não ficou anatomicamente plausível: "
+                    + _motivo_mascara(qualidade)
+                    + ". Um resultado calculado sobre ela não seria confiável."
+                )
+            nonlocal qualidade_mascara
+            qualidade_mascara = qualidade
             return case_dir
 
         t0 = time.monotonic()
@@ -570,6 +621,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             "in_sample": status["in_sample"],
             "in_sample_verdict": status["verdict"],
             "durations_seconds": duracoes,
+            "liver_mask_quality": qualidade_mascara,
             "viewer_ready": bool(viewer_ready),
             "viewer_url": (
                 f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}"

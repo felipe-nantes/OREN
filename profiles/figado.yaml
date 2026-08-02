@@ -77,6 +77,15 @@ mesh:
   suavizacao_iteracoes: 30
   feature_angle: 60.0
   taubin_pass_band: 0.1       # Taubin (windowed-sinc): menor = mais suave, preserva volume
+  # Reconstrução por campo contínuo (docs/165). A grade de RM hepática chega com
+  # 3 a 4x mais espaçamento em Z -- um fígado inteiro pode caber em 23 cortes --,
+  # e marchar direto nela produz terraços que são artefato de amostragem, não
+  # anatomia. Marchar no campo de distância reamostrado corta a rugosidade pela
+  # metade; o isovalor é calibrado por caso para encerrar o volume MEDIDO, então
+  # a suavização não custa fidelidade. 0 volta ao caminho antigo.
+  reamostragem_isotropica_mm: 0.8
+  suavizacao_campo_sigma_mm: 1.0
+  max_triangulos: 160000     # decimação quadrática; STL acima disso pesa no navegador
   cor_orgao: "#C8A27D"        # consumido pelo manifesto do visualizador
   cor_lesao: "#D7263D"
 

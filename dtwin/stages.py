@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 import pydicom
 import pyvista as pv
+import SimpleITK as sitk
 from skimage import measure, morphology
 
 from .core import (
@@ -125,17 +126,126 @@ def _refine_mask(mask_zyx, opening: bool, radius: int, min_voxels: int) -> np.nd
     return m.astype(np.uint8)
 
 
+def _campo_continuo(img, isotropic_mm: float, sigma_mm: float):
+    """Máscara binária -> campo de distância isotrópico e suavizado.
+
+    O marching cubes direto na grade de aquisição produz terraços porque a grade
+    é fortemente anisotrópica -- exames de RM hepática chegam com 3 a 4x mais
+    espaçamento em Z, e um fígado inteiro pode caber em 23 cortes. Os degraus são
+    artefato de amostragem, não anatomia.
+
+    A correção é marchar num campo CONTÍNUO: a distância com sinal carrega a
+    posição sub-voxel da borda, então reamostrá-la interpola a forma em vez de
+    replicar voxels. A gaussiana leve remove o que resta da escada.
+    """
+    dist = sitk.SignedMaurerDistanceMap(
+        sitk.Cast(img, sitk.sitkUInt8),
+        insideIsPositive=False,
+        squaredDistance=False,
+        useImageSpacing=True,
+    )
+    espac = np.array(dist.GetSpacing())
+    tam = np.array(dist.GetSize())
+    reamostra = sitk.ResampleImageFilter()
+    reamostra.SetOutputSpacing([float(isotropic_mm)] * 3)
+    reamostra.SetSize(np.ceil(tam * espac / float(isotropic_mm)).astype(int).tolist())
+    reamostra.SetOutputOrigin(dist.GetOrigin())
+    reamostra.SetOutputDirection(dist.GetDirection())
+    reamostra.SetInterpolator(sitk.sitkLinear)
+    reamostra.SetDefaultPixelValue(float(sitk.GetArrayViewFromImage(dist).max()))
+    campo = reamostra.Execute(dist)
+    if sigma_mm and float(sigma_mm) > 0:
+        campo = sitk.SmoothingRecursiveGaussian(campo, sigma=float(sigma_mm))
+    return campo
+
+
+def _malha_do_campo(campo, nivel: float):
+    arr = sitk.GetArrayFromImage(campo).astype(np.float32)
+    if arr.min() > nivel or arr.max() < nivel:
+        return None
+    verts_zyx, faces, _n, _v = measure.marching_cubes(arr, level=nivel)
+    verts_lps = world_vertices_from_index(verts_zyx, campo)
+    faces_pv = np.hstack(
+        [np.full((faces.shape[0], 1), 3, dtype=np.int64), faces]
+    ).ravel()
+    return pv.PolyData(verts_lps, faces_pv)
+
+
+def _nivel_por_volume(campo, volume_alvo_ml: float, iteracoes: int = 7):
+    """Escolhe o isovalor que faz a malha encerrar o volume MEDIDO na máscara.
+
+    A gaussiana erode a superfície de forma sistemática: marchar em zero perde
+    9 a 16% do volume, o que é infidelidade, não suavização. Em vez de aceitar
+    essa perda ou de fixar um deslocamento arbitrário, busca-se por bisseção o
+    nível que reproduz o volume da máscara. O critério é de fidelidade -- a
+    superfície fica tão lisa quanto a suavização permite, mas obrigada a encerrar
+    exatamente o volume que foi medido.
+    """
+    baixo, alto = 0.0, 3.0
+    melhor, melhor_erro = None, float("inf")
+    for _ in range(int(iteracoes)):
+        meio = (baixo + alto) / 2.0
+        m = _malha_do_campo(campo, meio)
+        if m is None:
+            alto = meio
+            continue
+        volume = float(m.volume) / 1000.0
+        erro = abs(volume - volume_alvo_ml)
+        if erro < melhor_erro:
+            melhor, melhor_erro = (m, meio), erro
+        if volume < volume_alvo_ml:
+            baixo = meio
+        else:
+            alto = meio
+    return melhor
+
+
 def _mesh_from_mask(
     mask_path: Path,
     level: float,
     smooth_iter: int,
     feature_angle: float,
     pass_band: float = 0.1,
+    isotropic_mm: float | None = None,
+    gaussian_sigma_mm: float = 1.0,
+    max_triangles: int = 0,
 ):
     img = read_image(mask_path)
     mask = array_from(img).astype(np.float32)
     if mask.max() < 0.5:
         return None  # máscara vazia
+    if isotropic_mm and float(isotropic_mm) > 0:
+        alvo_ml = float((mask > 0.5).sum()) * float(np.prod(img.GetSpacing())) / 1000.0
+        # A busca do isovalor roda numa grade GROSSEIRA e a malha final numa fina:
+        # o nível é uma distância em mm, então transfere entre resoluções. Sem
+        # isso seriam sete marching cubes na grade fina -- 8 s por estrutura, o
+        # que triplicaria o tempo do exame com uma dúzia de estruturas.
+        grosso = _campo_continuo(img, float(isotropic_mm) * 2.0, gaussian_sigma_mm)
+        escolha = _nivel_por_volume(grosso, alvo_ml)
+        if escolha is None:
+            return None
+        _, nivel = escolha
+        campo = _campo_continuo(img, float(isotropic_mm), gaussian_sigma_mm)
+        mesh = _malha_do_campo(campo, nivel)
+        if mesh is None:
+            return None
+        if max_triangles and mesh.n_cells > int(max_triangles):
+            # Decimação quadrática: preserva a forma muito melhor que subamostrar,
+            # e mantém o STL num tamanho que o navegador carrega sem engasgar.
+            mesh = mesh.decimate(1.0 - float(max_triangles) / mesh.n_cells)
+        if smooth_iter and int(smooth_iter) > 0:
+            mesh = mesh.smooth_taubin(
+                n_iter=int(smooth_iter),
+                pass_band=float(pass_band),
+                feature_angle=float(feature_angle),
+            )
+        log.info(
+            "Malha de %s: campo contínuo %.2f mm, sigma %.2f, nível %.3f mm, "
+            "volume %.0f mL (alvo %.0f mL), %d triângulos.",
+            mask_path.name, float(isotropic_mm), float(gaussian_sigma_mm),
+            nivel, mesh.volume / 1000.0, alvo_ml, mesh.n_cells,
+        )
+        return mesh
     try:
         verts_zyx, faces, _n, _v = measure.marching_cubes(mask, level=level)
     except (ValueError, RuntimeError) as e:
@@ -547,8 +657,13 @@ def stage6_mesh(case: Case, profile: dict) -> None:
     sm = int(mesh_cfg.get("suavizacao_iteracoes", 30))
     fa = float(mesh_cfg.get("feature_angle", 60.0))
     pb = float(mesh_cfg.get("taubin_pass_band", 0.1))
+    # Reconstrução por campo contínuo: 0 ou ausente mantém o caminho antigo.
+    iso = float(mesh_cfg.get("reamostragem_isotropica_mm", 0.0) or 0.0)
+    sigma = float(mesh_cfg.get("suavizacao_campo_sigma_mm", 1.0))
+    maxtri = int(mesh_cfg.get("max_triangulos", 0) or 0)
+    extra = {"isotropic_mm": iso, "gaussian_sigma_mm": sigma, "max_triangles": maxtri}
 
-    organ_mesh = _mesh_from_mask(case.mask_organ_clean, level, sm, fa, pass_band=pb)
+    organ_mesh = _mesh_from_mask(case.mask_organ_clean, level, sm, fa, pass_band=pb, **extra)
     if organ_mesh is None:
         raise PipelineError(
             "Malha do órgão vazia — máscara do órgão sem conteúdo após refino."
@@ -559,7 +674,7 @@ def stage6_mesh(case: Case, profile: dict) -> None:
         organ_mesh.n_points, organ_mesh.n_cells,
     )
 
-    lesion_mesh = _mesh_from_mask(case.mask_lesion_clean, level, sm, fa, pass_band=pb)
+    lesion_mesh = _mesh_from_mask(case.mask_lesion_clean, level, sm, fa, pass_band=pb, **extra)
     if lesion_mesh is not None:
         lesion_mesh.save(str(case.mesh_lesion))
         log.info(
@@ -582,7 +697,7 @@ def stage6_mesh(case: Case, profile: dict) -> None:
             if mesh_path.exists():
                 mesh_path.unlink()
             continue
-        anatomy_mesh = _mesh_from_mask(clean_path, level, sm, fa, pass_band=pb)
+        anatomy_mesh = _mesh_from_mask(clean_path, level, sm, fa, pass_band=pb, **extra)
         if anatomy_mesh is None:
             if mesh_path.exists():
                 mesh_path.unlink()
