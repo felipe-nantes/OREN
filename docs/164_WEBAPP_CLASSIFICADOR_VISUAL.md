@@ -111,7 +111,37 @@ menor e sem identificação da alteração.
 
 ---
 
-## 6. O que continua valendo
+## 6. Caminho único (atualização)
+
+O seletor de modo foi **removido das duas telas**. O exame individual e o
+benchmark rodam exclusivamente o classificador visual.
+
+O motivo é que a escolha transferia ao usuário um risco que é nosso: ele não tem
+como saber qual configuração é a melhor, e oferecer alternativas mais fracas
+convida a escolher a pior sem perceber.
+
+A trava não depende da interface. `/api/analyze` **recusa** com HTTP 400 um pedido
+que traga outro cenário, em vez de rebaixá-lo em silêncio — quem pediu outra coisa
+precisa saber que não a recebeu.
+
+Efeitos colaterais tratados:
+
+- **MedGemma deixou de ser dependência do webapp.** O chip de estado do gateway
+  saiu das duas telas: exibir "desligado" sugeria falha onde não há, e o benchmark
+  bloqueava o início por um serviço que não usa mais.
+- **O modelo 3D foi preservado.** O fluxo anterior gerava a malha do fígado para
+  revisão; o caminho visual passou a gerá-la também, segmentando direto no
+  diretório do job para que a rota existente continue servindo. Custa ~3 s e é
+  acessório: se falhar, o resultado sai do mesmo jeito, sem o visualizador.
+- Os modos MedGemma continuam no código para benchmark por linha de comando e
+  para os experimentos, onde comparar configurações é justamente o objetivo.
+
+Verificado ponta a ponta após a mudança: `ARGOS-BLIND-0026` → **POSITIVA**,
+Carcinoma hepatocelular 79,0%, modelo 3D disponível, **65 s** no total.
+
+---
+
+## 7. O que continua valendo
 
 - `research_only: true`, `clinical_use_allowed: false`, revisão humana obrigatória
   em todo resultado.

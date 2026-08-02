@@ -125,8 +125,14 @@ VISUAL_AUTHORIZED_PHASE_AUDIT = os.environ.get(
     "WEBAPP_VISUAL_AUTHORIZED_PHASE_AUDIT",
     "ARGOS_INTERNAL_BLIND_BENCHMARK_120_V1/private_reference/conversion_audit.json",
 )
-# A tela de exame individual só expõe modos que foram avaliados e versionados.
-# O navegador envia apenas a chave; nunca um caminho de configuração.
+# O exame individual roda um único caminho: o classificador visual da Etapa C, de
+# melhor acertividade medida (75,91%/76,11% agregado nested-OOF) e o único que
+# identifica QUAL alteração há. Não há seleção de modo na interface nem na API --
+# oferecer alternativas mais fracas convidaria a escolher a pior sem ter como
+# saber disso.
+INDIVIDUAL_SCREENING_MODE = "hybrid_supervised"
+# Mantido para o benchmark e para uso por linha de comando, onde comparar
+# configurações é justamente o objetivo. Não é alcançável pelo exame individual.
 INDIVIDUAL_SCREENING_SCENARIOS = {
     "volumetric_rag": VOLUMETRIC_RAG_MEDGEMMA_CONFIG,
     "pathology_target": PATHOLOGY_TARGET_MEDGEMMA_CONFIG,
@@ -497,18 +503,20 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
         _set(job_id, state="processing", step="ingestao_multifasica", progress=15)
         bundle = load_production_bundle(_visual_bundle_root("hybrid_supervised"))
 
-        def segment_venous(venous_dir: Path, work_dir: Path) -> Path:
-            work_dir = Path(work_dir).resolve()
-            proc = _segment(str(Path(venous_dir).resolve()), work_dir, "gpu",
+        def segment_venous(venous_dir: Path, _work_dir: Path) -> Path:
+            # Segmenta no PRÓPRIO diretório do job, e não numa subpasta: é de lá
+            # que a rota /api/jobs/{id}/model serve a malha, então isso preserva o
+            # modelo 3D de revisão que o fluxo anterior gerava.
+            proc = _segment(str(Path(venous_dir).resolve()), case_dir, "gpu",
                             PREP_TIMEOUT_GPU, fast=False)
-            if not _seg_done(work_dir):
+            if not _seg_done(case_dir):
                 log.warning("Job visual %s: GPU falhou; tentando CPU", job_id)
-                shutil.rmtree(work_dir, ignore_errors=True)
-                proc = _segment(str(Path(venous_dir).resolve()), work_dir, "cpu",
+                shutil.rmtree(case_dir, ignore_errors=True)
+                proc = _segment(str(Path(venous_dir).resolve()), case_dir, "cpu",
                                 PREP_TIMEOUT_CPU, fast=False)
-                if not _seg_done(work_dir):
+                if not _seg_done(case_dir):
                     raise PipelineError(_friendly_text(_cli_reason(proc)))
-            return work_dir
+            return case_dir
 
         t0 = time.monotonic()
         multiphase = build_multiphase_case(
@@ -536,6 +544,18 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
         decision = classify_embeddings(bundle, embeddings)
         duracoes["classificacao"] = round(time.monotonic() - t0, 4)
 
+        # Modelo 3D do fígado para revisão. É acessório à decisão: se falhar, o
+        # resultado sai do mesmo jeito, apenas sem o visualizador.
+        _set(job_id, state="processing", step="modelo_3d", progress=92)
+        t0 = time.monotonic()
+        try:
+            viewer_ready, motivo_modelo = _build_model(case_dir)
+        except Exception as exc:  # noqa: BLE001
+            viewer_ready, motivo_modelo = False, f"{type(exc).__name__}"
+        duracoes["modelo_3d"] = round(time.monotonic() - t0, 4)
+        if not viewer_ready:
+            log.warning("Job visual %s: modelo 3D indisponível (%s)", job_id, motivo_modelo)
+
         positiva = decision["prediction"] == "POSITIVE"
         status = in_sample_status(bundle, case_id=job_id)
         resultado = {
@@ -550,6 +570,13 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             "in_sample": status["in_sample"],
             "in_sample_verdict": status["verdict"],
             "durations_seconds": duracoes,
+            "viewer_ready": bool(viewer_ready),
+            "viewer_url": (
+                f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}"
+                if viewer_ready
+                else None
+            ),
+            "approval": {"status": "pending"} if viewer_ready else None,
             "requires_human_review": True,
             "research_only": True,
             "clinical_use_allowed": False,
@@ -1516,16 +1543,20 @@ async def analyze(request: Request) -> dict:
     files = [v for v in form.getlist("files") if not isinstance(v, str)]
     if not files:
         raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
-    scenario = str(form.get("scenario") or "volumetric_rag")
-    # O modo visual (Etapa C) não usa MedGemma: tem seu próprio caminho, que
-    # exige entrada multifásica. Os demais modos resolvem uma config autorizada.
-    visual = _is_visual_scenario(scenario)
-    medgemma_config = None
-    if not visual:
-        try:
-            medgemma_config = _individual_screening_config(scenario)
-        except PipelineError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # O exame individual roda EXCLUSIVAMENTE o classificador visual da Etapa C,
+    # que é o de melhor acertividade medida. O cliente não escolhe: um pedido que
+    # mande outro cenário é recusado em vez de silenciosamente rebaixado, para
+    # que ninguém receba um resultado pior achando que pediu outra coisa.
+    pedido = form.get("scenario")
+    if pedido is not None and str(pedido) != INDIVIDUAL_SCREENING_MODE:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Modo de exame individual não autorizado: {str(pedido)!r}. "
+                f"A análise individual usa apenas {INDIVIDUAL_SCREENING_MODE!r}."
+            ),
+        )
+    scenario = INDIVIDUAL_SCREENING_MODE
     relpaths = form.get("relpaths")
     job_id = uuid.uuid4().hex[:12]
     raw_dir = WORKSPACE / job_id / "_upload"
@@ -1547,16 +1578,9 @@ async def analyze(request: Request) -> dict:
             "state": "queued", "step": "recebendo", "progress": 5, "result": None,
             "analysis_scenario": scenario,
         }
-    if visual:
-        threading.Thread(
-            target=process_visual_job, args=(job_id, raw_dir), daemon=True
-        ).start()
-    else:
-        threading.Thread(
-            target=process_job,
-            args=(job_id, raw_dir, medgemma_config, scenario),
-            daemon=True,
-        ).start()
+    threading.Thread(
+        target=process_visual_job, args=(job_id, raw_dir), daemon=True
+    ).start()
     return {"job_id": job_id, "analysis_scenario": scenario}
 
 

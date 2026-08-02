@@ -14,7 +14,7 @@
       <div><p class="brand-name">Argos</p><p class="brand-subtitle">Digital Twin Cirúrgico · UEM · GETS · HU</p></div>
     </div>
     <nav class="app-nav" aria-label="Navegação principal"><a href="/">Exame individual</a><a class="active" href="/benchmark.html">Benchmark</a></nav>
-    <div class="header-context"><span class="status" id="backendStatus" title="Estado do modelo MedGemma">Verificando backend…</span><span class="research-pill">Modo Pesquisa</span></div>
+    <div class="header-context"><span class="status s-ok">Classificador visual, local</span><span class="research-pill">Modo Pesquisa</span></div>
   </header>
 
   <main class="page benchmark-page">
@@ -22,7 +22,7 @@
       <div class="hero-copy">
         <div class="eyebrow">Validação orientada a dados</div>
         <h1 class="page-title">Meça o desempenho clínico com transparência.</h1>
-        <p class="page-lead">Execute datasets rotulados no pipeline real, acompanhe cada exame e consolide métricas reprodutíveis da triagem MedGemma.</p>
+        <p class="page-lead">Execute datasets rotulados no pipeline real, acompanhe cada exame e consolide métricas reprodutíveis da triagem visual.</p>
         <div class="status-row"><span class="chip">Resultados <b>por exame</b></span><span class="chip">Relatórios <b>JSON e CSV</b></span><span class="chip">Revisão humana <b>obrigatória</b></span></div>
       </div>
     </section>
@@ -33,31 +33,13 @@
         <label class="caption" for="datasetName">Nome do dataset</label>
         <input id="datasetName" type="text" maxlength="120" placeholder="Ex.: Validação hepática — lote 01" />
         <label class="caption">Forma de execução</label>
-        <div class="scenario-toggle" id="scenarioToggle" role="group" aria-label="Forma de execução do benchmark">
-          <button type="button" class="scenario-btn active" data-scenario="baseline" aria-pressed="true">
-            <b>Baseline</b><span>9 cortes axiais uniformes (rápido)</span>
-          </button>
-          <button type="button" class="scenario-btn" data-scenario="volumetric" aria-pressed="false">
-            <b>Volumétrico</b><span>Cobertura de 100% do fígado</span>
-          </button>
-          <button type="button" class="scenario-btn" data-scenario="rag" aria-pressed="false">
-            <b>RAG</b><span>9 cortes + contexto textual auditável</span>
-          </button>
-          <button type="button" class="scenario-btn" data-scenario="volumetric_rag" aria-pressed="false">
-            <b>Vol. + RAG</b><span>100% do fígado + contexto textual</span>
-          </button>
-          <button type="button" class="scenario-btn" data-scenario="pathology_target" aria-pressed="false">
-            <b>Alvo patológico</b><span>100% do fígado + separa variante benigna</span>
-          </button>
-          <button type="button" class="scenario-btn" data-scenario="hybrid_supervised" aria-pressed="false">
-            <b>Classificador visual</b><span>Pesquisa · exige fases em subpastas</span>
-          </button>
-        </div>
-        <p class="hint" id="visualScenarioHint" style="display:none">
-          Modo de <b>pesquisa</b>: classificador visual supervisionado — melhor resultado
-          retrospectivo do projeto (75,9%/76,1% out-of-fold), porém <b>não estável por
-          dataset e não validado clinicamente</b>. Exige exame multifásico: cada caso deve
-          conter as subpastas <code>arterial</code>, <code>venous</code> e <code>delayed</code>.
+        <p class="hint">
+          <b>Classificador visual</b> — único caminho disponível, e o de melhor
+          acertividade medida do projeto (75,9%/76,1% out-of-fold). Não há seleção
+          de modo: oferecer configurações mais fracas convidaria a escolher a pior
+          sem ter como saber disso. Resultado de <b>pesquisa</b>, não estável por
+          dataset e não validado clinicamente. Cada exame precisa das subpastas
+          <code>arterial</code>, <code>venous</code> e <code>delayed</code>.
         </p>
         <div class="types">
           <label class="type"><input type="radio" name="kind" value="positive"><b>Positivo</b><span>Todos os exames são alterados.</span></label>
@@ -97,41 +79,13 @@
 </div>
 <script>
 const $=s=>document.querySelector(s);const show=(e,on=true)=>e.classList.toggle('hidden',!on);
-let uploadedItems=[],detectedCases=[],pollTimer=null,currentBenchmark=null,selectedScenario='baseline',backendReady=false;
+let uploadedItems=[],detectedCases=[],pollTimer=null,currentBenchmark=null;
+const selectedScenario='hybrid_supervised';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function selectedKind(){return document.querySelector('input[name=kind]:checked').value}
-  const SCENARIO_LABEL={
-    baseline:'Baseline (9 cortes)',
-    volumetric:'Volumétrico (100%)',
-    rag:'RAG textual',
-    volumetric_rag:'Volumétrico + RAG',
-    pathology_target:'Alvo patológico',
-    hybrid_supervised:'Classificador visual (pesquisa)'
-  };
-// Cenários que não usam o MedGemma: rodam o classificador visual supervisionado.
-const VISUAL_SCENARIOS=new Set(['hybrid_supervised']);
-const isVisualScenario=()=>VISUAL_SCENARIOS.has(selectedScenario);
-
-// --- Toggle de cenario autorizado (baseline / volumetrico / RAG / alvo patologico / visual) ---
-document.querySelectorAll('.scenario-btn').forEach(btn=>btn.onclick=()=>{
-  document.querySelectorAll('.scenario-btn').forEach(b=>{const on=b===btn;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on)});
-  selectedScenario=btn.dataset.scenario;
-  const hint=$('#visualScenarioHint');
-  if(hint)hint.style.display=isVisualScenario()?'block':'none';
-  validate();
-});
-
-// --- Estado do backend MedGemma (benchmark invalido se o modelo nao estiver pronto) ---
-async function refreshBackend(){
-  try{const r=await fetch('/api/health');const d=await r.json();backendReady=d.backend==='pronto';
-    const el=$('#backendStatus');
-    if(d.backend==='pronto'){el.textContent='Backend pronto';el.className='status s-ok';}
-    else if(d.backend==='carregando'){el.textContent='Backend carregando…';el.className='status s-inc';}
-    else{el.textContent='Backend desligado';el.className='status s-bad';}
-  }catch{backendReady=false;const el=$('#backendStatus');el.textContent='Backend desligado';el.className='status s-bad';}
-  validate();
-}
-refreshBackend();setInterval(refreshBackend,5000);
+  const SCENARIO_LABEL={ hybrid_supervised:'Classificador visual' };
+// Sem toggle e sem checagem de gateway: o benchmark roda sempre o classificador
+// visual, que executa no próprio processo do servidor.
 async function readDirectory(reader){let all=[];for(;;){const batch=await new Promise((res,rej)=>reader.readEntries(res,rej));if(!batch.length)return all;all=all.concat(batch)}}
 async function entryFiles(entry,base,out){if(entry.isFile){await new Promise(res=>entry.file(f=>{out.push({file:f,rel:base+entry.name});res()}));return}
   for(const child of await readDirectory(entry.createReader()))await entryFiles(child,base+entry.name+'/',out)}
@@ -168,14 +122,6 @@ $('#drop').onclick=()=>$('#folderInput').click();$('#folderInput').onchange=e=>l
 $('#drop').addEventListener('drop',async e=>loadItems(await fromDrop(e.dataTransfer)));
 $('#startBtn').onclick=async()=>{
   validate();if($('#startBtn').disabled)return;
-  // Validade: nao inicia um benchmark inteiro contra um backend desligado (todos
-  // os exames falhariam). Reconfirma o estado do modelo no momento do clique.
-  // O cenario visual NAO usa o MedGemma, entao nao depende do gateway.
-  if(!isVisualScenario()){
-    await refreshBackend();
-    if(!backendReady){show($('#setupCard'),false);show($('#uploadCard'),false);
-      renderError('O modelo MedGemma não está pronto (backend desligado ou carregando). Suba o gateway e aguarde "Backend pronto" antes de iniciar o benchmark.');return;}
-  }
   $('#startBtn').disabled=true;show($('#setupCard'),false);show($('#uploadCard'),false);show($('#progressCard'),true);
   $('#currentCase').textContent=`Preparando dataset (${SCENARIO_LABEL[selectedScenario]})…`;
   const manifest={dataset_name:$('#datasetName').value.trim(),dataset_kind:selectedKind(),scenario:selectedScenario,cases:detectedCases};const fd=new FormData();

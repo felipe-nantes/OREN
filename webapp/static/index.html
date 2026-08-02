@@ -27,10 +27,10 @@
       <div class="hero-copy">
         <div class="eyebrow">Inteligência visual hepática</div>
         <h1 class="page-title">Análise médica mais clara, do exame ao modelo.</h1>
-        <p class="page-lead">Envie uma ressonância magnética para segmentação do fígado, triagem visual assistida por MedGemma e revisão humana do modelo 3D.</p>
+        <p class="page-lead">Envie uma ressonância magnética multifásica para segmentação do fígado, triagem de lesão focal e identificação da alteração — com revisão humana obrigatória.</p>
         <div class="status-row">
           <span class="chip">Ambiente <b>local e seguro</b></span>
-          <span class="chip" id="backendChip"><span class="dot" style="background:#8da099"></span>MedGemma: <b id="backendState">verificando…</b></span>
+          <span class="chip"><span class="dot" style="background:#39c07f"></span>Classificador <b>visual, local</b></span>
           <span class="chip">Revisão humana <b>obrigatória</b></span>
         </div>
       </div>
@@ -43,23 +43,11 @@
             <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17.5V6.5A2.5 2.5 0 0 1 6.5 4h3l2 2h6A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2h-11A2.5 2.5 0 0 1 4 17.5Z" stroke="currentColor" stroke-width="1.7"/><path d="m9 13 3-3 3 3M12 10v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <div><h2>Novo exame</h2><p>Selecione uma pasta ou os arquivos DICOM da ressonância.</p></div>
           </div>
-          <div class="scenario-toggle" id="scenarioToggle" role="group" aria-label="Modo de análise do exame">
-            <button type="button" class="scenario-btn active" data-scenario="hybrid_supervised" aria-pressed="true">
-              <b>Classificador visual</b><span>Melhor acertividade medida + identifica a alteração</span>
-            </button>
-            <button type="button" class="scenario-btn" data-scenario="volumetric_rag" aria-pressed="false">
-              <b>RAG + volumétrico</b><span>100% do fígado + contexto textual auditável</span>
-            </button>
-            <button type="button" class="scenario-btn" data-scenario="pathology_target" aria-pressed="false">
-              <b>Alvo patológico</b><span>Separa variante benigna de lesão focal suspeita</span>
-            </button>
-          </div>
-          <div class="note" id="scenarioNote">Modo selecionado: Classificador visual.</div>
           <div class="note" id="multiphaseHint">
-            Este modo precisa das <b>três fases dinâmicas em subpastas</b> —
-            <code>arterial/</code>, <code>venous/</code> e <code>delayed/</code> —
-            dentro da pasta do exame. Identificar a fase a partir do DICOM bruto é
-            problema não resolvido, e adivinhar produziria uma resposta sem valor.
+            A pasta do exame precisa conter as <b>três fases dinâmicas em subpastas</b> —
+            <code>arterial/</code>, <code>venous/</code> e <code>delayed/</code>.
+            Identificar a fase a partir do DICOM bruto é problema não resolvido, e
+            adivinhar produziria uma resposta sem valor.
           </div>
           <div class="drop" id="drop">
             <div class="drop-content">
@@ -84,7 +72,7 @@
           </div>
           <div class="prog"><div class="bar" id="bar"></div></div>
           <div class="step"><div class="spin"></div><span id="stepLabel">Enviando…</span></div>
-          <div class="note">Leitura, des-identificação, segmentação do fígado e análise MedGemma podem levar alguns minutos.</div>
+          <div class="note">Leitura das fases, des-identificação, segmentação do fígado e classificação levam cerca de um minuto.</div>
         </div>
 
         <div class="card hidden" id="resultCard"></div>
@@ -97,7 +85,7 @@
         <p class="context-copy">Cada etapa mantém rastreabilidade e exige validação humana.</p>
         <div class="context-list">
           <div class="context-item"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><div><b>RM em DICOM</b><span>Entrada des-identificada</span></div></div>
-          <div class="context-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/></svg><div><b>Triagem MedGemma</b><span>Hipótese visual exploratória</span></div></div>
+          <div class="context-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/></svg><div><b>Triagem visual</b><span>Positivo/negativo e qual alteração</span></div></div>
           <div class="context-item"><svg viewBox="0 0 24 24" fill="none"><path d="m4 12 5 5L20 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Revisão humana</b><span>Obrigatória em todo resultado</span></div></div>
         </div>
       </aside>
@@ -110,22 +98,15 @@
 <script>
 const $ = s => document.querySelector(s);
 const show = (el,on)=>el.classList.toggle('hidden',!on);
-const STEP_LABELS = {recebendo:'Recebendo exame',ingestao:'Lendo e des-identificando o exame',
-  segmentacao:'Segmentando o fígado',montagem:'Preparando a análise',
-  medgemma:'Analisando com MedGemma',concluido:'Concluído'};
+const STEP_LABELS = {recebendo:'Recebendo exame',
+  ingestao_multifasica:'Lendo as fases e segmentando o fígado',
+  paineis:'Preparando os painéis do fígado',
+  classificacao:'Classificando o exame',concluido:'Concluído'};
 
 STEP_LABELS.modelo_3d='Gerando modelo 3D do fígado';
 
-async function refreshBackend(){
-  try{
-    const r = await (await fetch('/api/health')).json();
-    const map = {pronto:['#39c07f','pronto'],carregando:['#e2b93b','carregando…'],desligado:['#e26060','desligado']};
-    const [c,t] = map[r.backend]||['#666','—'];
-    $('#backendChip').querySelector('.dot').style.background=c;
-    $('#backendState').textContent=t;
-  }catch{ $('#backendState').textContent='—'; }
-}
-refreshBackend(); setInterval(refreshBackend, 8000);
+// O classificador visual roda no próprio processo do servidor: não há gateway
+// externo cujo estado precise ser exibido.
 
 // ---- coleta de arquivos (pasta ou avulsos), preservando caminho relativo ----
 async function entryFiles(entry, base, out){
@@ -149,27 +130,10 @@ function fromInput(input){
 }
 
 let polling=null;
-let selectedScenario='hybrid_supervised';
-const SCENARIO_LABELS={
-  hybrid_supervised:'Classificador visual',
-  volumetric_rag:'RAG + volumétrico',
-  pathology_target:'Alvo patológico'
-};
-function syncScenarioHint(){
-  // O aviso de fases só vale para o modo visual, que é o único que as exige.
-  show($('#multiphaseHint'), selectedScenario==='hybrid_supervised');
-}
-document.querySelectorAll('#scenarioToggle .scenario-btn').forEach(btn=>btn.addEventListener('click',()=>{
-  selectedScenario=btn.dataset.scenario;
-  document.querySelectorAll('#scenarioToggle .scenario-btn').forEach(item=>{
-    const active=item===btn;
-    item.classList.toggle('active',active);
-    item.setAttribute('aria-pressed',String(active));
-  });
-  $('#scenarioNote').textContent='Modo selecionado: '+SCENARIO_LABELS[selectedScenario]+'.';
-  syncScenarioHint();
-}));
-syncScenarioHint();
+// Um único caminho de análise: o classificador visual da Etapa C, que é o de
+// melhor acertividade medida. Não há seleção de modo -- oferecer configurações
+// mais fracas convidaria o usuário a escolher a pior sem ter como saber disso.
+const SCENARIO_LABELS={ hybrid_supervised:'Classificador visual' };
 async function startAnalysis(items){
   const dicoms = items.filter(x=>x.file.size>0);
   if(!dicoms.length){ return; }
@@ -179,7 +143,7 @@ async function startAnalysis(items){
   const rels=[];
   for(const {file,rel} of dicoms){ fd.append('files', file, file.name); rels.push(rel); }
   fd.append('relpaths', JSON.stringify(rels));
-  fd.append('scenario', selectedScenario);
+  fd.append('scenario', 'hybrid_supervised');
   let job;
   try{
     job = await (await fetch('/api/analyze',{method:'POST',body:fd})).json();
@@ -256,6 +220,14 @@ function renderVisualResult(result){
   meta.appendChild(el('span','chip','Status: <b>revisão humana obrigatória</b>'));
   c.appendChild(meta);
   c.appendChild(el('div','note', escapeHtml(result.disclaimer||'')));
+  if(result.viewer_ready && result.viewer_url){
+    const actions=el('div','btns');
+    const open=el('button','primary','Visualizar fígado em 3D e revisar');
+    open.onclick=()=>{ window.location.href=result.viewer_url; };
+    actions.appendChild(open); c.appendChild(actions);
+  }else{
+    c.appendChild(el('div','note','A triagem foi concluída, mas o modelo 3D não ficou disponível nesta execução.'));
+  }
 }
 
 function renderResult(result){

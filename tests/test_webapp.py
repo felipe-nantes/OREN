@@ -199,57 +199,65 @@ def test_analyze_creates_job_and_status_is_queryable(monkeypatch, tmp_path):
     assert (tmp_path / job_id / "_upload" / "estudo" / "IMG-0001.dcm").is_file()
 
 
-def test_individual_screening_accepts_only_volumetric_rag_and_pathology_target():
+def test_individual_screening_config_recusa_caminho_arbitrario():
+    """A resolução de config segue existindo para benchmark e linha de comando,
+    onde comparar configurações é o objetivo. Ela não é alcançável pelo exame
+    individual, mas continua tendo que recusar caminho vindo de fora."""
     assert server._individual_screening_config("volumetric_rag") == server.VOLUMETRIC_RAG_MEDGEMMA_CONFIG
-    assert server._individual_screening_config("pathology_target") == server.PATHOLOGY_TARGET_MEDGEMMA_CONFIG
     with pytest.raises(PipelineError, match="não autorizado"):
         server._individual_screening_config("../../config-inseguro.yaml")
 
 
-def test_analyze_selects_authorized_individual_scenario(monkeypatch, tmp_path):
-    seen = {}
-
-    def fake_process(job_id, raw_dir, medgemma_config, scenario):
-        seen.update(config=medgemma_config, scenario=scenario)
-
-    monkeypatch.setattr(server, "process_job", fake_process)
+def test_analyze_roda_sempre_o_classificador_visual(monkeypatch, tmp_path):
+    """O exame individual tem UM caminho, e ele não depende do que o cliente pede."""
+    visto = {}
+    monkeypatch.setattr(server, "process_visual_job",
+                        lambda job_id, raw_dir: visto.update(visual=job_id))
+    monkeypatch.setattr(server, "process_job",
+                        lambda *a, **k: visto.update(medgemma=True))
     monkeypatch.setattr(server, "WORKSPACE", tmp_path)
     client = TestClient(server.app)
     response = client.post(
         "/api/analyze",
         files=[("files", ("IMG-0001.dcm", b"fake-dicom-bytes", "application/dicom"))],
-        data={"relpaths": '["estudo/IMG-0001.dcm"]', "scenario": "pathology_target"},
+        data={"relpaths": '["estudo/IMG-0001.dcm"]'},
     )
     assert response.status_code == 200
-    assert response.json()["analysis_scenario"] == "pathology_target"
-    # O worker é disparado em thread; um pequeno polling evita tornar o teste dependente do scheduler.
+    assert response.json()["analysis_scenario"] == "hybrid_supervised"
+    # O worker é disparado em thread; um pequeno polling evita tornar o teste
+    # dependente do scheduler.
     for _ in range(50):
-        if seen:
+        if visto:
             break
         time.sleep(0.01)
-    assert seen == {
-        "config": server.PATHOLOGY_TARGET_MEDGEMMA_CONFIG,
-        "scenario": "pathology_target",
-    }
+    assert "visual" in visto
+    assert "medgemma" not in visto
 
 
-def test_analyze_rejects_unapproved_individual_scenario(monkeypatch, tmp_path):
+def test_analyze_recusa_pedido_de_modo_mais_fraco(monkeypatch, tmp_path):
+    """Recusar é melhor que rebaixar em silêncio: quem pediu outro modo precisa
+    saber que não o recebeu, em vez de levar um resultado pior sem perceber."""
     monkeypatch.setattr(server, "WORKSPACE", tmp_path)
     client = TestClient(server.app)
-    response = client.post(
-        "/api/analyze",
-        files=[("files", ("IMG-0001.dcm", b"fake-dicom-bytes", "application/dicom"))],
-        data={"scenario": "baseline"},
-    )
-    assert response.status_code == 400
-    assert "não autorizado" in response.json()["detail"]
+    for pedido in ("pathology_target", "volumetric_rag", "baseline"):
+        response = client.post(
+            "/api/analyze",
+            files=[("files", ("IMG-0001.dcm", b"fake-dicom-bytes", "application/dicom"))],
+            data={"scenario": pedido},
+        )
+        assert response.status_code == 400, pedido
+        assert "não autorizado" in response.json()["detail"]
 
 
-def test_individual_page_exposes_only_authorized_modes():
-    page = Path("webapp/static/index.html").read_text(encoding="utf-8")
-    assert 'data-scenario="volumetric_rag"' in page
-    assert 'data-scenario="pathology_target"' in page
-    assert "fd.append('scenario', selectedScenario)" in page
+def test_paginas_nao_oferecem_escolha_de_modo():
+    """Nenhuma tela pode deixar o usuário escolher uma configuração pior: ele não
+    tem como saber qual é a melhor, e oferecer a escolha transfere a ele um risco
+    que é nosso."""
+    for arquivo in ("webapp/static/index.html", "webapp/static/benchmark.html"):
+        page = Path(arquivo).read_text(encoding="utf-8")
+        assert "data-scenario=" not in page, f"{arquivo} ainda oferece seleção de modo"
+    individual = Path("webapp/static/index.html").read_text(encoding="utf-8")
+    assert "fd.append('scenario', 'hybrid_supervised')" in individual
 
 
 def test_benchmark_metrics_keep_failures_and_inconclusives_visible():
