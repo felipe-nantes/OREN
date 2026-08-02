@@ -469,6 +469,109 @@ def _build_model(case_dir: Path) -> tuple[bool, str]:
     return False, _cli_reason(proc)
 
 
+def process_visual_job(job_id: str, raw_dir: Path) -> None:
+    """Exame individual pelo classificador visual da Etapa C.
+
+    É o mesmo caminho do benchmark visual, caso a caso: fases em subpastas ->
+    harmonização na grade venosa + segmentação hepática -> painéis
+    liver-enriched -> embeddings MedSigLIP -> bundle congelado. Qualquer falha
+    vira "não concluído"; nunca uma decisão fabricada.
+
+    Exige as três fases dinâmicas em subpastas nomeadas, porque identificar a
+    fase a partir de DICOM bruto é problema não resolvido (docs/123). Adivinhar
+    aqui produziria um recorte na fase errada e uma resposta sem valor.
+    """
+    from dtwin.learning.exam_to_panels import build_exam_panels
+    from dtwin.learning.multiphase_ingest import build_multiphase_case
+    from dtwin.learning.visual_inference import (
+        classify_embeddings,
+        embed_panels,
+        in_sample_status,
+        load_production_bundle,
+    )
+
+    case_dir = (WORKSPACE / job_id / "case").resolve()
+    started = time.monotonic()
+    duracoes: dict[str, float] = {}
+    try:
+        _set(job_id, state="processing", step="ingestao_multifasica", progress=15)
+        bundle = load_production_bundle(_visual_bundle_root("hybrid_supervised"))
+
+        def segment_venous(venous_dir: Path, work_dir: Path) -> Path:
+            work_dir = Path(work_dir).resolve()
+            proc = _segment(str(Path(venous_dir).resolve()), work_dir, "gpu",
+                            PREP_TIMEOUT_GPU, fast=False)
+            if not _seg_done(work_dir):
+                log.warning("Job visual %s: GPU falhou; tentando CPU", job_id)
+                shutil.rmtree(work_dir, ignore_errors=True)
+                proc = _segment(str(Path(venous_dir).resolve()), work_dir, "cpu",
+                                PREP_TIMEOUT_CPU, fast=False)
+                if not _seg_done(work_dir):
+                    raise PipelineError(_friendly_text(_cli_reason(proc)))
+            return work_dir
+
+        t0 = time.monotonic()
+        multiphase = build_multiphase_case(
+            case_id=job_id,
+            case_upload_dir=Path(raw_dir),
+            output_dir=case_dir / "multiphase",
+            segment_venous=segment_venous,
+        )
+        duracoes["ingestao_e_segmentacao"] = round(time.monotonic() - t0, 4)
+
+        _set(job_id, state="processing", step="paineis", progress=55)
+        t0 = time.monotonic()
+        panels = build_exam_panels(
+            case_id=job_id,
+            phase_paths=multiphase.phase_paths,
+            coarse_liver_mask_path=multiphase.coarse_liver_mask_path,
+            output_dir=case_dir / "panels",
+            panel_config_path=REPO / VISUAL_PANEL_CONFIG,
+        )
+        duracoes["paineis"] = round(time.monotonic() - t0, 4)
+
+        _set(job_id, state="processing", step="classificacao", progress=80)
+        t0 = time.monotonic()
+        embeddings = embed_panels(REPO / VISUAL_EMBEDDING_CONFIG, panels.panel_paths)
+        decision = classify_embeddings(bundle, embeddings)
+        duracoes["classificacao"] = round(time.monotonic() - t0, 4)
+
+        positiva = decision["prediction"] == "POSITIVE"
+        status = in_sample_status(bundle, case_id=job_id)
+        resultado = {
+            "status": "concluido",
+            "analysis_scenario": "hybrid_supervised",
+            "prediction": "POSITIVA" if positiva else "NEGATIVA",
+            "visual_score": decision["score"],
+            "visual_threshold": decision["threshold"],
+            "panel_count": decision["panel_count"],
+            "class_probabilities": decision["class_probabilities"],
+            "phase_coverage": multiphase.coverage,
+            "in_sample": status["in_sample"],
+            "in_sample_verdict": status["verdict"],
+            "durations_seconds": duracoes,
+            "requires_human_review": True,
+            "research_only": True,
+            "clinical_use_allowed": False,
+            "disclaimer": DISCLAIMER,
+        }
+        resultado.update(_subtype_fields(decision["subtype"], positiva))
+        resultado["durations_seconds"]["total"] = round(time.monotonic() - started, 4)
+        _set(job_id, state="done", step="concluido", progress=100, result=resultado)
+    except subprocess.TimeoutExpired:
+        _set(job_id, state="done", step="concluido", progress=100, result=_graceful(
+            "O processamento excedeu o tempo limite.",
+            "Exames muito grandes podem não caber no orçamento de tempo."))
+    except PipelineError as exc:
+        _set(job_id, state="done", step="concluido", progress=100,
+             result=_graceful(str(exc)))
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Job visual %s: falha inesperada", job_id)
+        _set(job_id, state="done", step="concluido", progress=100, result=_graceful(
+            "Não foi possível concluir a análise deste exame.",
+            f"Falha inesperada: {type(exc).__name__}"))
+
+
 def _case_dir_for_job(job_id: str) -> Path:
     if not job_id or any(ch not in "0123456789abcdef" for ch in job_id.lower()):
         raise HTTPException(status_code=404, detail="Job nao encontrado.")
@@ -817,6 +920,62 @@ def _authorized_visual_phase_resolution(case_id: str, raw_case_dir: Path):
     )
 
 
+SUBTYPE_LABELS_PT = {
+    "fnh": "Hiperplasia nodular focal (HNF)",
+    "hcc": "Carcinoma hepatocelular (CHC)",
+    "hemangioma": "Hemangioma",
+    "hepatic_cyst": "Cisto hepático simples",
+}
+
+
+# O alvo da triagem binária é o CHC. As demais entidades nomeadas são lesões
+# reais, mas benignas -- um exame NEGATIVO pode perfeitamente conter uma delas.
+SCREENING_TARGET_SUBTYPE = "hcc"
+
+
+def _subtype_fields(subtype: dict, positiva: bool) -> dict:
+    """Campos de subtipo para a resposta, sem afirmar o que não se sabe.
+
+    Duas coisas distintas que a interface não pode confundir:
+
+    * **Triagem negativa não significa fígado sem lesão.** Só o CHC é positivo
+      neste endpoint; HNF, hemangioma e cisto são negativos e continuam sendo
+      alterações. Dizer "não há alteração" num negativo seria falso, e descartaria
+      uma identificação que o modelo fez com confiança alta.
+    * **Nomear exige base.** Se a massa de probabilidade foi para as classes sem
+      subtipo documentado (docs/161), o subtipo fica indeterminado -- escolher o
+      maior de quatro números quase nulos seria inventá-lo.
+    """
+    determinado = bool(subtype.get("determined"))
+    campos = {
+        "subtype_determined": determinado,
+        "subtype": None,
+        "subtype_label": None,
+        "subtype_confidence": None,
+        "subtype_named_lesion_mass": subtype.get("named_lesion_mass"),
+        "subtype_is_screening_target": None,
+        "subtype_unavailable_reason": None,
+    }
+    if not determinado:
+        campos["subtype_unavailable_reason"] = subtype.get("reason")
+        return campos
+    nome = str(subtype["subtype"])
+    campos.update(
+        subtype=nome,
+        subtype_label=SUBTYPE_LABELS_PT.get(nome, nome),
+        subtype_confidence=subtype.get("subtype_confidence"),
+        subtype_is_screening_target=(nome == SCREENING_TARGET_SUBTYPE),
+    )
+    if not positiva and nome == SCREENING_TARGET_SUBTYPE:
+        # Triagem negativa mas a classe mais provável é o próprio alvo: as duas
+        # leituras discordam e nenhuma deve ser apresentada como conclusão.
+        campos["subtype_unavailable_reason"] = (
+            "A triagem ficou abaixo do limiar, mas a classe mais provável é o "
+            "próprio alvo. As duas leituras discordam e o caso exige revisão."
+        )
+    return campos
+
+
 def _run_visual_benchmark_case(
     benchmark_id: str, index: int, item: dict, raw_case_dir: Path, scenario: str
 ) -> dict:
@@ -905,8 +1064,9 @@ def _run_visual_benchmark_case(
         # própria (ex.: benchmark cego) cai em 'unknown' — que NÃO é o mesmo que
         # out-of-sample e não deve ser lido como tal.
         status = in_sample_status(bundle, case_id=str(item["id"]))
+        positiva = decision["prediction"] == "POSITIVE"
         base.update(
-            prediction="POSITIVA" if decision["prediction"] == "POSITIVE" else "NEGATIVA",
+            prediction="POSITIVA" if positiva else "NEGATIVA",
             confidence=None,
             status="decisive",
             visual_score=decision["score"],
@@ -914,7 +1074,9 @@ def _run_visual_benchmark_case(
             panel_count=decision["panel_count"],
             in_sample=status["in_sample"],
             in_sample_verdict=status["verdict"],
+            class_probabilities=decision["class_probabilities"],
         )
+        base.update(_subtype_fields(decision["subtype"], positiva))
         return base
     except subprocess.TimeoutExpired:
         base["error"] = "O processamento excedeu o tempo limite."
@@ -1288,6 +1450,11 @@ def _benchmark_csv(report: dict) -> str:
     writer.writerow([
         "case_id", "truth", "prediction", "status", "correct", "confidence",
         "duration_seconds", "error",
+        # Identificação da alteração (modo visual). `subtype_determined` falso num
+        # caso POSITIVA não é dado faltante: é o modelo declarando que não tem base
+        # para nomear o subtipo neste exame (docs/161).
+        "subtype_determined", "subtype", "subtype_confidence",
+        "subtype_named_lesion_mass", "subtype_unavailable_reason",
         # Taxonomia protegida (preenchida quando o manifesto a declara).
         "target_condition", "negative_subtype", "positive_subtype", "phenotype_tags",
         # Schema v2 do relatório MedGemma (cenário pathology-target).
@@ -1300,6 +1467,11 @@ def _benchmark_csv(report: dict) -> str:
             item.get("case_id"), item.get("truth"), item.get("prediction"),
             item.get("status"), item.get("correct"), item.get("confidence"),
             item.get("duration_seconds"), _csv_cell(item.get("error")),
+            _csv_cell(item.get("subtype_determined")),
+            _csv_cell(item.get("subtype")),
+            _csv_cell(item.get("subtype_confidence")),
+            _csv_cell(item.get("subtype_named_lesion_mass")),
+            _csv_cell(item.get("subtype_unavailable_reason")),
             _csv_cell(item.get("target_condition")),
             _csv_cell(item.get("negative_subtype")),
             _csv_cell(item.get("positive_subtype")),
@@ -1345,10 +1517,15 @@ async def analyze(request: Request) -> dict:
     if not files:
         raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
     scenario = str(form.get("scenario") or "volumetric_rag")
-    try:
-        medgemma_config = _individual_screening_config(scenario)
-    except PipelineError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # O modo visual (Etapa C) não usa MedGemma: tem seu próprio caminho, que
+    # exige entrada multifásica. Os demais modos resolvem uma config autorizada.
+    visual = _is_visual_scenario(scenario)
+    medgemma_config = None
+    if not visual:
+        try:
+            medgemma_config = _individual_screening_config(scenario)
+        except PipelineError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     relpaths = form.get("relpaths")
     job_id = uuid.uuid4().hex[:12]
     raw_dir = WORKSPACE / job_id / "_upload"
@@ -1370,11 +1547,16 @@ async def analyze(request: Request) -> dict:
             "state": "queued", "step": "recebendo", "progress": 5, "result": None,
             "analysis_scenario": scenario,
         }
-    threading.Thread(
-        target=process_job,
-        args=(job_id, raw_dir, medgemma_config, scenario),
-        daemon=True,
-    ).start()
+    if visual:
+        threading.Thread(
+            target=process_visual_job, args=(job_id, raw_dir), daemon=True
+        ).start()
+    else:
+        threading.Thread(
+            target=process_job,
+            args=(job_id, raw_dir, medgemma_config, scenario),
+            daemon=True,
+        ).start()
     return {"job_id": job_id, "analysis_scenario": scenario}
 
 

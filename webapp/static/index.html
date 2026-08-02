@@ -44,14 +44,23 @@
             <div><h2>Novo exame</h2><p>Selecione uma pasta ou os arquivos DICOM da ressonância.</p></div>
           </div>
           <div class="scenario-toggle" id="scenarioToggle" role="group" aria-label="Modo de análise do exame">
-            <button type="button" class="scenario-btn active" data-scenario="volumetric_rag" aria-pressed="true">
+            <button type="button" class="scenario-btn active" data-scenario="hybrid_supervised" aria-pressed="true">
+              <b>Classificador visual</b><span>Melhor acertividade medida + identifica a alteração</span>
+            </button>
+            <button type="button" class="scenario-btn" data-scenario="volumetric_rag" aria-pressed="false">
               <b>RAG + volumétrico</b><span>100% do fígado + contexto textual auditável</span>
             </button>
             <button type="button" class="scenario-btn" data-scenario="pathology_target" aria-pressed="false">
               <b>Alvo patológico</b><span>Separa variante benigna de lesão focal suspeita</span>
             </button>
           </div>
-          <div class="note" id="scenarioNote">Modo selecionado: RAG + volumétrico.</div>
+          <div class="note" id="scenarioNote">Modo selecionado: Classificador visual.</div>
+          <div class="note" id="multiphaseHint">
+            Este modo precisa das <b>três fases dinâmicas em subpastas</b> —
+            <code>arterial/</code>, <code>venous/</code> e <code>delayed/</code> —
+            dentro da pasta do exame. Identificar a fase a partir do DICOM bruto é
+            problema não resolvido, e adivinhar produziria uma resposta sem valor.
+          </div>
           <div class="drop" id="drop">
             <div class="drop-content">
               <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -140,11 +149,16 @@ function fromInput(input){
 }
 
 let polling=null;
-let selectedScenario='volumetric_rag';
+let selectedScenario='hybrid_supervised';
 const SCENARIO_LABELS={
+  hybrid_supervised:'Classificador visual',
   volumetric_rag:'RAG + volumétrico',
   pathology_target:'Alvo patológico'
 };
+function syncScenarioHint(){
+  // O aviso de fases só vale para o modo visual, que é o único que as exige.
+  show($('#multiphaseHint'), selectedScenario==='hybrid_supervised');
+}
 document.querySelectorAll('#scenarioToggle .scenario-btn').forEach(btn=>btn.addEventListener('click',()=>{
   selectedScenario=btn.dataset.scenario;
   document.querySelectorAll('#scenarioToggle .scenario-btn').forEach(item=>{
@@ -153,7 +167,9 @@ document.querySelectorAll('#scenarioToggle .scenario-btn').forEach(btn=>btn.addE
     item.setAttribute('aria-pressed',String(active));
   });
   $('#scenarioNote').textContent='Modo selecionado: '+SCENARIO_LABELS[selectedScenario]+'.';
+  syncScenarioHint();
 }));
+syncScenarioHint();
 async function startAnalysis(items){
   const dicoms = items.filter(x=>x.file.size>0);
   if(!dicoms.length){ return; }
@@ -188,9 +204,64 @@ function list(arr){ if(!arr||!arr.length) return '<span style="color:var(--mut)"
   return '<ul>'+arr.map(x=>'<li>'+escapeHtml(String(x))+'</li>').join('')+'</ul>'; }
 function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
+function pct(x){ return (x==null||isNaN(x)) ? '—' : (100*Number(x)).toFixed(1)+'%'; }
+
+function renderVisualResult(result){
+  // O classificador visual responde duas coisas: TEM alteração (positivo/negativo)
+  // e, quando tem, QUAL é. A segunda só aparece se o modelo tiver base para
+  // nomeá-la; caso contrário o card diz por que não, em vez de chutar.
+  const c=$('#resultCard'); c.innerHTML='';
+  const positiva = result.prediction==='POSITIVA';
+  const head = el('div','verdict');
+  head.appendChild(el('span','vbadge v-'+(positiva?'POSITIVA':'NEGATIVA'), escapeHtml(result.prediction||'—')));
+  head.appendChild(el('div','', '<div style="font-weight:700">Triagem de lesão focal</div>'
+    +'<div class="sub">Classificador visual da Etapa C — modo Pesquisa</div>'));
+  c.appendChild(head);
+
+  // Triagem negativa NÃO quer dizer fígado sem lesão: só o CHC é positivo aqui.
+  // HNF, hemangioma e cisto são negativos e continuam sendo alterações reais.
+  if(result.subtype_determined){
+    const rotulo = positiva ? 'Alteração identificada' : 'Achado mais provável';
+    c.appendChild(field(rotulo, '<b>'+escapeHtml(result.subtype_label||result.subtype)+'</b>'
+      + (positiva ? '' : ' <span style="color:var(--mut)">— benigno, fora do alvo da triagem</span>')));
+    c.appendChild(field('Confiança na identificação',
+      '<span class="conf">'+pct(result.subtype_confidence)+'</span>'
+      +' <span style="color:var(--mut)">entre as quatro alterações conhecidas</span>'));
+    if(result.subtype_unavailable_reason){
+      c.appendChild(field('Atenção', escapeHtml(result.subtype_unavailable_reason)));
+    }
+  }else{
+    c.appendChild(field(positiva?'Alteração identificada':'Achado mais provável',
+      '<b>Não determinado</b>'));
+    c.appendChild(field('Por quê', escapeHtml(result.subtype_unavailable_reason||'—')));
+  }
+
+  c.appendChild(field('Score da triagem',
+    escapeHtml(Number(result.visual_score).toFixed(4))
+    +' <span style="color:var(--mut)">(limiar '+escapeHtml(Number(result.visual_threshold).toFixed(4))+')</span>'));
+
+  const probs = result.class_probabilities||{};
+  const ordem = Object.keys(probs).sort((a,b)=>probs[b]-probs[a]);
+  if(ordem.length){
+    c.appendChild(field('Distribuição por classe',
+      '<ul>'+ordem.map(k=>'<li>'+escapeHtml(k)+': '+pct(probs[k])+'</li>').join('')+'</ul>'));
+  }
+
+  const meta = el('div','meta');
+  meta.appendChild(el('span','chip','Modo: <b>Classificador visual</b>'));
+  meta.appendChild(el('span','chip','Painéis: <b>'+escapeHtml(String(result.panel_count||'—'))+'</b>'));
+  if(result.in_sample){
+    meta.appendChild(el('span','chip','<b>Caso visto no treino</b> — não é estimativa de generalização'));
+  }
+  meta.appendChild(el('span','chip','Status: <b>revisão humana obrigatória</b>'));
+  c.appendChild(meta);
+  c.appendChild(el('div','note', escapeHtml(result.disclaimer||'')));
+}
+
 function renderResult(result){
   show($('#progCard'),false); show($('#againBtns'),true); show($('#resultCard'),true);
   if(!result || result.status!=='concluido') return renderGraceful(result||{});
+  if(result.analysis_scenario==='hybrid_supervised') return renderVisualResult(result);
   const rep = result.report||{};
   const verdict = (rep.resultado_hipotese||'INCONCLUSIVA').toUpperCase();
   const c = $('#resultCard'); c.innerHTML='';

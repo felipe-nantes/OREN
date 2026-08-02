@@ -30,6 +30,24 @@ from dtwin.learning.protocol import canonical_sha256, sha256_file
 
 DEFAULT_EMBEDDING_CONFIG = "configs/training/medsiglip_frozen_v1.yaml"
 
+# Classes de lesão nomeadas. As duas `*_unspecified` existem porque a coorte
+# OpenSwissHCC não documenta subtipo; elas NÃO são um subtipo e nunca podem ser
+# reportadas como tal.
+NAMED_LESION_CLASSES = ("fnh", "hcc", "hemangioma", "hepatic_cyst")
+
+# Massa mínima nas classes nomeadas para que um subtipo possa ser afirmado.
+#
+# docs/161 mediu que a atribuição de classe é condicionada à coorte de aquisição:
+# no LLD real as quatro classes nomeadas recebem 99,32% da massa de probabilidade;
+# nas duas coortes OpenSwiss reais, 1,43% e 1,47%; numa coorte sintética com fundo
+# anatômico de outra origem, 6,93%. A separação é quase binária, e um limiar em
+# 50% fica bem longe de qualquer um dos modos observados.
+#
+# Sem essa guarda, um exame de origem não vista receberia o argmax entre as quatro
+# classes nomeadas mesmo com o modelo colocando ~99% da massa em `unspecified` --
+# ou seja, um subtipo inventado sobre 1% de evidência.
+NAMED_LESION_MASS_FLOOR = 0.50
+
 
 @dataclass(frozen=True)
 class ProductionBundle:
@@ -77,19 +95,85 @@ def load_production_bundle(bundle_root: Path) -> ProductionBundle:
     )
 
 
+def class_probabilities(
+    bundle: ProductionBundle, panel_embeddings: np.ndarray
+) -> dict[str, float]:
+    """Mean per-class probability across the case's panels."""
+    matrix = np.asarray(panel_embeddings, dtype=np.float64)
+    probabilities = bundle.model.predict_proba(matrix).mean(axis=0)
+    classes = list(bundle.model.named_steps["classifier"].classes_)
+    names = list(bundle.manifest["class_names"])
+    return {
+        names[int(label)]: float(probabilities[column])
+        for column, label in enumerate(classes)
+    }
+
+
+def resolve_subtype(class_mass: Mapping[str, float]) -> dict[str, Any]:
+    """Name the lesion subtype, or refuse to when the evidence is not there.
+
+    The model can place its probability mass on `*_unspecified`, which carries no
+    subtype meaning. In that regime the argmax over the four named classes is an
+    artefact of renormalizing near-zero numbers, so this returns
+    `determined=False` instead of a fabricated label.
+    """
+    named = {name: float(class_mass.get(name, 0.0)) for name in NAMED_LESION_CLASSES}
+    named_mass = sum(named.values())
+    unspecified_mass = sum(
+        float(value)
+        for name, value in class_mass.items()
+        if name not in NAMED_LESION_CLASSES
+    )
+    if named_mass < NAMED_LESION_MASS_FLOOR:
+        return {
+            "determined": False,
+            "subtype": None,
+            "subtype_confidence": None,
+            "named_lesion_mass": named_mass,
+            "unspecified_mass": unspecified_mass,
+            "mass_floor": NAMED_LESION_MASS_FLOOR,
+            "reason": (
+                "O modelo concentrou a probabilidade em classes sem subtipo "
+                "documentado, o que ocorre quando o exame vem de uma origem de "
+                "aquisição diferente das usadas no treino. Afirmar um subtipo "
+                "aqui seria inventá-lo."
+            ),
+        }
+    best = max(named, key=named.get)
+    return {
+        "determined": True,
+        "subtype": best,
+        "subtype_confidence": named[best] / named_mass if named_mass else None,
+        "named_lesion_mass": named_mass,
+        "unspecified_mass": unspecified_mass,
+        "mass_floor": NAMED_LESION_MASS_FLOOR,
+        "reason": None,
+    }
+
+
 def classify_embeddings(bundle: ProductionBundle, panel_embeddings: np.ndarray) -> dict[str, Any]:
-    """Score one case from its panel embedding matrix (n_panels x dim)."""
+    """Score one case from its panel embedding matrix (n_panels x dim).
+
+    Returns the binary decision exactly as the OOF pipeline computed it, plus the
+    per-class mass and a subtype that is only named when the evidence supports it.
+    """
     matrix = np.asarray(panel_embeddings, dtype=np.float64)
     if matrix.ndim != 2 or matrix.shape[0] == 0:
         raise PipelineError("Embeddings de painel inválidos para inferência.")
     per_panel = _positive_probability(bundle.model, matrix, bundle.positive_indices)
     score = _aggregate(per_panel.tolist(), bundle.aggregation)
     prediction = "POSITIVE" if score >= bundle.threshold else "NEGATIVE"
+    mass = class_probabilities(bundle, matrix)
+    subtype = resolve_subtype(mass)
     return {
         "score": float(score),
         "threshold": bundle.threshold,
         "prediction": prediction,
         "panel_count": int(matrix.shape[0]),
+        "class_probabilities": mass,
+        # O subtipo só descreve QUAL alteração, e só faz sentido quando a triagem
+        # deu positiva. Num negativo ele fica registrado mas não é a resposta.
+        "subtype": subtype,
     }
 
 

@@ -195,7 +195,15 @@ function metric(label,value,detail,cls=''){return`<div class="metric ${cls}"><di
 function renderReport(report){show($('#progressCard'),false);const card=$('#reportCard');show(card,true);const m=report.metrics,cm=m.confusion_matrix;
   const rows=report.cases.map(c=>{const state=c.status==='decisive'?(c.correct?'s-ok':'s-bad'):c.status==='inconclusive'?'s-inc':'s-bad';
     const technical={failed:'FALHA',failure:'FALHA',timeout:'TIMEOUT',invalid_response:'RESPOSTA INVÁLIDA'};
-    const label=technical[c.status]||(c.status==='inconclusive'?'INCONCLUSIVO':c.correct?'CORRETO':'INCORRETO');return`<tr><td>${esc(c.case_id)}</td><td>${c.truth==='positive'?'Positivo':'Negativo'}</td><td>${esc(c.prediction||'—')}</td><td><span class="status ${state}">${label}</span></td><td>${esc(c.confidence||'—')}</td><td>${c.duration_seconds}s</td></tr>`}).join('');
+    const label=technical[c.status]||(c.status==='inconclusive'?'INCONCLUSIVO':c.correct?'CORRETO':'INCORRETO');
+    // Subtipo: só existe no modo visual, e só quando o modelo teve base para
+    // nomeá-lo. "Não determinado" é resposta legítima, não ausência de dado.
+    const sub=c.subtype_determined
+      ? `${esc(c.subtype_label||c.subtype)}${c.subtype_confidence!=null?` <span style="color:var(--mut)">(${(100*c.subtype_confidence).toFixed(0)}%)</span>`:''}`
+      : (c.prediction==='POSITIVA'&&c.status==='decisive'
+          ? '<span style="color:var(--mut)" title="'+esc(c.subtype_unavailable_reason||'')+'">não determinado</span>'
+          : '<span style="color:var(--mut)">—</span>');
+    return`<tr><td>${esc(c.case_id)}</td><td>${c.truth==='positive'?'Positivo':'Negativo'}</td><td>${esc(c.prediction||'—')}</td><td>${sub}</td><td><span class="status ${state}">${label}</span></td><td>${esc(c.confidence||'—')}</td><td>${c.duration_seconds}s</td></tr>`}).join('');
   const gate=m.target?.met===true?'<span class="status s-ok">META 75% ATINGIDA</span>':'<span class="status s-bad">META 75% NÃO ATINGIDA</span>';
   const scenarioName=SCENARIO_LABEL[report.scenario]||report.scenario||'—';
   // Procedencia ANTES das metricas: se os casos podem ter sido vistos no treino,
@@ -214,7 +222,7 @@ function renderReport(report){show($('#progressCard'),false);const card=$('#repo
     <div class="split"><div class="card"><h3>Matriz de confusão</h3><div class="matrix"><div class="cell ok"><b>${cm.tp}</b><span>Verdadeiros positivos</span></div>
       <div class="cell err"><b>${cm.fp}</b><span>Falsos positivos</span></div><div class="cell err"><b>${cm.fn}</b><span>Falsos negativos</span></div>
       <div class="cell ok"><b>${cm.tn}</b><span>Verdadeiros negativos</span></div></div></div>
-      <div class="card results"><h3>Resultados por exame</h3><table><thead><tr><th>Exame</th><th>Referência</th><th>Predição</th><th>Resultado</th><th>Confiança</th><th>Tempo</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+      <div class="card results"><h3>Resultados por exame</h3><table><thead><tr><th>Exame</th><th>Referência</th><th>Predição</th><th>Alteração</th><th>Resultado</th><th>Confiança</th><th>Tempo</th></tr></thead><tbody>${rows}</tbody></table></div></div>
     <div class="note">Política conservadora: INCONCLUSIVA e falha contam como erro na matriz e nas métricas principais. Cobertura e a leitura somente das decisões permanecem no JSON para diagnóstico, mas não podem inflar o gate de sensibilidade e especificidade ≥75%.</div>
     <div class="actions"><button class="primary" onclick="location.reload()">Novo benchmark</button></div>`;
 }
