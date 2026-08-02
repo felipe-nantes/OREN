@@ -428,6 +428,56 @@ def _motivo_mascara(qualidade: dict) -> str:
     return "; ".join(motivos) if motivos else "a máscara não passou na verificação"
 
 
+# Faixa de plausibilidade do fígado adulto. O piso de 300 mL do gate pega só os
+# desastres; entre 300 e 900 mL a segmentação passa mas quase certamente perdeu
+# parte do órgão, e o usuário precisa saber disso ao olhar o modelo 3D.
+#
+# Medido nos 321 casos LLD do pipeline de pesquisa: mediana ~1600 mL, p10 ~420 mL.
+# Ou seja, cerca de 10 a 15% dos exames caem numa cauda de sub-segmentação. Não é
+# o segmentador quebrado em geral -- é falha numa fração, e ela precisa ser
+# visível em vez de silenciosa.
+#
+# O limite inferior NÃO vira reprovação porque fígado pequeno existe de verdade:
+# cirrose avançada, hepatectomia prévia, paciente pediátrico. Rejeitar seria
+# trocar um erro silencioso por outro.
+VOLUME_HEPATICO_TIPICO_ML = (900.0, 2400.0)
+
+
+def _aviso_volume_figado(qualidade: dict | None) -> dict | None:
+    """Avisa quando o volume segmentado sai da faixa típica de fígado adulto."""
+    if not qualidade:
+        return None
+    volume = qualidade.get("largest_component_volume_ml")
+    if not isinstance(volume, (int, float)):
+        return None
+    baixo, alto = VOLUME_HEPATICO_TIPICO_ML
+    if volume < baixo:
+        return {
+            "nivel": "atencao",
+            "volume_ml": float(volume),
+            "faixa_tipica_ml": [baixo, alto],
+            "texto": (
+                f"O fígado segmentado mede {volume:.0f} mL, abaixo da faixa típica "
+                f"de um adulto ({baixo:.0f} a {alto:.0f} mL). A segmentação "
+                "provavelmente perdeu parte do órgão, e o modelo 3D descreve só o "
+                "que foi segmentado. Fígado pequeno também ocorre de verdade "
+                "(cirrose avançada, hepatectomia prévia), então confira as imagens."
+            ),
+        }
+    if volume > alto:
+        return {
+            "nivel": "atencao",
+            "volume_ml": float(volume),
+            "faixa_tipica_ml": [baixo, alto],
+            "texto": (
+                f"O fígado segmentado mede {volume:.0f} mL, acima da faixa típica "
+                f"de um adulto ({baixo:.0f} a {alto:.0f} mL). Pode ser "
+                "hepatomegalia real ou a máscara ter incorporado tecido vizinho."
+            ),
+        }
+    return None
+
+
 def _success_result(report: dict) -> dict:
     """Monta o resultado de sucesso para o frontend.
 
@@ -622,6 +672,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             "in_sample_verdict": status["verdict"],
             "durations_seconds": duracoes,
             "liver_mask_quality": qualidade_mascara,
+            "liver_volume_warning": _aviso_volume_figado(qualidade_mascara),
             "viewer_ready": bool(viewer_ready),
             "viewer_url": (
                 f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}"

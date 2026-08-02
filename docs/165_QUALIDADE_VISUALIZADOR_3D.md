@@ -230,6 +230,106 @@ sub-segmentações moderadas.
 
 ---
 
+---
+
+## 9. Segunda rodada de apresentação, e um erro de diagnóstico meu
+
+Depois dos prints, os ajustes seguintes:
+
+| Item | Antes | Depois |
+|---|---|---|
+| Sigma do campo | 1,0 mm | **2,0 mm** — rugosidade 3,2 → 1,6, desvio da borda **inalterado** (0,71 mm) |
+| Distância da câmera | 1,73× a diagonal | **1,31×** calculado pelo FOV |
+| Vista inicial | `(1,1,1)` = póstero-superior-esquerda | ântero-superior direita + botões nomeados |
+| Opacidade do órgão | 0,50 | **0,88** |
+| Fundo | cor chapada | gradiente |
+
+Parei o sigma em 2,0 porque acima disso o p95 do desvio passa do meio-voxel da
+grade — o piso do que o exame permite saber.
+
+**O erro:** ao subir a opacidade, o órgão ficou quase preto e passei um bom tempo
+mexendo em `sheen`, `clearcoat` e `transmission`. O problema era **geometria de
+iluminação**: as luzes estavam fixas em `(1, 1.2, 0.8)`, calibradas para a vista
+antiga. Ao girar a vista padrão para o lado oposto, passei a mostrar o lado da
+sombra. Agora o rig acompanha a câmera.
+
+Também tentei um gradiente com esfera de céu dentro da cena; ela quebrou a
+ordenação de transparência do órgão. Movido para CSS, fora da cena 3D.
+
+---
+
+## 10. A investigação da segmentação — onde o problema realmente está
+
+### O que se mediu
+
+O fígado do caso saiu com **511 mL**. Campo de visão de 380×380×198 mm, abdome
+inteiro, **sem truncamento**. A vesícula saiu com **0 mL** e a veia porta com
+0,5 mL — sub-segmentação severa, não corte de imagem.
+
+Sobrepondo a máscara ao exame, o padrão fica claro: **o fígado é a grande massa
+homogênea e a máscara pega bordas e ilhas, perdendo o miolo**, pior nos cortes
+superior e inferior.
+
+### O que foi descartado
+
+| Hipótese | Teste | Resultado |
+|---|---|---|
+| Buracos fechados na máscara | preenchimento 3D e 2D, fechamento raio 3/5/7 | 511 → **517 mL**. Nada. O que falta não é buraco. |
+| Volume 4D quebrando o modelo | `volume.nii.gz` é (512,512,76,1) | eixo singleton; o SimpleITK achata. A fase tardia é 3D e falha igual. |
+| Falha sistemática do `total_mr` | volumes nos 321 casos LLD | **mediana 1601 mL**, p10 419 mL. O modelo funciona na maioria; falha numa cauda de 10–15%. |
+
+### O que se confirmou
+
+**A fase de contraste muda tudo.** Mesmo exame, mesmo modelo:
+
+| Fase | Volume hepático |
+|---|---:|
+| Arterial | **122 mL** |
+| Venosa *(a que o pipeline usa)* | 486 mL |
+| Tardia | **607 mL** |
+| União das três | **650 mL** |
+
+Cinco vezes de variação entre fases. Mas **nenhuma chega perto dos ~1600 mL
+esperados**, e a união custa duas execuções extras do TotalSegmentator (~5 min
+por exame) para ainda entregar menos da metade do órgão.
+
+### Por que não troquei a máscara
+
+**A máscara hepática alimenta os painéis da classificação.** O bundle de produção
+foi validado com painéis recortados das máscaras atuais, com todos os seus
+defeitos. Trocar por uma máscara melhor é deslocamento de distribuição na entrada
+do classificador — poderia degradar a acertividade que é o produto principal.
+
+> Melhorar a máscara para o modelo 3D é seguro. Usá-la nos painéis exige
+> revalidação, e essa é uma decisão de maior porte.
+
+### O que foi feito
+
+Faixa de plausibilidade **900–2400 mL**, com **aviso, não reprovação**:
+
+- abaixo de 300 mL o gate anatômico reprova (implausível para adulto);
+- entre 300 e 900 mL o caso passa **com aviso explícito na tela**;
+- na faixa típica, o volume aparece como informação.
+
+O aviso não vira reprovação porque **fígado pequeno existe de verdade** — cirrose
+avançada, hepatectomia prévia, paciente pediátrico. Rejeitar trocaria um erro
+silencioso por outro.
+
+O ponto é que uma malha lisa e convincente de meio fígado é indistinguível, a
+olho, de uma malha correta. O número precisa aparecer.
+
+---
+
+## 11. O que resta, em ordem
+
+1. **Modelo de segmentação adequado a RM com contraste dinâmico.** É a causa raiz.
+   O `total_mr` foi treinado sobretudo em RM sem contraste, e a variação de 5×
+   entre fases mostra o quanto ele depende do realce.
+2. **Se trocar a máscara, revalidar a classificação.** Não é opcional.
+3. Corte mais fino na aquisição — o limite de fidelidade em Z é físico.
+
+---
+
 ## Fontes
 
 - [Staircase-Aware Smoothing of Medical Surface Meshes](https://www.researchgate.net/publication/220833514_Staircase-Aware_Smoothing_of_Medical_Surface_Meshes)

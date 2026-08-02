@@ -84,7 +84,11 @@ mesh:
   # metade; o isovalor é calibrado por caso para encerrar o volume MEDIDO, então
   # a suavização não custa fidelidade. 0 volta ao caminho antigo.
   reamostragem_isotropica_mm: 0.8
-  suavizacao_campo_sigma_mm: 1.0
+  # sigma 2,0 mm: a varredura mediu rugosidade caindo de 3,2 para 1,6 SEM mudar
+  # o desvio medio da borda (0,71 mm nos dois). Acima disso o p95 do desvio passa
+  # do meio-voxel da grade -- o piso do que o exame permite saber -- e a malha
+  # deixaria de descrever a medicao.
+  suavizacao_campo_sigma_mm: 2.0
   max_triangulos: 160000     # decimação quadrática; STL acima disso pesa no navegador
   cor_orgao: "#C8A27D"        # consumido pelo manifesto do visualizador
   cor_lesao: "#D7263D"

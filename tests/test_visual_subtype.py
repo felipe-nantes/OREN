@@ -97,3 +97,38 @@ def test_modo_visual_e_reconhecido_no_exame_individual():
 
     assert _is_visual_scenario("hybrid_supervised") is True
     assert _is_visual_scenario("volumetric_rag") is False
+
+
+# --- Aviso de volume hepático -------------------------------------------------
+# O modelo 3D descreve o que foi SEGMENTADO. Uma segmentação parcial produz uma
+# malha lisa e convincente de meio fígado, e quem olha não tem como perceber.
+
+def test_volume_hepatico_fora_da_faixa_gera_aviso():
+    from webapp.server import _aviso_volume_figado
+
+    baixo = _aviso_volume_figado({"largest_component_volume_ml": 511.0})
+    assert baixo is not None
+    assert baixo["nivel"] == "atencao"
+    assert "abaixo" in baixo["texto"]
+
+    alto = _aviso_volume_figado({"largest_component_volume_ml": 2900.0})
+    assert alto is not None
+    assert "acima" in alto["texto"]
+
+
+def test_volume_hepatico_tipico_nao_gera_aviso():
+    from webapp.server import _aviso_volume_figado
+
+    assert _aviso_volume_figado({"largest_component_volume_ml": 1508.0}) is None
+
+
+def test_aviso_de_volume_nao_reprova_o_caso():
+    """Fígado pequeno existe de verdade -- cirrose avançada, hepatectomia prévia,
+    paciente pediátrico. Rejeitar trocaria um erro silencioso por outro; o aviso
+    informa sem bloquear."""
+    from webapp.server import _aviso_volume_figado, _MOTIVOS_MASCARA
+
+    aviso = _aviso_volume_figado({"largest_component_volume_ml": 511.0})
+    assert "cirrose" in aviso["texto"] or "hepatectomia" in aviso["texto"]
+    # o gate anatômico é outro mecanismo, com seus próprios motivos
+    assert "physical_volume_below_minimum" in _MOTIVOS_MASCARA

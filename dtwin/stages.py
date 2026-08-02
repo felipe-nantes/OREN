@@ -724,7 +724,11 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
         {
             "role": "orgao", "vtp": case.mesh_organ,
             "color": mesh_cfg.get("cor_orgao", "#C8A27D"),
-            "label": "Fígado", "material": "organ", "opacity": 0.5,
+            # 0,5 deixava o parênquima com aparência de gelatina e escondia o
+            # relevo da superfície -- justamente o que a malha nova passou a
+            # descrever bem. 0,88 mantém os vasos visíveis por dentro sem
+            # dissolver o órgão; o controle deslizante segue disponível.
+            "label": "Fígado", "material": "organ", "opacity": 0.88,
             "default_visible": not has_couinaud,
         },
         {

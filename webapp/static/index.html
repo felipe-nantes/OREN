@@ -219,6 +219,18 @@ function renderVisualResult(result){
   }
   meta.appendChild(el('span','chip','Status: <b>revisão humana obrigatória</b>'));
   c.appendChild(meta);
+  // Aviso de volume hepático: o modelo 3D descreve o que foi SEGMENTADO, e uma
+  // segmentação parcial produz uma malha bonita de meio fígado. Quem olha não
+  // tem como perceber isso pela imagem, então o número precisa aparecer.
+  if(result.liver_volume_warning){
+    const av=el('div','note');
+    av.style.borderLeft='3px solid #d98324'; av.style.paddingLeft='10px';
+    av.innerHTML='<b>Atenção sobre o modelo 3D.</b> '+escapeHtml(result.liver_volume_warning.texto);
+    c.appendChild(av);
+  }else if(result.liver_mask_quality){
+    const v=result.liver_mask_quality.largest_component_volume_ml;
+    if(Number.isFinite(v)) c.appendChild(field('Volume hepático segmentado', v.toFixed(0)+' mL'));
+  }
   c.appendChild(el('div','note', escapeHtml(result.disclaimer||'')));
   if(result.viewer_ready && result.viewer_url){
     const actions=el('div','btns');

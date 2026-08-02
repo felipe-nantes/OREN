@@ -210,3 +210,20 @@ input[type="range"] { width: 100%; margin-top: 10px; accent-color: var(--primary
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Vistas anatômicas nomeadas: sem elas, achar a vista anterior exigia arrastar
+   às cegas, e duas pessoas nunca chegavam ao mesmo ângulo para comparar. */
+.row.views { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.viewbtn {
+  flex: 1 1 auto; padding: 6px 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid #cfe0d8; background: #fff; color: #21584a;
+  font: inherit; font-size: 12px; font-weight: 600; letter-spacing: .01em;
+}
+.viewbtn:hover { background: #eef6f2; border-color: #9fc7b6; }
+.viewbtn:active { background: #dcece4; }
+
+/* Gradiente do palco. Fica no contêiner, não na cena 3D: uma esfera de céu
+   dentro da cena quebrava a ordenação de transparência do órgão. */
+#canvas-holder {
+  background: linear-gradient(180deg, #f7fbf9 0%, #e8f1ed 55%, #d6e5dd 100%);
+}
