@@ -57,7 +57,7 @@ trocá-los numa apresentação.
 
 | Número | O que é | Vale como |
 |---|---:|---|
-| **96,43%** | 25 casos LLD pelo frontend ([docs/171](171_RESULTADO_BENCHMARK_FRONTEND_PATOLOGIA_VARIACAO.md)) | **in-sample** — esses casos estão no treino do bundle. Prova que o fluxo funciona; **não é generalização** |
+| **96,43%** | 25 casos LLD pelo frontend ([docs/171](171_RESULTADO_BENCHMARK_FRONTEND_PATOLOGIA_VARIACAO.md)) | **in-sample — 25/25 verificados contra o manifesto do bundle** ([docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md)), e medido sem o gate anatômico que está no ar, que recusaria 2 dos 5 positivos. Prova que o fluxo funciona; **não é generalização** |
 | **52,19%** | caminho de produção, nested-OOF | o que o sistema no ar entrega fora da amostra |
 | **64,81%** | cascata de representações ([docs/156](156_SUBTIPO_HONESTO_FUSAO.md)) | melhor medição honesta obtida |
 
@@ -175,6 +175,18 @@ classificador congelado.
   ([docs/169](169_REGIAO_CANDIDATA_3D_POS_INFERENCIA.md)), sem vazamento circular;
 - 1349 testes automatizados.
 
+**Testado pelo frontend em 3 de agosto** ([docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md)),
+com os arquivos entrando pelo caminho real da página:
+
+| Caso | Referência | Resultado | Subtipo |
+|---|---|---|---|
+| `ARGOS-BLIND-0046` | HCC | POSITIVA (0,633 / limiar 0,475), 114 s | **HCC** — correto |
+| `ARGOS-BLIND-0048` | hemangioma | NEGATIVA (0,104), 127 s | **hemangioma** — correto |
+| `ARGOS-BLIND-0026` | HCC | recusado pelo gate anatômico | — |
+
+Acertou decisão e variação nos dois que concluiu, e no caso 0046 **avisou contra
+o próprio resultado** (fígado de 485 mL, abaixo da faixa típica).
+
 ---
 
 ## 8. Limitações que devem ser ditas antes de perguntadas
@@ -184,9 +196,12 @@ classificador congelado.
 2. **A coorte é previsível a 100%** por um classificador de domínio (docs/131).
    Há confundimento entre coortes não resolvido.
 3. **O único sinal externo disponível é 45,45%** de sensibilidade (n=11).
-4. **A segmentação hepática falha numa cauda de 10–15% dos casos**
-   ([docs/165](165_QUALIDADE_VISUALIZADOR_3D.md)): mediana 1601 mL nos 321 casos
-   LLD, mas p10 de 419 mL. O volume aparece na tela com aviso quando sai da faixa.
+4. **A segmentação hepática subestima o volume na maioria da coorte principal**
+   ([docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md)): nos 321 casos LLD a
+   mediana é 637 mL e **76% ficam abaixo de 900 mL**, o piso adulto que o próprio
+   webapp usa para avisar. Não invalida a classificação — treino e medição usaram
+   estas mesmas máscaras —, mas limita o modelo 3D e o quanto os painéis
+   representam o órgão inteiro. O volume aparece na tela com aviso automático.
 5. `clinical_use_allowed` permanece `false` em todo artefato.
 
 ---

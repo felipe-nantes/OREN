@@ -228,6 +228,10 @@ O mesmo gate agora roda no webapp, e o caso é recusado com mensagem explícita.
 dos casos testados passou com 511 mL. O gate pega os desastres, não as
 sub-segmentações moderadas.
 
+**Quanto é permissivo, medido depois ([docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md)):**
+nos 321 casos LLD o gate reprova 17%, mas **76% ficam abaixo de 900 mL**. A
+ressalva acima é maior do que parecia quando foi escrita.
+
 ---
 
 ---
@@ -276,7 +280,7 @@ superior e inferior.
 |---|---|---|
 | Buracos fechados na máscara | preenchimento 3D e 2D, fechamento raio 3/5/7 | 511 → **517 mL**. Nada. O que falta não é buraco. |
 | Volume 4D quebrando o modelo | `volume.nii.gz` é (512,512,76,1) | eixo singleton; o SimpleITK achata. A fase tardia é 3D e falha igual. |
-| Falha sistemática do `total_mr` | volumes nos 321 casos LLD | **mediana 1601 mL**, p10 419 mL. O modelo funciona na maioria; falha numa cauda de 10–15%. |
+| Falha sistemática do `total_mr` | volumes nos 321 casos LLD | ~~**mediana 1601 mL**, p10 419 mL. O modelo funciona na maioria; falha numa cauda de 10–15%.~~ **CORRIGIDO em [docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md): a medição estava errada.** O correto é **mediana 637 mL**, p10 164 mL, com **76% abaixo de 900 mL**. Não é cauda — é a maioria da coorte. |
 
 ### O que se confirmou
 
