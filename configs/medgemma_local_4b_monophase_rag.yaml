@@ -1,0 +1,57 @@
+# Explicit low-latency single-phase workflow. It never creates or simulates
+# dynamic phases. The triphasic/volumetric configurations remain unchanged.
+extends: medgemma_local_4b_volumetric_pathology_target.yaml
+medgemma_screening:
+  panel:
+    strategy: uniform_9
+    axial_slices: 9
+  rag:
+    enabled: true
+    index_path: rag/index/liver_mri_rag_v1/bm25_index.json
+    retrieval_eval: docs/rag/retrieval_eval_v1.yaml
+    top_k: 2
+    max_sources: 10
+    max_chunk_chars: 520
+    min_score: 0.0
+    query_ids:
+      - dwi_adc_benign_malignant
+      - pseudolesion_perfusion_pitfall
+      - arterial_phase_motion_artifact
+      - dynamic_contrast_phases
+  prompt:
+    template: |-
+      Você está analisando um painel de nove cortes sistematicamente distribuídos de UMA ÚNICA série de RM hepática em modo de pesquisa.
+
+      AVISO OBRIGATÓRIO: esta entrada é monofásica. Não existem imagens arterial, portal/venosa e tardia simultaneamente. Nenhuma fase foi sintetizada. Portanto, não afirme realce arterial, washout, cápsula por dinâmica, persistência de realce nem qualquer comparação temporal entre fases.
+
+      A região do fígado está segmentada somente por contorno. Não há lesão previamente marcada. O alvo da triagem é uma lesão focal hepática ou patologia suspeita que seja morfologicamente visível na única série fornecida.
+
+      Separe:
+      1. ausência de foco suspeito visível;
+      2. variante anatômica benigna, vaso, pseudolesão ou artefato provável;
+      3. foco/massa morfologicamente suspeito e persistente entre cortes da mesma série.
+
+      Regras:
+      - POSITIVA somente quando houver foco ou massa morfologicamente suspeito, não explicado por vaso ou artefato, visível em cortes adjacentes.
+      - NEGATIVA quando não houver evidência focal suficiente, inclusive diante de veia calibrosa, estrutura tubular contínua, variante vascular ou artefato isolado.
+      - INCONCLUSIVA quando a qualidade/cobertura for insuficiente, quando houver dúvida real entre variante e patologia, ou quando a conclusão depender das fases dinâmicas ausentes.
+      - Registre explicitamente em limitacoes_da_analise que o exame é monofásico, que a dinâmica de contraste não foi avaliada e que o painel é uma amostragem limitada do volume.
+
+      Isto não é diagnóstico e não é laudo médico. Não recomende conduta. Revisão humana obrigatória. Baseie-se somente nas imagens fornecidas.
+
+      Responda com um único objeto JSON, sem Markdown, usando exatamente:
+      {
+        "resultado_hipotese": "POSITIVA | NEGATIVA | INCONCLUSIVA",
+        "resumo_do_achado": "string",
+        "localizacao_aproximada": "string",
+        "sinais_visuais_observados": ["string"],
+        "confianca": "baixa | moderada | alta",
+        "limitacoes_da_analise": ["string"],
+        "necessidade_de_revisao_humana": true,
+        "alvo_da_triagem": "lesao_focal_hepatica_suspeita",
+        "ha_lesao_focal_suspeita": true,
+        "ha_variante_anatomica_benigna": false,
+        "ha_pseudolesao_ou_artefato": false,
+        "tipo_alteracao_nao_alvo": "none | vascular_variant | perfusion_pseudolesion | artifact | focal_fat | cystic_benign | other",
+        "justificativa_da_separacao": "string"
+      }
