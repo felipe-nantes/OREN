@@ -35,3 +35,16 @@ Controles: orbitar (arrastar), zoom (scroll), alternar visibilidade e opacidade 
 Quando aberto pelo botão do webapp, o viewer recebe também `?job=<id>` e mostra
 as ações **Aprovar segmentação** e **Solicitar revisão**. A decisão é enviada ao
 backend local e persistida no caso como `outputs/approval.json`.
+
+## Recursos do manifesto v2
+
+O visualizador oferece vistas anatômicas nomeadas, controles por estrutura,
+corte ortogonal, modo de malha, régua de superfície, captura PNG, tela cheia e
+referências axial/coronal/sagital da RM com contorno automático.
+
+O painel de qualidade mede a fidelidade **da malha à máscara fonte**; ele não
+mede acurácia clínica da segmentação. Manifestos v2 exigem um checklist de
+revisão e registram o estado do visualizador, medições e hashes dos artefatos.
+
+O contrato completo, os limites e a validação estão documentados em
+`docs/166_VISUALIZADOR_3D_AUDITAVEL.md`.

@@ -3,36 +3,117 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Argos — Visualizador 3D</title>
-  <link rel="stylesheet" href="./argos-viewer.css" />
+  <title>OREN — Visualizador 3D</title>
+  <link rel="stylesheet" href="./argos-viewer.css?v=oren-20260803-4" />
 </head>
 <body>
   <div id="banner">Modo Pesquisa — não destinado a decisão clínica · Coordenadas LPS</div>
   <div id="wrap">
-    <div id="canvas-holder"><div class="canvas-badge">Modelo anatômico 3D · LPS</div></div>
-    <div id="panel">
+    <main id="canvas-holder">
+      <div class="canvas-badge">Modelo anatômico 3D · LPS</div>
+      <div id="viewer-toolbar" role="toolbar" aria-label="Ferramentas do modelo 3D">
+        <button id="reset-view" type="button" title="Reenquadrar o modelo">Reenquadrar</button>
+        <button id="wireframe" type="button" aria-pressed="false" title="Inspecionar a triangulação">Malha</button>
+        <button id="measure" type="button" aria-pressed="false" title="Medir entre dois pontos da superfície">Medir</button>
+        <button id="clear-measures" type="button" title="Apagar medições">Limpar medidas</button>
+        <button id="snapshot" type="button" title="Salvar uma captura PNG sem dados identificáveis">Capturar</button>
+        <button id="fullscreen" type="button" title="Alternar tela cheia">Tela cheia</button>
+      </div>
+      <div id="measurement-status" aria-live="polite">Régua desativada.</div>
+      <section id="reference-dock" aria-label="Referência bidimensional da ressonância" hidden>
+        <header>
+          <div><span>Referência 2D</span><strong>RM + contorno automático</strong></div>
+          <button id="reference-collapse" type="button" aria-expanded="true">Recolher</button>
+        </header>
+        <div id="reference-body">
+          <div id="reference-tabs" role="tablist" aria-label="Orientação da imagem">
+            <button type="button" data-view="axial" role="tab">Axial</button>
+            <button type="button" data-view="coronal" role="tab">Coronal</button>
+            <button type="button" data-view="sagittal" role="tab">Sagital</button>
+          </div>
+          <div class="reference-frame">
+            <img id="reference-image" alt="Plano da RM com o contorno da máscara hepática" />
+            <span id="orientation-top" class="orientation top"></span>
+            <span id="orientation-bottom" class="orientation bottom"></span>
+            <span id="orientation-left" class="orientation left"></span>
+            <span id="orientation-right" class="orientation right"></span>
+          </div>
+          <input id="reference-slider" type="range" min="0" max="0" value="0" step="1" aria-label="Plano da referência 2D" />
+          <div id="reference-meta"></div>
+          <p>Amarelo: limite do fígado. Âmbar: região candidata automática não confirmada, quando presente. A imagem é apoio de revisão, não um visualizador diagnóstico.</p>
+        </div>
+      </section>
+    </main>
+    <aside id="panel">
       <div class="viewer-brand">
-        <div class="viewer-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.2 12s3.2-5.2 8.8-5.2S20.8 12 20.8 12 17.6 17.2 12 17.2 3.2 12 3.2 12Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg></div>
-        <div><strong>Argos</strong><span>Digital Twin Cirúrgico</span></div>
+        <div class="viewer-mark" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-width="13" transform="rotate(-90 50 50)"><circle cx="50" cy="50" r="40" stroke-dasharray="187.08 64.25"/><circle cx="50" cy="50" r="40" stroke-dasharray="43.28 208.05" stroke-dashoffset="-197.55"/></g></svg></div>
+        <div class="viewer-lockup"><svg class="viewer-wordmark" viewBox="0 0 252 60" fill="none" role="img" aria-label="OREN"><g stroke="currentColor" stroke-width="3.5"><circle cx="28" cy="30" r="24"/><path d="M76 55V5h20a13.5 13.5 0 0 1 0 27H76M94 32l18 23M134 6.5h40M134 30h40M134 53.5h40M198 55V5l34 50V5"/></g></svg><span>Digital Twin Cirúrgico</span></div>
       </div>
       <div class="panel-heading"><div class="panel-kicker">Revisão anatômica</div><h1>Visualizador 3D</h1></div>
-      <div id="drop">Arraste a pasta <b>outputs/</b> aqui<br/>(ou os arquivos: manifest + STLs)</div>
-      <div id="controls"></div>
-      <div id="meta"></div>
-      <div id="approval">
-        <h1>Revisão humana</h1>
-        <p>Inspecione o contorno do fígado antes de registrar sua decisão.</p>
-        <div class="approval-actions">
-          <button id="approve">Aprovar segmentação</button>
-          <button id="request-revision">Solicitar revisão</button>
+      <div id="drop" tabindex="0">Arraste a pasta <b>outputs/</b> aqui<br/>(manifesto, STLs e referências PNG)</div>
+
+      <section class="panel-section">
+        <div class="section-title"><span>Exploração</span><small>estrutura, visibilidade e opacidade</small></div>
+        <div id="controls"></div>
+      </section>
+      <section id="clip-section" class="panel-section" hidden>
+        <div class="section-title"><span>Plano de corte</span><small>inspeção da superfície</small></div>
+        <label class="toggle-row"><input id="clip-enabled" type="checkbox" /> Ativar corte ortogonal</label>
+        <div class="compact-grid">
+          <label>Plano<select id="clip-axis"><option value="z">Axial</option><option value="y">Coronal</option><option value="x">Sagital</option></select></label>
+          <label class="toggle-row"><input id="clip-invert" type="checkbox" /> Inverter</label>
         </div>
-        <div id="approval-status">Pendente de revisão.</div>
-      </div>
-    </div>
+        <input id="clip-position" type="range" min="0" max="100" value="50" step="1" aria-label="Posição do plano de corte" />
+        <div id="clip-value">50% do volume</div>
+        <p class="section-note">O corte revela superfícies internas, mas não simula ressecção nem preenche tecido.</p>
+      </section>
+      <section id="quality-section" class="panel-section" hidden>
+        <div class="section-title"><span>Qualidade da reconstrução</span><small>malha versus máscara fonte</small></div>
+        <div id="quality-summary"></div>
+        <div id="quality-cards"></div>
+      </section>
+      <section id="relationships-section" class="panel-section" hidden>
+        <div class="section-title"><span>Relações espaciais</span><small>medidas exploratórias</small></div>
+        <div id="relationships"></div>
+      </section>
+      <section id="candidate-section" class="panel-section candidate-section" hidden>
+        <div class="section-title"><span>Região candidata</span><small>automática · não confirmada</small></div>
+        <div id="candidate-summary"></div>
+        <p class="section-note">O contorno âmbar é produzido após a triagem e não altera a classificação. Ele pode representar lesão, variante benigna, pseudolesão ou erro de segmentação.</p>
+      </section>
+      <details class="panel-section metadata-section">
+        <summary>Proveniência e geometria</summary>
+        <div id="meta"></div>
+      </details>
+      <section id="approval">
+        <h2>Revisão humana</h2>
+        <p>Confirme cada item antes de aprovar. A decisão registra também o manifesto e o estado das ferramentas.</p>
+        <div class="review-checklist">
+          <label><input id="review-3d" type="checkbox" /> Inspecionei o contorno 3D em mais de uma vista.</label>
+          <label><input id="review-2d" type="checkbox" /> Comparei a superfície com as referências 2D.</label>
+          <label id="review-candidate-row" hidden><input id="review-candidate" type="checkbox" /> Comparei a região candidata âmbar com a RM em 2D e 3D.</label>
+          <label><input id="review-research" type="checkbox" /> Reconheço que o resultado é somente para pesquisa.</label>
+        </div>
+        <label id="candidate-decision-row" class="candidate-decision" hidden>
+          Decisão técnica sobre o candidato
+          <select id="candidate-decision">
+            <option value="">Selecione após revisar</option>
+            <option value="accepted_as_region_of_interest">Aceitar como região de interesse</option>
+            <option value="rejected">Rejeitar candidato automático</option>
+            <option value="needs_correction">Solicitar correção do contorno</option>
+          </select>
+        </label>
+        <div class="approval-actions">
+          <button id="approve" type="button">Concluir revisão técnica</button>
+          <button id="request-revision" type="button">Solicitar revisão</button>
+        </div>
+        <div id="approval-status" aria-live="polite">Pendente de revisão.</div>
+      </section>
+    </aside>
   </div>
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.js" } }
   </script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=oren-20260803-5"></script>
 </body>
 </html>

@@ -3,17 +3,20 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Argos — Análise hepática assistida</title>
-<link rel="stylesheet" href="/argos.css" />
+<title>OREN — Análise hepática assistida</title>
+<meta name="theme-color" content="#f8fbf9" />
+<link rel="icon" href="/oren-icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/argos.css?v=oren-20260803-4" />
+<script src="/oren-motion.js?v=oren-20260803" defer></script>
 </head>
-<body>
+<body data-page="exam">
 <div class="app-shell">
   <header class="app-header">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M3.2 12s3.2-5.2 8.8-5.2S20.8 12 20.8 12 17.6 17.2 12 17.2 3.2 12 3.2 12Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>
+        <svg viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-width="13" transform="rotate(-90 50 50)"><circle cx="50" cy="50" r="40" stroke-dasharray="187.08 64.25"/><circle cx="50" cy="50" r="40" stroke-dasharray="43.28 208.05" stroke-dashoffset="-197.55"/></g></svg>
       </div>
-      <div><p class="brand-name">Argos</p><p class="brand-subtitle">Digital Twin Cirúrgico · UEM · GETS · HU</p></div>
+      <div class="brand-lockup"><svg class="brand-wordmark" viewBox="0 0 252 60" fill="none" role="img" aria-label="OREN"><g stroke="currentColor" stroke-width="3.5"><circle cx="28" cy="30" r="24"/><path d="M76 55V5h20a13.5 13.5 0 0 1 0 27H76M94 32l18 23M134 6.5h40M134 30h40M134 53.5h40M198 55V5l34 50V5"/></g></svg><p class="brand-subtitle">Digital Twin Cirúrgico · UEM · GETS · HU</p></div>
     </div>
     <nav class="app-nav" aria-label="Navegação principal">
       <a class="active" href="/">Exame individual</a>
@@ -27,7 +30,7 @@
       <div class="hero-copy">
         <div class="eyebrow">Inteligência visual hepática</div>
         <h1 class="page-title">Análise médica mais clara, do exame ao modelo.</h1>
-        <p class="page-lead">Envie uma ressonância magnética multifásica para segmentação do fígado, triagem de lesão focal e identificação da alteração — com revisão humana obrigatória.</p>
+        <p class="page-lead">Envie uma ressonância magnética para segmentação do fígado e triagem exploratória. Exames multifásicos usam o classificador validado; exames monofásicos seguem por um modo limitado e identificado — sempre com revisão humana.</p>
         <div class="status-row">
           <span class="chip">Ambiente <b>local e seguro</b></span>
           <span class="chip"><span class="dot" style="background:#39c07f"></span>Classificador <b>visual, local</b></span>
@@ -44,16 +47,18 @@
             <div><h2>Novo exame</h2><p>Selecione uma pasta ou os arquivos DICOM da ressonância.</p></div>
           </div>
           <div class="note" id="multiphaseHint">
-            A pasta do exame precisa conter as <b>três fases dinâmicas em subpastas</b> —
-            <code>arterial/</code>, <code>venous/</code> e <code>delayed/</code>.
-            Identificar a fase a partir do DICOM bruto é problema não resolvido, e
-            adivinhar produziria uma resposta sem valor.
+            Você pode selecionar a <b>pasta DICOM bruta</b> do exame. O OREN agrupa
+            as séries e procura as fases arterial, venosa e tardia nos metadados técnicos.
+            Pastas <code>arterial/</code>, <code>venous/</code> e <code>delayed/</code>
+            também continuam aceitas. Se houver somente uma fase utilizável, o OREN
+            aplica automaticamente o modo monofásico experimental, sem criar fases
+            artificiais. Ambiguidade entre várias séries continua sendo interrompida.
           </div>
           <div class="drop" id="drop">
             <div class="drop-content">
               <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-              <div class="big">Arraste a pasta do exame de RM aqui</div>
-              <div class="small">Arquivos DICOM de uma série ou exame multi-frame</div>
+              <div class="big">Arraste a pasta DICOM bruta do exame aqui</div>
+              <div class="small">Exportação completa do estudo ou pasta multifásica organizada</div>
             </div>
           </div>
           <div class="btns">
@@ -68,7 +73,7 @@
         <div class="card hidden" id="progCard">
           <div class="section-heading">
             <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 1 0 9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            <div><h2>Processando exame</h2><p>O Argos está preparando a análise e o modelo.</p></div>
+            <div><h2>Processando exame</h2><p>O OREN está preparando a análise e o modelo.</p></div>
           </div>
           <div class="prog"><div class="bar" id="bar"></div></div>
           <div class="step"><div class="spin"></div><span id="stepLabel">Enviando…</span></div>
@@ -92,7 +97,7 @@
     </div>
   </main>
 
-  <footer>Hipótese visual exploratória em modo Pesquisa. Não é diagnóstico, não é laudo médico e não substitui avaliação especializada.</footer>
+  <footer><span class="footer-brand">OREN</span><span>Hipótese visual exploratória em modo Pesquisa. Não é diagnóstico, não é laudo médico e não substitui avaliação especializada.</span></footer>
 </div>
 
 <script>
@@ -100,6 +105,9 @@ const $ = s => document.querySelector(s);
 const show = (el,on)=>el.classList.toggle('hidden',!on);
 const STEP_LABELS = {recebendo:'Recebendo exame',
   ingestao_multifasica:'Lendo as fases e segmentando o fígado',
+  ingestao_monofasica:'Preparando a fase única disponível',
+  ingestao:'Selecionando a série de RM',segmentacao:'Segmentando o fígado',
+  medgemma:'Analisando a fase única com o MedGemma',
   paineis:'Preparando os painéis do fígado',
   classificacao:'Classificando o exame',concluido:'Concluído'};
 
@@ -133,7 +141,10 @@ let polling=null;
 // Um único caminho de análise: o classificador visual da Etapa C, que é o de
 // melhor acertividade medida. Não há seleção de modo -- oferecer configurações
 // mais fracas convidaria o usuário a escolher a pior sem ter como saber disso.
-const SCENARIO_LABELS={ hybrid_supervised:'Classificador visual' };
+const SCENARIO_LABELS={
+  hybrid_supervised:'Classificador visual trifásico',
+  monophase_rag:'Monofásico + RAG (amostragem rápida)'
+};
 async function startAnalysis(items){
   const dicoms = items.filter(x=>x.file.size>0);
   if(!dicoms.length){ return; }
@@ -214,6 +225,18 @@ function renderVisualResult(result){
   const meta = el('div','meta');
   meta.appendChild(el('span','chip','Modo: <b>Classificador visual</b>'));
   meta.appendChild(el('span','chip','Painéis: <b>'+escapeHtml(String(result.panel_count||'—'))+'</b>'));
+  if(result.phase_resolution){
+    const phaseMethods={
+      explicit_folder_names:'pastas nomeadas',
+      explicit_dicom_phase_semantics:'metadados DICOM explícitos',
+      ordered_axial_t1_postcontrast_series:'ordem temporal DICOM revisável',
+      authorized_explicit_mapping:'mapeamento autorizado'
+    };
+    const method=phaseMethods[result.phase_resolution.method]||result.phase_resolution.method||'não informado';
+    const confidence=result.phase_resolution.confidence;
+    meta.appendChild(el('span','chip','Fases: <b>'+escapeHtml(method)+'</b>'
+      +(Number.isFinite(confidence)?' · '+pct(confidence):'')));
+  }
   if(result.in_sample){
     meta.appendChild(el('span','chip','<b>Caso visto no treino</b> — não é estimativa de generalização'));
   }
@@ -265,6 +288,14 @@ function renderResult(result){
   meta.appendChild(el('span','chip','Escala: <b>'+escapeHtml(result.model_parameter_scale||'—')+'</b>'));
   meta.appendChild(el('span','chip','Status: <b>revisão humana obrigatória</b>'));
   c.appendChild(meta);
+  if(result.input_assessment && result.input_assessment.mode==='single_phase'){
+    const aviso=el('div','note');
+    aviso.style.borderLeft='3px solid #d98324'; aviso.style.paddingLeft='10px';
+    aviso.innerHTML='<b>Exame monofásico.</b> Foi analisada somente a série real disponível; '
+      +'nenhuma fase foi sintetizada. Este resultado não usa nem comprova as métricas do protocolo trifásico.';
+    c.appendChild(aviso);
+    c.appendChild(field('Limitações específicas da entrada', list(result.input_assessment.limitations)));
+  }
   if(rep.alvo_da_triagem){
     c.appendChild(field('Alvo da triagem', 'Lesão focal hepática suspeita'));
     const nonTarget=rep.tipo_alteracao_nao_alvo&&rep.tipo_alteracao_nao_alvo!=='none'

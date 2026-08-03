@@ -2,8 +2,11 @@
 import json
 from pathlib import Path
 
+import numpy as np
+from PIL import Image
+
 from dtwin.engine import Engine
-from dtwin.core import array_to_image, read_image, save_image
+from dtwin.core import array_from, array_to_image, read_image, save_image, sha256_of
 from .conftest import make_sphere_mask
 
 
@@ -19,6 +22,8 @@ def test_finalize_produces_stls_and_manifest(synthetic_case):
     assert manifest.exists()
 
     data = json.loads(manifest.read_text(encoding="utf-8"))
+    assert data["schema"] == "argos-viewer-manifest-v2"
+    assert data["schema_version"] == 2
     assert data["organ"] == "figado"
     assert data["coordinate_system"] == "LPS"
     roles = {m["role"]: m for m in data["meshes"]}
@@ -27,6 +32,27 @@ def test_finalize_produces_stls_and_manifest(synthetic_case):
     for m in data["meshes"]:
         assert "/" not in m["stl"] and "\\" not in m["stl"]
         assert (case.outputs / m["stl"]).exists()
+        metrics = m["metrics"]
+        assert metrics["not_segmentation_accuracy"] is True
+        assert metrics["source_mask_volume_ml"] > 0
+        assert metrics["mesh_sha256"] == sha256_of(case.outputs / m["stl"])
+        assert metrics["vertices"] > 0 and metrics["triangles"] > 0
+
+    references = data["reference_images"]
+    assert references["contains_phi_metadata"] is False
+    axial = references["views"]["axial"]
+    mask = array_from(read_image(case.mask_organ_clean)) > 0
+    expected_indices = np.flatnonzero(mask.any(axis=(1, 2))).tolist()
+    assert [frame["index"] for frame in axial["frames"]] == expected_indices
+    assert axial["coverage"] == "all_liver_bearing_planes"
+    for view in references["views"].values():
+        for frame in view["frames"]:
+            image_path = case.outputs / frame["file"]
+            assert image_path.is_file()
+            assert frame["sha256"] == sha256_of(image_path)
+            with Image.open(image_path) as image:
+                assert image.size == (512, 512)
+                assert not image.getexif()
 
 
 def test_finalize_no_lesion_flag(synthetic_case):

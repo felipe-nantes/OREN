@@ -39,6 +39,13 @@ from .core import (
     sha256_of,
     world_vertices_from_index,
 )
+from .viewer_artifacts import (
+    acquisition_summary,
+    compute_mesh_metrics,
+    generate_reference_images,
+    lesion_segment_overlap,
+    nearest_surface_relationships,
+)
 
 log = logging.getLogger("dtwin")
 
@@ -647,6 +654,51 @@ def stage5_refine(case: Case, profile: dict) -> None:
             role, int(anatomy.sum()), int(anatomy_clean.sum()),
         )
 
+    # Região candidata automática, gerada SOMENTE depois da inferência. Ela é
+    # mantida separada da lesão manual e nunca alimenta o classificador.
+    if not case.mask_candidate.exists():
+        case.mask_candidate_clean.unlink(missing_ok=True)
+    else:
+        if not case.candidate_manifest.is_file():
+            raise PipelineError("Região candidata sem manifesto de proveniência.")
+        try:
+            candidate_receipt = json.loads(case.candidate_manifest.read_text("utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise PipelineError("Manifesto da região candidata inválido.") from exc
+        if (
+            candidate_receipt.get("schema") != "argos-candidate-region-v1"
+            or candidate_receipt.get("used_by_screening_inference") is not False
+            or candidate_receipt.get("candidate_is_diagnosis") is not False
+            or candidate_receipt.get("mask_sha256") != sha256_of(case.mask_candidate)
+        ):
+            raise PipelineError("Integridade/proveniência da região candidata falhou.")
+        candidate_image = read_image(case.mask_candidate)
+        if (
+            candidate_image.GetSize() != organ_img.GetSize()
+            or not np.allclose(candidate_image.GetSpacing(), organ_img.GetSpacing(), atol=1e-6)
+            or not np.allclose(candidate_image.GetOrigin(), organ_img.GetOrigin(), atol=1e-5)
+            or not np.allclose(candidate_image.GetDirection(), organ_img.GetDirection(), atol=1e-6)
+        ):
+            raise PipelineError("Região candidata diverge da geometria hepática.")
+        candidate = array_from(candidate_image)
+        if not np.isfinite(candidate).all() or not np.isin(np.unique(candidate), [0, 1]).all():
+            raise PipelineError("Região candidata não é binária.")
+        cc = refino.get("candidato", {})
+        candidate_clean = _refine_mask(
+            candidate,
+            cc.get("opening", False),
+            cc.get("opening_radius", 1),
+            cc.get("min_volume_voxels", 1),
+        )
+        save_image(
+            array_to_image(candidate_clean, candidate_image, np.uint8),
+            case.mask_candidate_clean,
+        )
+        log.info(
+            "Estágio 5: região candidata automática preservada (%d -> %d voxels).",
+            int(candidate.sum()), int(candidate_clean.sum()),
+        )
+
 
 # --------------------------------------------------------------------------- #
 # (6) Geração de malha (superfície). FEA/tetraedralização = fase 2.
@@ -689,6 +741,20 @@ def stage6_mesh(case: Case, profile: dict) -> None:
             log.info("Estágio 6: malha de lesão obsoleta removida (caso sem lesão).")
         log.info("Estágio 6: sem malha de lesão (máscara vazia).")
 
+    candidate_mesh = (
+        _mesh_from_mask(case.mask_candidate_clean, level, sm, fa, pass_band=pb, **extra)
+        if case.mask_candidate_clean.is_file()
+        else None
+    )
+    if candidate_mesh is not None:
+        candidate_mesh.save(str(case.mesh_candidate))
+        log.info(
+            "Estágio 6: malha candidata não confirmada (%d vértices, %d faces).",
+            candidate_mesh.n_points, candidate_mesh.n_cells,
+        )
+    else:
+        case.mesh_candidate.unlink(missing_ok=True)
+
     for _, entry in _anatomy_structures(profile):
         role = str(entry["papel"])
         clean_path = case.anatomy_mask(role, clean=True)
@@ -714,7 +780,14 @@ def stage6_mesh(case: Case, profile: dict) -> None:
 # --------------------------------------------------------------------------- #
 def stage7_export_publish(case: Case, profile: dict) -> None:
     case.outputs.mkdir(parents=True, exist_ok=True)
+    viewer_manifest_path = case.outputs / "viewer_manifest.json"
+    # Um finalize interrompido não pode deixar o webapp republicar um manifesto
+    # antigo como se descrevesse os novos artefatos.
+    if viewer_manifest_path.exists():
+        viewer_manifest_path.unlink()
     mesh_cfg = profile.get("mesh", {})
+    viewer_cfg = profile.get("viewer", {}) or {}
+    quality_cfg = viewer_cfg.get("quality_metrics", {}) or {}
     anatomy = _anatomy_structures(profile)
     has_couinaud = any(
         str(entry["papel"]).startswith("couinaud_") and case.anatomy_mesh(str(entry["papel"])).exists()
@@ -723,6 +796,7 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
     plan = [
         {
             "role": "orgao", "vtp": case.mesh_organ,
+            "mask": case.mask_organ_clean,
             "color": mesh_cfg.get("cor_orgao", "#C8A27D"),
             # 0,5 deixava o parênquima com aparência de gelatina e escondia o
             # relevo da superfície -- justamente o que a malha nova passou a
@@ -733,8 +807,17 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
         },
         {
             "role": "lesao", "vtp": case.mesh_lesion,
+            "mask": case.mask_lesion_clean,
             "color": mesh_cfg.get("cor_lesao", "#D7263D"),
             "label": "Lesão marcada manualmente", "material": "lesion", "opacity": 1.0,
+            "default_visible": True,
+        },
+        {
+            "role": "candidato", "vtp": case.mesh_candidate,
+            "mask": case.mask_candidate_clean,
+            "color": mesh_cfg.get("cor_candidato", "#FF8400"),
+            "label": "Região candidata automática — não confirmada",
+            "material": "candidate", "opacity": 0.78,
             "default_visible": True,
         },
     ]
@@ -743,6 +826,7 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
         plan.append({
             "role": role,
             "vtp": case.anatomy_mesh(role),
+            "mask": case.anatomy_mask(role, clean=True),
             "color": str(entry.get("cor", "#C8A27D")),
             "label": str(entry.get("nome", role)),
             "material": str(entry.get("material", "anatomy")),
@@ -751,6 +835,7 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
         })
 
     items = []
+    meshes_by_role: dict[str, pv.PolyData] = {}
     for spec in plan:
         role, vtp, color = spec["role"], spec["vtp"], spec["color"]
         stl = case.outputs / f"{profile['id']}_{role}.stl"
@@ -766,6 +851,18 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
             mesh.save(str(stl))  # API correta (corrige o pv.save_mesh_as inexistente)
         except Exception as e:  # noqa: BLE001
             raise PipelineError(f"Falha ao exportar STL {stl}: {e}") from e
+        metrics = compute_mesh_metrics(
+            Path(spec["mask"]),
+            mesh,
+            stl,
+            max_volume_error_percent=float(
+                quality_cfg.get("max_volume_error_percent", 2.0)
+            ),
+            max_surface_p95_voxels=float(
+                quality_cfg.get("max_surface_p95_voxels", 1.0)
+            ),
+        )
+        meshes_by_role[role] = mesh
         items.append({
             "role": role,
             "stl": stl.name,
@@ -774,6 +871,7 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
             "material": spec["material"],
             "opacity": spec["opacity"],
             "default_visible": spec["default_visible"],
+            "metrics": metrics,
         })
         log.info("Estágio 7: STL exportado -> %s", stl)
 
@@ -781,7 +879,51 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
         raise PipelineError("Nenhuma malha para exportar.")
 
     manifest = case.read_manifest()
+    reference_images = generate_reference_images(
+        case.volume,
+        case.mask_organ_clean,
+        case.outputs,
+        case.mask_candidate_clean if case.mask_candidate_clean.is_file() else None,
+    )
+    acquisition = acquisition_summary(
+        case.volume,
+        case.mask_organ_clean,
+        mesh_isotropic_spacing_mm=float(mesh_cfg.get("reamostragem_isotropica_mm", 0.0)),
+        mesh_smoothing_sigma_mm=float(mesh_cfg.get("suavizacao_campo_sigma_mm", 0.0)),
+    )
+    target_roles = [
+        item["role"]
+        for item in items
+        if item["role"] == "orgao" or item.get("material") == "vessel"
+    ]
+    relationship_source = "lesao" if "lesao" in meshes_by_role else "candidato"
+    relationships = nearest_surface_relationships(
+        meshes_by_role, target_roles, source_role=relationship_source
+    )
+    segment_masks = {
+        str(entry["papel"]): case.anatomy_mask(str(entry["papel"]), clean=True)
+        for _, entry in anatomy
+        if str(entry["papel"]).startswith("couinaud_")
+        and case.anatomy_mask(str(entry["papel"]), clean=True).is_file()
+    }
+    lesion_context = lesion_segment_overlap(case.mask_lesion_clean, segment_masks)
+    candidate_context = lesion_segment_overlap(case.mask_candidate_clean, segment_masks)
+    if candidate_context:
+        candidate_context["source"] = (
+            "automatic_unconfirmed_candidate_mask_and_automatic_couinaud_masks"
+        )
+        candidate_context["candidate_voxels"] = candidate_context.pop("lesion_voxels")
+        for overlap in candidate_context.get("overlaps", []):
+            if "lesion_overlap_percent" in overlap:
+                overlap["candidate_overlap_percent"] = overlap.pop(
+                    "lesion_overlap_percent"
+                )
+    candidate_region = None
+    if case.candidate_manifest.is_file():
+        candidate_region = json.loads(case.candidate_manifest.read_text("utf-8"))
     viewer = {
+        "schema": "argos-viewer-manifest-v2",
+        "schema_version": 2,
         "case_id": manifest.get("case_id"),
         "organ": profile["id"],
         "coordinate_system": profile.get("exportacao", {}).get(
@@ -789,12 +931,40 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
         ),
         "regulatory_state": manifest.get("regulatory_state", "PESQUISA"),
         "disclaimer": "Uso em pesquisa/educação. NÃO destinado a decisão clínica.",
+        "quality_scope": (
+            "Fidelidade da reconstrução à máscara fonte; não mede acurácia "
+            "anatômica da segmentação."
+        ),
+        "acquisition": acquisition,
         "meshes": items,
+        "reference_images": reference_images,
+        "spatial_relationships": relationships,
+        "lesion_context": lesion_context,
+        "candidate_context": candidate_context,
+        "candidate_region": candidate_region,
+        "viewer_features": {
+            "orthogonal_clipping": True,
+            "surface_distance_measurement": True,
+            "wireframe_inspection": True,
+            "reference_mr_stack": True,
+            "screenshot": True,
+            "unconfirmed_candidate_review": candidate_region is not None,
+        },
+        "review_requirements": {
+            "inspect_3d_contour": True,
+            "inspect_2d_reference": True,
+            "acknowledge_research_only": True,
+            "inspect_candidate_against_mr": bool(
+                candidate_region and candidate_region.get("candidate_present")
+            ),
+        },
     }
-    (case.outputs / "viewer_manifest.json").write_text(
+    temp_manifest = viewer_manifest_path.with_name(".viewer_manifest.json.tmp")
+    temp_manifest.write_text(
         json.dumps(viewer, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+    temp_manifest.replace(viewer_manifest_path)
     log.info(
         "Estágio 7: manifesto do visualizador escrito em %s",
-        case.outputs / "viewer_manifest.json",
+        viewer_manifest_path,
     )

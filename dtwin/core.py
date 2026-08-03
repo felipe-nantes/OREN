@@ -168,6 +168,10 @@ class Case:
     def mask_organ_clean(self) -> Path: return self.root / "mask_organ_clean.nii.gz"
     @property
     def mask_lesion_clean(self) -> Path: return self.root / "mask_lesion_clean.nii.gz"
+    @property
+    def mask_candidate(self) -> Path: return self.root / "mask_candidate.nii.gz"
+    @property
+    def mask_candidate_clean(self) -> Path: return self.root / "mask_candidate_clean.nii.gz"
 
     # Anatomia interna opcional (segmentos hepáticos, vasos e vesícula). Os
     # nomes de papel vêm exclusivamente do perfil versionado; não são aceitos
@@ -181,6 +185,12 @@ class Case:
     def mesh_organ(self) -> Path: return self.root / "mesh_organ.vtp"
     @property
     def mesh_lesion(self) -> Path: return self.root / "mesh_lesion.vtp"
+    @property
+    def mesh_candidate(self) -> Path: return self.root / "mesh_candidate.vtp"
+
+    @property
+    def candidate_manifest(self) -> Path:
+        return self.root / "candidate_region.json"
 
     def anatomy_mesh(self, role: str) -> Path:
         return self.root / f"mesh_anatomy_{role}.vtp"

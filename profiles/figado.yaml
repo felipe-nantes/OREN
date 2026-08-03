@@ -56,6 +56,17 @@ segmentacao_lesao:
   modo: manual_slicer
   ferramentas_sugeridas: [threshold, region_growing, paint]
 
+# Localização automática opcional, executada apenas DEPOIS de a decisão da
+# triagem estar congelada. A saída é uma região candidata para revisão, não uma
+# lesão confirmada e nunca retorna ao classificador.
+localizacao_candidata:
+  habilitada: true
+  motor: totalsegmentator_mri
+  motor_task: liver_lesions_mr
+  executar_pos_inferencia: true
+  uso_na_inferencia: false
+  revisao_humana_obrigatoria: true
+
 # --- Refino das máscaras ---------------------------------------------
 refino:
   orgao:
@@ -66,6 +77,10 @@ refino:
     opening: false            # NÃO erodir: lesão pequena é real
     opening_radius: 1
     min_volume_voxels: 30
+  candidato:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 1
   anatomia:
     opening: false            # não erodir segmentos ou vasos finos
     opening_radius: 1
@@ -92,8 +107,15 @@ mesh:
   max_triangulos: 160000     # decimação quadrática; STL acima disso pesa no navegador
   cor_orgao: "#C8A27D"        # consumido pelo manifesto do visualizador
   cor_lesao: "#D7263D"
+  cor_candidato: "#FF8400"
 
 # --- Exportação -------------------------------------------------------
+viewer:
+  quality_metrics:
+    # Compara a malha à máscara fonte; não representa acurácia anatômica.
+    max_volume_error_percent: 2.0
+    max_surface_p95_voxels: 1.0
+
 exportacao:
   sistema_coordenadas: LPS    # padrão de impressão 3D / 3D Slicer
 
