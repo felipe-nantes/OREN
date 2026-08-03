@@ -105,10 +105,18 @@ como fallback) supera o caminho no ar **em todas as classes**:
 
 Ambos medidos em nested-OOF com denominador honesto — comparáveis.
 
-**Não foi implementado**, e a razão é de método: exige rodar o localizador antes
-do subtipo, o que muda a ordem do pipeline. Fazer isso sem teste ponta a ponta
-seria trocar um número medido por um risco. É a próxima entrega, com custo
-conhecido.
+**Não foi implementado**, e a razão foi verificada, não suposta
+([docs/177](177_SUBTIPO_DO_CAMINHO_EM_PRODUCAO.md) §5):
+
+1. **Não existe modelo de fusão treinado.** A medição de docs/156 foi nested-OOF
+   com modelos por fold — não há artefato de produção. Seria preciso treinar um
+   modelo novo, assiná-lo como bundle e reordenar o pipeline para rodar o
+   localizador antes do subtipo.
+2. **Não há como validar esse modelo novo hoje.** Todo caso disponível para teste
+   pelo frontend é LLD, e o LLD inteiro está no treino do bundle. A única
+   evidência seria o número de docs/156 — que apoia o *método*, não o *build*.
+
+É a próxima entrega, com custo conhecido e ganho medido.
 
 ---
 
