@@ -58,7 +58,7 @@ trocá-los numa apresentação.
 | Número | O que é | Vale como |
 |---|---:|---|
 | **96,43%** | 25 casos LLD pelo frontend ([docs/171](171_RESULTADO_BENCHMARK_FRONTEND_PATOLOGIA_VARIACAO.md)) | **in-sample — 25/25 verificados contra o manifesto do bundle** ([docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md)), e medido sem o gate anatômico que está no ar, que recusaria 2 dos 5 positivos. Prova que o fluxo funciona; **não é generalização** |
-| **52,19%** | caminho de produção, nested-OOF | o que o sistema no ar entrega fora da amostra |
+| **52,19%** | caminho de produção, nested-OOF ([docs/177](177_SUBTIPO_DO_CAMINHO_EM_PRODUCAO.md)) | o que o sistema no ar entrega fora da amostra |
 | **64,81%** | cascata de representações ([docs/156](156_SUBTIPO_HONESTO_FUSAO.md)) | melhor medição honesta obtida |
 
 **Se perguntarem "qual a acurácia de subtipo?", a resposta defensável é 52,19%
