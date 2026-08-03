@@ -22,6 +22,7 @@ import csv
 import io
 import json
 import logging
+import math
 import os
 import platform
 import shutil
@@ -41,10 +42,15 @@ import yaml
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.datastructures import FormData
 
 from dtwin.benchmark.metrics import compute_benchmark_metrics
+from dtwin.benchmark.subtype_metrics import (
+    SUBTYPE_CLASSES,
+    binary_label_for_subtype,
+    compute_subtype_metrics,
+)
 from dtwin.benchmark.hashing import git_state
 from dtwin.benchmark.reporting import write_run_outputs
 from dtwin.benchmark.runner import classify_screening_failure
@@ -65,6 +71,7 @@ from dtwin.medgemma_client import (
 )
 from dtwin.medgemma_volumetric import effective_screening_timeout
 from dtwin.segmentation_subprocess import run_segmentation_subprocess
+from dtwin.candidate_subprocess import candidate_error, run_candidate_subprocess
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 log = logging.getLogger("dtwin.webapp")
@@ -84,6 +91,10 @@ RAG_MEDGEMMA_CONFIG = os.environ.get(
 )
 VOLUMETRIC_RAG_MEDGEMMA_CONFIG = os.environ.get(
     "WEBAPP_VOLUMETRIC_RAG_MEDGEMMA_CONFIG", "configs/medgemma_local_4b_volumetric_rag.yaml"
+)
+MONOPHASE_MEDGEMMA_CONFIG = os.environ.get(
+    "WEBAPP_MONOPHASE_MEDGEMMA_CONFIG",
+    "configs/medgemma_local_4b_monophase_rag.yaml",
 )
 PATHOLOGY_TARGET_MEDGEMMA_CONFIG = os.environ.get(
     "WEBAPP_PATHOLOGY_TARGET_MEDGEMMA_CONFIG",
@@ -143,6 +154,7 @@ PREP_TIMEOUT_GPU = int(os.environ.get("WEBAPP_PREP_TIMEOUT_GPU", "900"))
 PREP_TIMEOUT_CPU = int(os.environ.get("WEBAPP_PREP_TIMEOUT_CPU", "2400"))
 SCREEN_TIMEOUT = int(os.environ.get("WEBAPP_SCREEN_TIMEOUT", "600"))
 MODEL_TIMEOUT = int(os.environ.get("WEBAPP_MODEL_TIMEOUT", "300"))
+CANDIDATE_TIMEOUT = int(os.environ.get("WEBAPP_CANDIDATE_TIMEOUT", "95"))
 # O Starlette limita uploads multipart a 1000 arquivos por padrão (proteção
 # genérica contra DoS). Um dataset de benchmark real (muitos exames, cada um com
 # centenas/milhares de fatias DICOM) estoura isso com facilidade. O servidor só
@@ -428,14 +440,46 @@ def _motivo_mascara(qualidade: dict) -> str:
     return "; ".join(motivos) if motivos else "a máscara não passou na verificação"
 
 
+def _segmentar_figado_com_gate(venous_dir: Path, destino: Path, rotulo: str) -> dict:
+    """Segmenta o fígado e só entrega a máscara se ela for anatomicamente plausível.
+
+    Ponto ÚNICO de decisão, usado pelo exame individual e pelo benchmark. Os dois
+    já divergiram: o gate existia só no caminho individual, e o mesmo exame — os
+    mesmos arquivos — era recusado numa página e contado como acerto na outra
+    (docs/175). Enquanto houver uma função só, isso não volta.
+
+    Falhar aqui é o comportamento correto, não um efeito colateral: os painéis são
+    recortados desta máscara, então classificar sobre meio fígado é acertar por
+    sorte. No benchmark a exceção vira falha técnica, que a política de métricas
+    já conta como erro.
+    """
+    destino = Path(destino).resolve()
+    proc = _segment(str(Path(venous_dir).resolve()), destino, "gpu", PREP_TIMEOUT_GPU, fast=False)
+    if not _seg_done(destino):
+        log.warning("%s: GPU falhou; tentando CPU", rotulo)
+        shutil.rmtree(destino, ignore_errors=True)
+        proc = _segment(str(Path(venous_dir).resolve()), destino, "cpu", PREP_TIMEOUT_CPU, fast=False)
+        if not _seg_done(destino):
+            raise PipelineError(_friendly_text(_cli_reason(proc)))
+    qualidade = _mask_quality(destino)
+    if not qualidade["gate_passed"]:
+        log.warning("%s: máscara reprovada (%s)", rotulo, qualidade["failure_reasons"])
+        raise PipelineError(
+            "A segmentação do fígado não ficou anatomicamente plausível: "
+            + _motivo_mascara(qualidade)
+            + ". Um resultado calculado sobre ela não seria confiável."
+        )
+    return qualidade
+
+
 # Faixa de plausibilidade do fígado adulto. O piso de 300 mL do gate pega só os
 # desastres; entre 300 e 900 mL a segmentação passa mas quase certamente perdeu
 # parte do órgão, e o usuário precisa saber disso ao olhar o modelo 3D.
 #
-# Medido nos 321 casos LLD do pipeline de pesquisa: mediana ~1600 mL, p10 ~420 mL.
-# Ou seja, cerca de 10 a 15% dos exames caem numa cauda de sub-segmentação. Não é
-# o segmentador quebrado em geral -- é falha numa fração, e ela precisa ser
-# visível em vez de silenciosa.
+# Medido nos 321 casos LLD do pipeline de pesquisa (docs/175): mediana 637 mL,
+# p10 164 mL, e 76% abaixo de 900 mL. Não é uma cauda: na MAIORIA da coorte o
+# volume segmentado fica abaixo do piso adulto. Por isso o aviso existe -- se
+# fosse raro, bastaria a nota de rodapé.
 #
 # O limite inferior NÃO vira reprovação porque fígado pequeno existe de verdade:
 # cirrose avançada, hepatectomia prévia, paciente pediátrico. Rejeitar seria
@@ -493,6 +537,7 @@ def _viewer_result(
     viewer_ready: bool,
     *,
     analysis_scenario: str = "volumetric_rag",
+    input_assessment: dict[str, Any] | None = None,
 ) -> dict:
     """Acrescenta a visualizacao sem alterar o contrato do relatorio MedGemma."""
     result = _success_result(report)
@@ -505,6 +550,7 @@ def _viewer_result(
         ),
         approval={"status": "pending"} if viewer_ready else None,
         analysis_scenario=analysis_scenario,
+        input_assessment=input_assessment,
     )
     return result
 
@@ -525,20 +571,62 @@ def _load_report(path: Path) -> dict | None:
     return data
 
 
+def _viewer_assets(manifest: dict) -> dict[str, dict[str, str | None]]:
+    """Lista fechada de artefatos que o manifesto autoriza o servidor a expor."""
+    assets: dict[str, dict[str, str | None]] = {}
+    for item in manifest.get("meshes", []):
+        if not isinstance(item, dict):
+            continue
+        filename = item.get("stl")
+        if not isinstance(filename, str) or Path(filename).name != filename:
+            continue
+        metrics = item.get("metrics") if isinstance(item.get("metrics"), dict) else {}
+        assets[filename] = {
+            "media_type": "model/stl",
+            "sha256": metrics.get("mesh_sha256") if isinstance(metrics, dict) else None,
+        }
+    views = (manifest.get("reference_images") or {}).get("views", {})
+    if isinstance(views, dict):
+        for view in views.values():
+            if not isinstance(view, dict):
+                continue
+            for frame in view.get("frames", []):
+                if not isinstance(frame, dict):
+                    continue
+                filename = frame.get("file")
+                if (
+                    isinstance(filename, str)
+                    and Path(filename).name == filename
+                    and filename.lower().endswith(".png")
+                ):
+                    assets[filename] = {
+                        "media_type": "image/png",
+                        "sha256": frame.get("sha256"),
+                    }
+    return assets
+
+
 def _model_done(case_dir: Path) -> bool:
-    """Modelo publicavel = manifesto valido e todos os STLs presentes."""
+    """Modelo publicável = manifesto válido, artefatos presentes e hashes íntegros."""
     manifest_path = case_dir / "outputs" / "viewer_manifest.json"
     if not manifest_path.is_file():
         return False
     try:
         manifest = json.loads(manifest_path.read_text("utf-8"))
-        meshes = manifest.get("meshes", [])
-        return bool(meshes) and all(
-            isinstance(item, dict)
-            and Path(str(item.get("stl", ""))).name == item.get("stl")
-            and (manifest_path.parent / item["stl"]).is_file()
-            for item in meshes
-        )
+        assets = _viewer_assets(manifest)
+        mesh_names = {
+            item.get("stl") for item in manifest.get("meshes", []) if isinstance(item, dict)
+        }
+        if not mesh_names or not mesh_names <= set(assets):
+            return False
+        for filename, spec in assets.items():
+            path = manifest_path.parent / filename
+            if not path.is_file():
+                return False
+            expected_hash = spec.get("sha256")
+            if expected_hash and sha256_of(path) != expected_hash:
+                return False
+        return True
     except (OSError, json.JSONDecodeError, TypeError, KeyError):
         return False
 
@@ -562,6 +650,78 @@ def _build_model(case_dir: Path) -> tuple[bool, str]:
     return False, _cli_reason(proc)
 
 
+def _localize_candidate(case_dir: Path, decision: dict[str, Any]) -> dict[str, Any]:
+    """Run the viewer-only localizer after the screening decision is frozen.
+
+    A localization failure never changes the already computed prediction and
+    never prevents publication of the liver model. It is reported explicitly.
+    """
+    subtype = decision.get("subtype") if isinstance(decision.get("subtype"), dict) else {}
+    requested = decision.get("prediction") == "POSITIVE" or bool(subtype.get("determined"))
+    if not requested:
+        for name in (
+            "mask_candidate.nii.gz", "mask_candidate_clean.nii.gz",
+            "mesh_candidate.vtp", "candidate_region.json", "candidate_request.json",
+        ):
+            (case_dir / name).unlink(missing_ok=True)
+        return {
+            "status": "not_requested_no_focal_finding",
+            "candidate_present": False,
+            "used_by_screening_inference": False,
+            "requires_human_review": False,
+        }
+    request = {
+        "schema": "argos-candidate-request-v1",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "screening_decision_frozen": True,
+        "prediction": str(decision.get("prediction")),
+        "visual_score": float(decision.get("score", 0.0)),
+        "visual_threshold": float(decision.get("threshold", 0.0)),
+        "subtype_determined": bool(subtype.get("determined")),
+        "subtype": str(subtype.get("subtype")) if subtype.get("determined") else None,
+        "subtype_label": (
+            SUBTYPE_LABELS_PT.get(str(subtype.get("subtype")), str(subtype.get("subtype")))
+            if subtype.get("determined") else None
+        ),
+        "used_by_screening_inference": False,
+        "ground_truth_included": False,
+        "research_only": True,
+    }
+    request_path = case_dir / "candidate_request.json"
+    temp = request_path.with_name(".candidate_request.json.tmp")
+    temp.write_text(json.dumps(request, indent=2, ensure_ascii=False), encoding="utf-8")
+    temp.replace(request_path)
+    process = run_candidate_subprocess(
+        case_dir=case_dir,
+        request_path=request_path,
+        device="gpu",
+        timeout_seconds=CANDIDATE_TIMEOUT,
+        python_executable=PY,
+    )
+    manifest_path = case_dir / "candidate_region.json"
+    if process.returncode == 0 and manifest_path.is_file():
+        try:
+            result = json.loads(manifest_path.read_text("utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise PipelineError("Manifesto do candidato automático inválido.") from exc
+        if result.get("schema") != "argos-candidate-region-v1":
+            raise PipelineError("Schema do candidato automático inválido.")
+        return result
+    # Remove any incomplete/stale candidate so finalize cannot publish it.
+    for name in (
+        "mask_candidate.nii.gz", "mask_candidate_clean.nii.gz",
+        "mesh_candidate.vtp", "candidate_region.json",
+    ):
+        (case_dir / name).unlink(missing_ok=True)
+    return {
+        "status": "localization_unavailable",
+        "candidate_present": False,
+        "used_by_screening_inference": False,
+        "requires_human_review": True,
+        "reason": candidate_error(process),
+    }
+
+
 def process_visual_job(job_id: str, raw_dir: Path) -> None:
     """Exame individual pelo classificador visual da Etapa C.
 
@@ -576,6 +736,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
     """
     from dtwin.learning.exam_to_panels import build_exam_panels
     from dtwin.learning.multiphase_ingest import build_multiphase_case
+    from dtwin.learning.raw_dicom_phase_resolver import RawPhaseResolutionError
     from dtwin.learning.visual_inference import (
         classify_embeddings,
         embed_panels,
@@ -589,44 +750,63 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
     qualidade_mascara: dict | None = None
     try:
         _set(job_id, state="processing", step="ingestao_multifasica", progress=15)
-        bundle = load_production_bundle(_visual_bundle_root("hybrid_supervised"))
-
         def segment_venous(venous_dir: Path, _work_dir: Path) -> Path:
             # Segmenta no PRÓPRIO diretório do job, e não numa subpasta: é de lá
             # que a rota /api/jobs/{id}/model serve a malha, então isso preserva o
             # modelo 3D de revisão que o fluxo anterior gerava.
-            proc = _segment(str(Path(venous_dir).resolve()), case_dir, "gpu",
-                            PREP_TIMEOUT_GPU, fast=False)
-            if not _seg_done(case_dir):
-                log.warning("Job visual %s: GPU falhou; tentando CPU", job_id)
-                shutil.rmtree(case_dir, ignore_errors=True)
-                proc = _segment(str(Path(venous_dir).resolve()), case_dir, "cpu",
-                                PREP_TIMEOUT_CPU, fast=False)
-                if not _seg_done(case_dir):
-                    raise PipelineError(_friendly_text(_cli_reason(proc)))
-            # Gate anatômico: uma máscara implausível invalida tudo a jusante --
-            # os painéis são recortados a partir dela.
-            qualidade = _mask_quality(case_dir)
-            if not qualidade["gate_passed"]:
-                log.warning("Job visual %s: máscara reprovada (%s)",
-                            job_id, qualidade["failure_reasons"])
-                raise PipelineError(
-                    "A segmentação do fígado não ficou anatomicamente plausível: "
-                    + _motivo_mascara(qualidade)
-                    + ". Um resultado calculado sobre ela não seria confiável."
-                )
             nonlocal qualidade_mascara
-            qualidade_mascara = qualidade
+            qualidade_mascara = _segmentar_figado_com_gate(
+                venous_dir, case_dir, f"Job visual {job_id}"
+            )
             return case_dir
 
         t0 = time.monotonic()
-        multiphase = build_multiphase_case(
-            case_id=job_id,
-            case_upload_dir=Path(raw_dir),
-            output_dir=case_dir / "multiphase",
-            segment_venous=segment_venous,
-        )
+        try:
+            multiphase = build_multiphase_case(
+                case_id=job_id,
+                case_upload_dir=Path(raw_dir),
+                output_dir=case_dir / "multiphase",
+                segment_venous=segment_venous,
+            )
+        except RawPhaseResolutionError as exc:
+            if exc.code != "insufficient_dynamic_phases":
+                raise
+            # Never make fake RGB phases. Use the best real series through a
+            # dedicated single-phase reader and carry its limitations forward.
+            scenario = "monophase_rag"
+            assessment = {
+                "schema": "oren-input-assessment-v1",
+                "mode": "single_phase",
+                "dynamic_enhancement_information_present": False,
+                "synthetic_phases_created": False,
+                "validated_triphase_metrics_applicable": False,
+                "fallback_reason_code": exc.code,
+                "limitations": [
+                    "Apenas uma série de RM foi usada.",
+                    "O painel contém nove cortes sistematicamente amostrados e não representa cobertura axial integral.",
+                    "Não é possível avaliar realce arterial, washout ou persistência entre fases.",
+                    "Este resultado não deve ser comparado diretamente às métricas do protocolo trifásico.",
+                ],
+            }
+            _set(
+                job_id,
+                analysis_scenario=scenario,
+                input_assessment=assessment,
+                step="ingestao_monofasica",
+                progress=18,
+            )
+            process_job(
+                job_id,
+                raw_dir,
+                medgemma_config=MONOPHASE_MEDGEMMA_CONFIG,
+                analysis_scenario=scenario,
+                input_assessment=assessment,
+            )
+            return
         duracoes["ingestao_e_segmentacao"] = round(time.monotonic() - t0, 4)
+
+        # A single-phase fallback must not depend on the visual bundle.
+        bundle = load_production_bundle(_visual_bundle_root("hybrid_supervised"))
 
         _set(job_id, state="processing", step="paineis", progress=55)
         t0 = time.monotonic()
@@ -645,9 +825,39 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
         decision = classify_embeddings(bundle, embeddings)
         duracoes["classificacao"] = round(time.monotonic() - t0, 4)
 
+        # A decisão já está congelada. Só agora a região candidata pode ser
+        # localizada para o visualizador; ela jamais retorna ao classificador.
+        _set(job_id, state="processing", step="localizacao_candidata", progress=88)
+        t0 = time.monotonic()
+        try:
+            candidate_localization = _localize_candidate(case_dir, decision)
+        except subprocess.TimeoutExpired:
+            for name in (
+                "mask_candidate.nii.gz", "mask_candidate_clean.nii.gz",
+                "mesh_candidate.vtp", "candidate_region.json",
+            ):
+                (case_dir / name).unlink(missing_ok=True)
+            candidate_localization = {
+                "status": "localization_timeout",
+                "candidate_present": False,
+                "used_by_screening_inference": False,
+                "requires_human_review": True,
+            }
+        except Exception as exc:  # noqa: BLE001
+            candidate_localization = {
+                "status": "localization_unavailable",
+                "candidate_present": False,
+                "used_by_screening_inference": False,
+                "requires_human_review": True,
+                "reason": type(exc).__name__,
+            }
+        duracoes["localizacao_candidata_pos_inferencia"] = round(
+            time.monotonic() - t0, 4
+        )
+
         # Modelo 3D do fígado para revisão. É acessório à decisão: se falhar, o
         # resultado sai do mesmo jeito, apenas sem o visualizador.
-        _set(job_id, state="processing", step="modelo_3d", progress=92)
+        _set(job_id, state="processing", step="modelo_3d", progress=94)
         t0 = time.monotonic()
         try:
             viewer_ready, motivo_modelo = _build_model(case_dir)
@@ -668,11 +878,13 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             "panel_count": decision["panel_count"],
             "class_probabilities": decision["class_probabilities"],
             "phase_coverage": multiphase.coverage,
+            "phase_resolution": multiphase.phase_resolution,
             "in_sample": status["in_sample"],
             "in_sample_verdict": status["verdict"],
             "durations_seconds": duracoes,
             "liver_mask_quality": qualidade_mascara,
             "liver_volume_warning": _aviso_volume_figado(qualidade_mascara),
+            "candidate_localization": candidate_localization,
             "viewer_ready": bool(viewer_ready),
             "viewer_url": (
                 f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}"
@@ -708,8 +920,35 @@ def _case_dir_for_job(job_id: str) -> Path:
     return (WORKSPACE / job_id / "case").resolve()
 
 
+class ReviewChecklistPayload(BaseModel):
+    inspected_3d_contour: bool = False
+    compared_2d_reference: bool = False
+    reviewed_candidate_against_mr: bool = False
+    acknowledged_research_only: bool = False
+
+
+class ClippingStatePayload(BaseModel):
+    enabled: bool = False
+    axis: Literal["x", "y", "z"] = "z"
+    position_percent: float = 50.0
+    inverted: bool = False
+
+
+class ViewerStatePayload(BaseModel):
+    active_view: Literal["padrao", "anterior", "superior", "direita"] = "padrao"
+    wireframe_enabled: bool = False
+    clipping: ClippingStatePayload | None = None
+    measurements_mm: list[float] = Field(default_factory=list)
+    visible_roles: list[str] = Field(default_factory=list)
+
+
 class ApprovalPayload(BaseModel):
     status: Literal["approved", "revision_requested"]
+    checklist: ReviewChecklistPayload | None = None
+    viewer_state: ViewerStatePayload | None = None
+    candidate_review_decision: Literal[
+        "accepted_as_region_of_interest", "rejected", "needs_correction"
+    ] | None = None
 
 
 def process_job(
@@ -717,6 +956,7 @@ def process_job(
     raw_dir: Path,
     medgemma_config: str = VOLUMETRIC_RAG_MEDGEMMA_CONFIG,
     analysis_scenario: str = "volumetric_rag",
+    input_assessment: dict[str, Any] | None = None,
 ) -> None:
     # case_dir e raw_dir (_upload) são IRMÃOS sob WORKSPACE/job_id; nunca aninhados,
     # senão limpar o case_dir apagaria o DICOM enviado (necessário no fallback CPU).
@@ -860,6 +1100,7 @@ def process_job(
                 job_id,
                 viewer_ready,
                 analysis_scenario=analysis_scenario,
+                input_assessment=input_assessment,
             ),
         )
     except subprocess.TimeoutExpired:
@@ -1148,14 +1389,12 @@ def _run_visual_benchmark_case(
             base["phase_resolution"] = authorized_resolution.safe_manifest()
 
         def segment_venous(venous_dir: Path, work_dir: Path) -> Path:
+            # Mesmo gate anatômico do exame individual. Sem ele, o benchmark
+            # contava como acerto exames que a página individual recusava.
             work_dir = Path(work_dir).resolve()
-            prep = _segment(str(Path(venous_dir).resolve()), work_dir, "gpu", PREP_TIMEOUT_GPU, fast=False)
-            if not _seg_done(work_dir):
-                log.warning("Benchmark visual %s/%s: GPU falhou; tentando CPU", benchmark_id, item["id"])
-                shutil.rmtree(work_dir, ignore_errors=True)
-                prep = _segment(str(Path(venous_dir).resolve()), work_dir, "cpu", PREP_TIMEOUT_CPU, fast=False)
-                if not _seg_done(work_dir):
-                    raise PipelineError(_friendly_text(_cli_reason(prep)))
+            base["liver_mask_quality"] = _segmentar_figado_com_gate(
+                venous_dir, work_dir, f"Benchmark visual {benchmark_id}/{item['id']}"
+            )
             return work_dir
 
         ingest_started = time.monotonic()
@@ -1370,14 +1609,19 @@ def _run_benchmark_case(
         shutil.rmtree(series_dir, ignore_errors=True)
 
 
-def _evaluate_benchmark_result(inference_result: dict, label: str) -> dict:
-    """Anexa o ground truth somente após a inferência ter encerrado."""
+def _evaluate_benchmark_result(
+    inference_result: dict,
+    label: str,
+    truth_subtype: str | None = None,
+) -> dict:
+    """Anexa ground truths binário e multiclasse somente após a inferência."""
     started = time.monotonic()
     result = dict(inference_result)
     expected = "POSITIVA" if label == "positive" else "NEGATIVA"
     prediction = result.get("prediction")
     result.update(
         truth=label,
+        truth_subtype=truth_subtype,
         correct=(prediction == expected) if prediction in {"POSITIVA", "NEGATIVA"} else None,
         protected_ground_truth_hashes={"lesion_mask": None, "annotation_manifest": None},
     )
@@ -1414,7 +1658,13 @@ def process_benchmark(benchmark_id: str, manifest: dict, raw_dir: Path) -> None:
                 inference_result = _run_benchmark_case(
                     benchmark_id, index, case_item, raw_dir / f"{index:04d}", medgemma_config
                 )
-            results.append(_evaluate_benchmark_result(inference_result, item["label"]))
+            results.append(
+                _evaluate_benchmark_result(
+                    inference_result,
+                    item["label"],
+                    item.get("truth_subtype"),
+                )
+            )
             _set_benchmark(benchmark_id, processed=index, progress=5 + int(index / len(cases) * 90))
 
         completed_at = datetime.now(timezone.utc).isoformat()
@@ -1422,16 +1672,33 @@ def process_benchmark(benchmark_id: str, manifest: dict, raw_dir: Path) -> None:
             _visual_model_info(scenario) if visual else _benchmark_model_info(medgemma_config)
         )
         metrics = calculate_benchmark_metrics(results)
+        subtype_metrics = (
+            compute_subtype_metrics(results)
+            if manifest.get("evaluation_mode") == "pathology_and_subtype"
+            else None
+        )
+        combined_target = {
+            "requires_binary_and_subtype_targets": bool(subtype_metrics),
+            "binary_met": metrics["target"]["met"],
+            "subtype_met": subtype_metrics["target"]["met"] if subtype_metrics else None,
+            "met": bool(
+                metrics["target"]["met"]
+                and (subtype_metrics is None or subtype_metrics["target"]["met"])
+            ),
+        }
         report = {
             "schema_version": 1,
             "benchmark_id": benchmark_id,
             "dataset_name": manifest["dataset_name"],
             "dataset_kind": manifest["dataset_kind"],
+            "evaluation_mode": manifest.get("evaluation_mode", "binary"),
             "scenario": manifest.get("scenario", "baseline"),
             "started_at": started_at,
             "completed_at": completed_at,
             "model": model_info,
             "metrics": metrics,
+            "subtype_metrics": subtype_metrics,
+            "combined_target": combined_target,
             "provenance": _provenance_summary(results) if visual else None,
             "cases": results,
             "disclaimer": DISCLAIMER,
@@ -1485,8 +1752,22 @@ def process_benchmark(benchmark_id: str, manifest: dict, raw_dir: Path) -> None:
                 "platform": platform.platform(),
             },
             "research_only": True,
+            "evaluation_mode": manifest.get("evaluation_mode", "binary"),
+            "subtype_reference_vocabulary": (
+                list(SUBTYPE_CLASSES)
+                if manifest.get("evaluation_mode") == "pathology_and_subtype"
+                else None
+            ),
         }
         write_run_outputs(benchmark_root, run_manifest, results, metrics)
+        if subtype_metrics is not None:
+            subtype_path = benchmark_root / "metrics_subtype.json"
+            subtype_temp = benchmark_root / ".metrics_subtype.json.tmp"
+            subtype_temp.write_text(
+                json.dumps(subtype_metrics, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            subtype_temp.replace(subtype_path)
         _set_benchmark(
             benchmark_id,
             state="done",
@@ -1516,12 +1797,20 @@ def _parse_benchmark_manifest(raw: str, file_count: int) -> dict:
         raise HTTPException(status_code=400, detail="Manifesto do benchmark inválido.")
     dataset_name = str(manifest.get("dataset_name") or "").strip()[:120]
     dataset_kind = manifest.get("dataset_kind")
+    evaluation_mode = str(manifest.get("evaluation_mode") or "binary")
     scenario = str(manifest.get("scenario") or "baseline")
     cases = manifest.get("cases")
     if not dataset_name:
         raise HTTPException(status_code=400, detail="Informe o nome do dataset.")
     if dataset_kind not in {"positive", "negative", "mixed"}:
         raise HTTPException(status_code=400, detail="Tipo de dataset inválido.")
+    if evaluation_mode not in {"binary", "pathology_and_subtype"}:
+        raise HTTPException(status_code=400, detail="Modo de avaliação inválido.")
+    if evaluation_mode == "pathology_and_subtype" and dataset_kind != "mixed":
+        raise HTTPException(
+            status_code=400,
+            detail="O benchmark de patologia e variação exige dataset misto.",
+        )
     if scenario not in BENCHMARK_SCENARIOS and scenario not in VISUAL_BENCHMARK_SCENARIOS:
         raise HTTPException(status_code=400, detail="Cenário de benchmark inválido.")
     if not isinstance(cases, list) or not cases:
@@ -1535,6 +1824,28 @@ def _parse_benchmark_manifest(raw: str, file_count: int) -> dict:
             raise HTTPException(status_code=400, detail="Definição de exame inválida.")
         case_id = str(case.get("id") or "").strip()[:120]
         label = case.get("label")
+        truth_subtype = case.get("truth_subtype")
+        if truth_subtype is not None:
+            truth_subtype = str(truth_subtype).strip()
+        if evaluation_mode == "pathology_and_subtype":
+            if truth_subtype not in SUBTYPE_CLASSES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Subtipo de referência inválido no exame {case_id}.",
+                )
+            expected_label = binary_label_for_subtype(truth_subtype)
+            if label != expected_label:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Rótulo binário incompatível com o subtipo no exame {case_id}."
+                    ),
+                )
+        elif truth_subtype:
+            raise HTTPException(
+                status_code=400,
+                detail="Subtipo protegido só é aceito no modo patologia e variação.",
+            )
         indices = case.get("file_indices")
         if not case_id or case_id in seen_ids:
             raise HTTPException(status_code=400, detail="Os exames precisam de identificadores únicos.")
@@ -1554,11 +1865,17 @@ def _parse_benchmark_manifest(raw: str, file_count: int) -> dict:
             seen_files.add(value)
             clean_indices.append(value)
         seen_ids.add(case_id)
-        normalized.append({"id": case_id, "label": label, "file_indices": clean_indices})
+        normalized.append({
+            "id": case_id,
+            "label": label,
+            "truth_subtype": truth_subtype if evaluation_mode == "pathology_and_subtype" else None,
+            "file_indices": clean_indices,
+        })
     if seen_files != set(range(file_count)):
         raise HTTPException(status_code=400, detail="Todos os arquivos devem pertencer a um exame.")
     return {
         "dataset_name": dataset_name, "dataset_kind": dataset_kind,
+        "evaluation_mode": evaluation_mode,
         "scenario": scenario, "cases": normalized,
     }
 
@@ -1580,6 +1897,7 @@ def _benchmark_csv(report: dict) -> str:
     writer.writerow([
         "case_id", "truth", "prediction", "status", "correct", "confidence",
         "duration_seconds", "error",
+        "truth_subtype", "predicted_subtype_for_scoring", "subtype_correct",
         # Identificação da alteração (modo visual). `subtype_determined` falso num
         # caso POSITIVA não é dado faltante: é o modelo declarando que não tem base
         # para nomear o subtipo neste exame (docs/161).
@@ -1597,6 +1915,9 @@ def _benchmark_csv(report: dict) -> str:
             item.get("case_id"), item.get("truth"), item.get("prediction"),
             item.get("status"), item.get("correct"), item.get("confidence"),
             item.get("duration_seconds"), _csv_cell(item.get("error")),
+            _csv_cell(item.get("truth_subtype")),
+            _csv_cell(item.get("predicted_subtype_for_scoring")),
+            _csv_cell(item.get("subtype_correct")),
             _csv_cell(item.get("subtype_determined")),
             _csv_cell(item.get("subtype")),
             _csv_cell(item.get("subtype_confidence")),
@@ -1843,15 +2164,18 @@ def model_file(job_id: str, filename: str):
         raise HTTPException(status_code=404, detail="Arquivo do modelo nao encontrado.")
     try:
         manifest = json.loads(manifest_path.read_text("utf-8"))
-        allowed = {item.get("stl") for item in manifest.get("meshes", []) if isinstance(item, dict)}
+        assets = _viewer_assets(manifest)
     except (OSError, json.JSONDecodeError):
         raise HTTPException(status_code=404, detail="Manifesto do modelo invalido.")
-    if filename not in allowed:
+    if filename not in assets:
         raise HTTPException(status_code=404, detail="Arquivo do modelo nao encontrado.")
     path = manifest_path.parent / filename
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Arquivo do modelo nao encontrado.")
-    return FileResponse(path, media_type="model/stl", filename=filename)
+    expected_hash = assets[filename].get("sha256")
+    if expected_hash and sha256_of(path) != expected_hash:
+        raise HTTPException(status_code=409, detail="Integridade do artefato do modelo falhou.")
+    return FileResponse(path, media_type=str(assets[filename]["media_type"]))
 
 
 @app.post("/api/jobs/{job_id}/approval")
@@ -1863,10 +2187,69 @@ def approve_model(job_id: str, payload: ApprovalPayload) -> dict:
         job = _jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job nao encontrado.")
+    manifest_path = case_dir / "outputs" / "viewer_manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text("utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=409, detail="Manifesto do modelo invalido.") from exc
+
+    checklist = payload.checklist or ReviewChecklistPayload()
+    requirements = manifest.get("review_requirements", {})
+    if payload.status == "approved" and isinstance(requirements, dict):
+        missing: list[str] = []
+        if requirements.get("inspect_3d_contour") and not checklist.inspected_3d_contour:
+            missing.append("inspecao_3d")
+        if requirements.get("inspect_2d_reference") and not checklist.compared_2d_reference:
+            missing.append("comparacao_2d")
+        if requirements.get("acknowledge_research_only") and not checklist.acknowledged_research_only:
+            missing.append("ciencia_uso_pesquisa")
+        if requirements.get("inspect_candidate_against_mr"):
+            if not checklist.reviewed_candidate_against_mr:
+                missing.append("comparacao_candidato_rm")
+            if payload.candidate_review_decision not in {
+                "accepted_as_region_of_interest", "rejected"
+            }:
+                missing.append("decisao_sobre_candidato")
+        if missing:
+            raise HTTPException(
+                status_code=422,
+                detail="Checklist de revisao incompleto: " + ", ".join(missing),
+            )
+
+    state = payload.viewer_state or ViewerStatePayload()
+    allowed_roles = {
+        item.get("role") for item in manifest.get("meshes", []) if isinstance(item, dict)
+    }
+    if len(state.visible_roles) > 64 or any(role not in allowed_roles for role in state.visible_roles):
+        raise HTTPException(status_code=422, detail="Estado do visualizador contem estrutura invalida.")
+    if len(state.measurements_mm) > 20 or any(
+        not math.isfinite(value) or value < 0 or value > 5000
+        for value in state.measurements_mm
+    ):
+        raise HTTPException(status_code=422, detail="Medicoes do visualizador invalidas.")
+    clipping = state.clipping or ClippingStatePayload()
+    if not math.isfinite(clipping.position_percent) or not 0 <= clipping.position_percent <= 100:
+        raise HTTPException(status_code=422, detail="Plano de corte invalido.")
+
+    artifact_hashes = {
+        filename: spec.get("sha256") or sha256_of(manifest_path.parent / filename)
+        for filename, spec in _viewer_assets(manifest).items()
+    }
     approval = {
         "status": payload.status,
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
         "review_type": "human_visual_review",
+        "review_protocol": "argos-viewer-review-v2",
+        "checklist": checklist.model_dump(),
+        "viewer_state": state.model_dump(),
+        "candidate_review_decision": payload.candidate_review_decision,
+        "candidate_review_scope": (
+            "technical_region_of_interest_only_not_diagnostic_confirmation"
+            if manifest.get("candidate_region")
+            else None
+        ),
+        "viewer_manifest_sha256": sha256_of(manifest_path),
+        "artifact_hashes": artifact_hashes,
     }
     path = case_dir / "outputs" / "approval.json"
     temp = path.with_name(".approval.json.tmp")

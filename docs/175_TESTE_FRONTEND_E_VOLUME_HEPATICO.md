@@ -139,10 +139,51 @@ máscaras encostam na borda do volume. Nos piores casos o fígado segmentado ocu
 
 ## 6. Pendências que este teste abre
 
-- **Unificar o gate** entre o caminho individual e o de benchmark. Hoje o mesmo
-  exame recebe tratamento diferente conforme a página, e isso não se sustenta.
+- ~~**Unificar o gate** entre o caminho individual e o de benchmark.~~
+  **FEITO — ver §7.**
 - **Revisar o piso de 300 mL.** Ele reprova 17% quando 76% estão abaixo da faixa
   adulta: pega desastres, não sub-segmentação moderada.
 - **Investigar a sub-segmentação do `total_mr` nesta coorte.** Trocar a máscara
   invalidaria as métricas congeladas (os painéis saem dela), então isso é
   trabalho planejado, não conserto de véspera.
+
+---
+
+## 7. Correção aplicada: o gate agora é um ponto único
+
+`_segmentar_figado_com_gate` passa a ser a **única** forma de obter uma máscara
+hepática nos dois fluxos visuais. `process_visual_job` e
+`_run_visual_benchmark_case` chamam essa função; nenhum dos dois chama `_segment`
+direto.
+
+Falhar ali é o comportamento correto, não efeito colateral: os painéis são
+recortados da máscara, então classificar sobre meio fígado é acertar por sorte.
+No benchmark a exceção vira falha técnica, que a política de métricas já conta
+como erro.
+
+### Verificação ponta a ponta, pela página de benchmark
+
+Os dois casos HCC, enviados pelo botão real da página:
+
+| Caso | Antes | Depois |
+|---|---|---|
+| `ARGOS-BLIND-0026` | `decisive`, contado como **acerto** | **`failed`** — "a segmentação do fígado não ficou anatomicamente plausível" |
+| `ARGOS-BLIND-0046` | `decisive` | `decisive`, POSITIVA, agora com `liver_mask_quality` registrado (484,8 mL) |
+
+A sensibilidade desse lote de dois caiu de 1,00 para **0,50**, porque a falha
+técnica passou a contar como erro. **Essa queda é o conserto, não uma
+regressão:** o número antigo vinha de aceitar um exame que a página individual
+recusava.
+
+Efeito colateral útil: o benchmark passa a gravar `liver_mask_quality` por caso,
+então o volume segmentado fica auditável em cada linha do relatório.
+
+### Testes
+
+Três testes novos em `tests/test_webapp.py` (1349 → **1352**, todos passando):
+
+- o gate recusa máscara implausível e a mensagem chega ao usuário;
+- o gate devolve a qualidade quando aprova, para alimentar o aviso de volume;
+- **teste de regressão estrutural**: falha se qualquer um dos dois fluxos visuais
+  voltar a chamar `_segment` direto, contornando o ponto único. É o que impede a
+  divergência de voltar sem ninguém perceber.

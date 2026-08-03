@@ -171,6 +171,147 @@ def test_model_endpoints_and_manual_approval(monkeypatch, tmp_path):
     assert saved["review_type"] == "human_visual_review"
 
 
+def test_viewer_v2_checks_assets_and_requires_auditable_review(monkeypatch, tmp_path):
+    import json
+
+    from dtwin.core import sha256_of
+
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    job_id = "def456"
+    outputs = tmp_path / job_id / "case" / "outputs"
+    outputs.mkdir(parents=True)
+    stl = outputs / "figado_orgao.stl"
+    png = outputs / "mri_reference_axial_001_of_001.png"
+    stl.write_bytes(b"solid liver\nendsolid liver\n")
+    png.write_bytes(b"not-a-real-png-but-hash-protected")
+    manifest = {
+        "schema": "argos-viewer-manifest-v2",
+        "meshes": [{
+            "role": "orgao",
+            "stl": stl.name,
+            "color": "#ffffff",
+            "metrics": {"mesh_sha256": sha256_of(stl)},
+        }],
+        "reference_images": {"views": {"axial": {"frames": [{
+            "file": png.name,
+            "sha256": sha256_of(png),
+            "index": 0,
+        }]}}},
+        "review_requirements": {
+            "inspect_3d_contour": True,
+            "inspect_2d_reference": True,
+            "acknowledge_research_only": True,
+        },
+    }
+    (outputs / "viewer_manifest.json").write_text(json.dumps(manifest), "utf-8")
+    server._jobs[job_id] = {
+        "state": "done", "step": "concluido", "progress": 100,
+        "result": {}, "approval": {"status": "pending"},
+    }
+    client = TestClient(server.app)
+
+    assert server._model_done(tmp_path / job_id / "case") is True
+    image_response = client.get(f"/api/jobs/{job_id}/model/{png.name}")
+    assert image_response.status_code == 200
+    assert image_response.headers["content-type"].startswith("image/png")
+    assert client.post(
+        f"/api/jobs/{job_id}/approval", json={"status": "approved"}
+    ).status_code == 422
+
+    response = client.post(
+        f"/api/jobs/{job_id}/approval",
+        json={
+            "status": "approved",
+            "checklist": {
+                "inspected_3d_contour": True,
+                "compared_2d_reference": True,
+                "acknowledged_research_only": True,
+            },
+            "viewer_state": {
+                "active_view": "anterior",
+                "wireframe_enabled": True,
+                "clipping": {
+                    "enabled": True, "axis": "z",
+                    "position_percent": 42, "inverted": False,
+                },
+                "measurements_mm": [12.5],
+                "visible_roles": ["orgao"],
+            },
+        },
+    )
+    assert response.status_code == 200
+    saved = json.loads((outputs / "approval.json").read_text("utf-8"))
+    assert saved["review_protocol"] == "argos-viewer-review-v2"
+    assert saved["checklist"]["compared_2d_reference"] is True
+    assert saved["viewer_state"]["measurements_mm"] == [12.5]
+    assert saved["viewer_manifest_sha256"] == sha256_of(outputs / "viewer_manifest.json")
+    assert saved["artifact_hashes"][png.name] == sha256_of(png)
+
+    png.write_bytes(b"tampered")
+    assert server._model_done(tmp_path / job_id / "case") is False
+    assert client.get(f"/api/jobs/{job_id}/model/{png.name}").status_code == 409
+
+
+def test_candidate_review_requires_mr_comparison_and_explicit_roi_decision(monkeypatch, tmp_path):
+    import json
+
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    job_id = "cab123"
+    outputs = tmp_path / job_id / "case" / "outputs"
+    outputs.mkdir(parents=True)
+    stl = outputs / "figado_candidato.stl"
+    stl.write_bytes(b"solid candidate\nendsolid candidate\n")
+    manifest = {
+        "meshes": [{"role": "candidato", "stl": stl.name, "color": "#ff8400"}],
+        "candidate_region": {
+            "schema": "argos-candidate-region-v1",
+            "candidate_present": True,
+            "candidate_is_diagnosis": False,
+        },
+        "review_requirements": {
+            "inspect_candidate_against_mr": True,
+            "acknowledge_research_only": True,
+        },
+    }
+    (outputs / "viewer_manifest.json").write_text(json.dumps(manifest), "utf-8")
+    server._jobs[job_id] = {"state": "done", "result": {}, "approval": {"status": "pending"}}
+    client = TestClient(server.app)
+
+    incomplete = client.post(
+        f"/api/jobs/{job_id}/approval",
+        json={
+            "status": "approved",
+            "checklist": {"acknowledged_research_only": True},
+        },
+    )
+    assert incomplete.status_code == 422
+
+    accepted = client.post(
+        f"/api/jobs/{job_id}/approval",
+        json={
+            "status": "approved",
+            "candidate_review_decision": "accepted_as_region_of_interest",
+            "checklist": {
+                "reviewed_candidate_against_mr": True,
+                "acknowledged_research_only": True,
+            },
+        },
+    )
+    assert accepted.status_code == 200
+    saved = json.loads((outputs / "approval.json").read_text("utf-8"))
+    assert saved["candidate_review_decision"] == "accepted_as_region_of_interest"
+    assert saved["candidate_review_scope"].endswith("not_diagnostic_confirmation")
+
+
+def test_candidate_localizer_is_not_requested_without_focal_finding(tmp_path):
+    result = server._localize_candidate(
+        tmp_path,
+        {"prediction": "NEGATIVE", "subtype": {"determined": False}},
+    )
+    assert result["status"] == "not_requested_no_focal_finding"
+    assert result["used_by_screening_inference"] is False
+
+
 def test_seg_done_requires_volume_and_mask(tmp_path):
     assert server._seg_done(tmp_path) is False
     (tmp_path / "volume.nii.gz").write_bytes(b"x")
@@ -258,6 +399,119 @@ def test_paginas_nao_oferecem_escolha_de_modo():
         assert "data-scenario=" not in page, f"{arquivo} ainda oferece seleção de modo"
     individual = Path("webapp/static/index.html").read_text(encoding="utf-8")
     assert "fd.append('scenario', 'hybrid_supervised')" in individual
+
+
+def test_exame_individual_accepts_dicom_bruto_e_expoe_resolucao_de_fases():
+    page = Path("webapp/static/index.html").read_text(encoding="utf-8")
+    assert "pasta DICOM bruta" in page
+    assert "modo monofásico experimental" in page
+    assert "sem criar fases" in page
+    assert "Ambiguidade entre várias séries" in page
+    assert "ordered_axial_t1_postcontrast_series" in page
+    assert "ordem temporal DICOM revisável" in page
+
+
+def test_visual_job_falls_back_only_for_insufficient_dynamic_phases(monkeypatch, tmp_path):
+    from dtwin.learning import multiphase_ingest
+    from dtwin.learning.raw_dicom_phase_resolver import RawPhaseResolutionError
+
+    job_id = "mono00000001"
+    raw = tmp_path / "upload"
+    raw.mkdir()
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path / "workspace")
+    server._jobs[job_id] = {
+        "state": "queued", "step": "recebendo", "progress": 5,
+        "result": None, "analysis_scenario": "hybrid_supervised",
+    }
+
+    def insufficient(**_kwargs):
+        raise RawPhaseResolutionError(
+            "fases insuficientes", code="insufficient_dynamic_phases"
+        )
+
+    captured = {}
+
+    def single_phase_worker(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr(multiphase_ingest, "build_multiphase_case", insufficient)
+    monkeypatch.setattr(server, "process_job", single_phase_worker)
+
+    server.process_visual_job(job_id, raw)
+
+    assert captured["args"] == (job_id, raw)
+    assert captured["kwargs"]["medgemma_config"] == server.MONOPHASE_MEDGEMMA_CONFIG
+    assert captured["kwargs"]["analysis_scenario"] == "monophase_rag"
+    assessment = captured["kwargs"]["input_assessment"]
+    assert assessment["dynamic_enhancement_information_present"] is False
+    assert assessment["synthetic_phases_created"] is False
+    assert assessment["validated_triphase_metrics_applicable"] is False
+    assert server._jobs[job_id]["analysis_scenario"] == "monophase_rag"
+
+
+def test_visual_job_keeps_ambiguous_raw_study_fail_closed(monkeypatch, tmp_path):
+    from dtwin.learning import multiphase_ingest
+    from dtwin.learning.raw_dicom_phase_resolver import RawPhaseResolutionError
+
+    job_id = "ambig0000001"
+    raw = tmp_path / "upload"
+    raw.mkdir()
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path / "workspace")
+    server._jobs[job_id] = {
+        "state": "queued", "step": "recebendo", "progress": 5,
+        "result": None, "analysis_scenario": "hybrid_supervised",
+    }
+
+    def ambiguous(**_kwargs):
+        raise RawPhaseResolutionError(
+            "mais de um estudo elegível",
+            code="ambiguous_explicit_multiphase_studies",
+        )
+
+    fallback_called = []
+    monkeypatch.setattr(multiphase_ingest, "build_multiphase_case", ambiguous)
+    monkeypatch.setattr(server, "process_job", lambda *_a, **_k: fallback_called.append(True))
+
+    server.process_visual_job(job_id, raw)
+
+    assert fallback_called == []
+    assert server._jobs[job_id]["result"]["status"] == "nao_concluido"
+    assert "mais de um estudo" in server._jobs[job_id]["result"]["motivo"]
+
+
+def test_monophase_config_is_low_latency_rag_and_forbids_dynamic_claims():
+    from dtwin.medgemma_client import load_screening_config
+
+    config = load_screening_config(server.REPO / server.MONOPHASE_MEDGEMMA_CONFIG)
+    prompt = config["prompt"]["template"]
+
+    assert config["panel"]["strategy"] == "uniform_9"
+    assert config["rag"]["enabled"] is True
+    assert "entrada é monofásica" in prompt
+    assert "Nenhuma fase foi sintetizada" in prompt
+    assert "não afirme realce arterial, washout" in prompt
+    assert '"alvo_da_triagem"' in prompt
+
+
+def test_monophase_viewer_result_preserves_input_assessment():
+    assessment = {
+        "mode": "single_phase",
+        "dynamic_enhancement_information_present": False,
+        "synthetic_phases_created": False,
+        "validated_triphase_metrics_applicable": False,
+    }
+    result = server._viewer_result(
+        {"report": {"resultado_hipotese": "INCONCLUSIVA"}},
+        "abc123",
+        False,
+        analysis_scenario="monophase_rag",
+        input_assessment=assessment,
+    )
+
+    assert result["analysis_scenario"] == "monophase_rag"
+    assert result["input_assessment"] == assessment
+    assert result["status"] == "concluido"
 
 
 def test_benchmark_metrics_keep_failures_and_inconclusives_visible():
@@ -383,6 +637,75 @@ def test_benchmark_manifest_accepts_visual_scenario():
     assert server._is_visual_scenario("hybrid_supervised") is True
     # cenários MedGemma continuam não-visuais
     assert server._is_visual_scenario("pathology_target") is False
+
+
+def test_benchmark_manifest_accepts_pathology_and_subtype_and_derives_consistency():
+    import json
+
+    parsed = server._parse_benchmark_manifest(
+        json.dumps({
+            "dataset_name": "Coorte de variações",
+            "dataset_kind": "mixed",
+            "evaluation_mode": "pathology_and_subtype",
+            "scenario": "hybrid_supervised",
+            "cases": [
+                {"id": "hcc-1", "label": "positive", "truth_subtype": "hcc", "file_indices": [0]},
+                {"id": "fnh-1", "label": "negative", "truth_subtype": "fnh", "file_indices": [1]},
+                {"id": "hem-1", "label": "negative", "truth_subtype": "hemangioma", "file_indices": [2]},
+                {"id": "cyst-1", "label": "negative", "truth_subtype": "hepatic_cyst", "file_indices": [3]},
+            ],
+        }),
+        file_count=4,
+    )
+    assert parsed["evaluation_mode"] == "pathology_and_subtype"
+    assert [case["label"] for case in parsed["cases"]] == [
+        "positive", "negative", "negative", "negative",
+    ]
+
+
+def test_benchmark_manifest_rejects_inconsistent_or_unprotected_subtype():
+    import json
+
+    base = {
+        "dataset_name": "Coorte",
+        "dataset_kind": "mixed",
+        "evaluation_mode": "pathology_and_subtype",
+        "scenario": "hybrid_supervised",
+        "cases": [{
+            "id": "caso-1", "label": "positive", "truth_subtype": "fnh", "file_indices": [0],
+        }],
+    }
+    with pytest.raises(Exception, match="incompatível"):
+        server._parse_benchmark_manifest(json.dumps(base), file_count=1)
+
+    base["evaluation_mode"] = "binary"
+    with pytest.raises(Exception, match="só é aceito"):
+        server._parse_benchmark_manifest(json.dumps(base), file_count=1)
+
+
+def test_ground_truth_subtype_is_attached_only_after_inference():
+    inference = {
+        "case_id": "caso-1",
+        "prediction": "NEGATIVA",
+        "status": "decisive",
+        "subtype_determined": True,
+        "subtype": "fnh",
+    }
+    assert "truth_subtype" not in inference
+    evaluated = server._evaluate_benchmark_result(inference, "negative", "fnh")
+    assert evaluated["truth_subtype"] == "fnh"
+    assert evaluated["correct"] is True
+    assert "truth_subtype" not in inference
+
+
+def test_benchmark_frontend_exposes_dual_metrics_without_removing_binary_mode():
+    page = Path("webapp/static/benchmark.html").read_text(encoding="utf-8")
+    assert 'value="binary" checked' in page
+    assert 'value="pathology_and_subtype"' in page
+    assert "Acurácia balanceada" in page
+    assert "Matriz de confusão multiclasse" in page
+    assert "HCC é positivo para a patologia-alvo" in page
+    assert "A referência de subtipo somente é anexada depois da inferência" in page
 
 
 def test_provenance_summary_flags_unknown_and_in_sample():
@@ -749,6 +1072,7 @@ def test_benchmark_report_downloads_json_and_csv(monkeypatch, tmp_path):
     assert "case_id,truth,prediction" in header
     # Colunas estratificadas (taxonomia + schema v2) presentes e preenchidas.
     for column in (
+        "truth_subtype", "predicted_subtype_for_scoring", "subtype_correct",
         "target_condition", "negative_subtype", "positive_subtype", "phenotype_tags",
         "ha_lesao_focal_suspeita", "tipo_alteracao_nao_alvo",
     ):
@@ -789,3 +1113,119 @@ def test_web_benchmark_persists_auditable_run_outputs(monkeypatch, tmp_path):
     ):
         assert (root / name).is_file(), name
     assert server._benchmarks[benchmark_id]["state"] == "done"
+
+
+def test_web_benchmark_builds_dual_report_without_leaking_subtype_to_inference(
+    monkeypatch, tmp_path
+):
+    import json
+
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    truth = {
+        "hcc-1": "hcc",
+        "fnh-1": "fnh",
+        "hem-1": "hemangioma",
+        "cyst-1": "hepatic_cyst",
+    }
+
+    def fake_visual(_benchmark_id, _index, case_item, _raw_dir, _scenario):
+        assert set(case_item) == {"id", "dataset"}
+        assert "truth_subtype" not in case_item
+        subtype = truth[case_item["id"]]
+        return {
+            "case_id": case_item["id"],
+            "prediction": "POSITIVA" if subtype == "hcc" else "NEGATIVA",
+            "status": "decisive",
+            "confidence": 0.9,
+            "duration_seconds": 1.0,
+            "subtype_determined": True,
+            "subtype": subtype,
+            "in_sample_verdict": "out_of_sample",
+        }
+
+    monkeypatch.setattr(server, "_run_visual_benchmark_case", fake_visual)
+    monkeypatch.setattr(server, "_visual_model_info", lambda _scenario: {"model_id": "test"})
+    monkeypatch.setattr(server, "write_run_outputs", lambda *_args, **_kwargs: None)
+    benchmark_id = "dual001"
+    raw = tmp_path / "benchmarks" / benchmark_id / "_upload"
+    raw.mkdir(parents=True)
+    server._benchmarks[benchmark_id] = {
+        "state": "queued", "progress": 0, "processed": 0, "total": 4,
+        "current_case": None, "report": None, "error": None,
+    }
+    cases = [
+        {
+            "id": case_id,
+            "label": "positive" if subtype == "hcc" else "negative",
+            "truth_subtype": subtype,
+            "file_indices": [index],
+        }
+        for index, (case_id, subtype) in enumerate(truth.items())
+    ]
+    server.process_benchmark(benchmark_id, {
+        "dataset_name": "quatro classes",
+        "dataset_kind": "mixed",
+        "evaluation_mode": "pathology_and_subtype",
+        "scenario": "hybrid_supervised",
+        "cases": cases,
+    }, raw)
+
+    report = server._benchmarks[benchmark_id]["report"]
+    assert server._benchmarks[benchmark_id]["state"] == "done"
+    assert report["metrics"]["sensitivity"] == 1.0
+    assert report["metrics"]["specificity"] == 1.0
+    assert report["subtype_metrics"]["balanced_accuracy"] == 1.0
+    assert report["subtype_metrics"]["class_coverage_complete"] is True
+    assert report["combined_target"]["met"] is True
+    assert all(row["subtype_correct"] is True for row in report["cases"])
+    subtype_artifact = tmp_path / "benchmarks" / benchmark_id / "metrics_subtype.json"
+    assert subtype_artifact.is_file()
+    assert json.loads(subtype_artifact.read_text("utf-8"))["balanced_accuracy"] == 1.0
+
+
+def _mascara_de_teste(destino: Path, gate_passa: bool) -> None:
+    """Cria os arquivos que _seg_done exige. O gate é decidido pelo stub."""
+    destino.mkdir(parents=True, exist_ok=True)
+    (destino / "volume.nii.gz").write_bytes(b"x")
+    (destino / "mask_organ.nii.gz").write_bytes(b"x")
+
+
+def test_gate_anatomico_recusa_mascara_implausivel(monkeypatch, tmp_path):
+    """Uma máscara reprovada não pode virar resultado: os painéis saem dela."""
+    monkeypatch.setattr(server, "_segment",
+                        lambda *a, **k: _mascara_de_teste(Path(a[1]), True))
+    monkeypatch.setattr(server, "_mask_quality", lambda _d: {
+        "gate_passed": False,
+        "failure_reasons": ["physical_volume_below_minimum"],
+    })
+    with pytest.raises(PipelineError, match="anatomicamente plausível"):
+        server._segmentar_figado_com_gate(tmp_path / "venosa", tmp_path / "saida", "teste")
+
+
+def test_gate_anatomico_devolve_qualidade_quando_aprova(monkeypatch, tmp_path):
+    qualidade = {"gate_passed": True, "largest_component_volume_ml": 1500.0}
+    monkeypatch.setattr(server, "_segment",
+                        lambda *a, **k: _mascara_de_teste(Path(a[1]), True))
+    monkeypatch.setattr(server, "_mask_quality", lambda _d: qualidade)
+    assert server._segmentar_figado_com_gate(
+        tmp_path / "venosa", tmp_path / "saida", "teste") == qualidade
+
+
+def test_os_dois_caminhos_usam_o_mesmo_gate():
+    """Regressão de docs/175.
+
+    O gate existia só no exame individual, e o MESMO exame era recusado numa
+    página e contado como acerto na outra. Este teste falha se alguém voltar a
+    chamar _segment direto de dentro de um dos fluxos visuais, contornando o
+    ponto único de decisão.
+    """
+    import inspect
+
+    for fluxo in (server.process_visual_job, server._run_visual_benchmark_case):
+        fonte = inspect.getsource(fluxo)
+        assert "_segmentar_figado_com_gate" in fonte, (
+            f"{fluxo.__name__} não usa o gate unificado"
+        )
+        assert "_segment(" not in fonte, (
+            f"{fluxo.__name__} chama _segment direto e escapa do gate anatômico"
+        )
