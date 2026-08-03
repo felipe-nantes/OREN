@@ -1,5 +1,23 @@
 # Resultado do benchmark frontend — Patologia + Variação
 
+> ## ⚠️ Os números deste documento NÃO são desempenho
+>
+> Verificado depois, em [docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md):
+>
+> 1. **É in-sample.** Os **25/25** casos estavam no conjunto de treino do bundle,
+>    confirmado resolvendo a proveniência contra o manifesto do próprio bundle.
+>    O `in_sample` exibido como `unknown` significa "não foi possível comparar",
+>    não "fora da amostra".
+> 2. **Foi medido sem o gate anatômico que está no ar.** Aplicando-o, **2 dos 5
+>    positivos** seriam recusados — os 100% de sensibilidade vêm de aceitar
+>    exames que a página de exame individual rejeitava. O gate foi unificado
+>    desde então.
+>
+> **Este documento prova que o fluxo ponta a ponta funciona. Ele não mede
+> generalização.** Para o número honesto de subtipo, ver
+> [docs/174](174_CONSOLIDADO_ESTADO_ATUAL.md) §3: **52,19%** para o caminho no ar
+> e **64,81%** para a melhor configuração medida.
+
 **Data:** 3 de agosto de 2026  
 **Benchmark ID:** `9a736ea3cfee`  
 **Coorte:** 25 casos LLD-MMRI multifásicos  
