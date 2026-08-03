@@ -173,7 +173,10 @@ classificador congelado.
   máscara, métricas de fidelidade malha-versus-máscara e checklist de revisão;
 - **região candidata** localizada só **após** a decisão congelada
   ([docs/169](169_REGIAO_CANDIDATA_3D_POS_INFERENCIA.md)), sem vazamento circular;
-- 1349 testes automatizados.
+- **gate anatômico único** para exame individual e benchmark: uma máscara
+  implausível vira falha técnica em vez de resultado, nos dois caminhos, com
+  teste de regressão estrutural que impede a divergência de voltar;
+- 1352 testes automatizados.
 
 **Testado pelo frontend em 3 de agosto** ([docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md)),
 com os arquivos entrando pelo caminho real da página:
