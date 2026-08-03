@@ -217,6 +217,13 @@ o próprio resultado** (fígado de 485 mL, abaixo da faixa típica).
    automático.
 5. `clinical_use_allowed` permanece `false` em todo artefato.
 
+**Procedência dos dados, escolha de encoder, e o que não tem resposta escrita:**
+ver [docs/178](178_PROCEDENCIA_E_USO_DOS_DADOS.md). Resumo: são todos datasets
+públicos de pesquisa (Zenodo/HuggingFace/TCIA), sem coleta de paciente novo;
+MedSigLIP foi adotado porque o MedGemma generativo não separou positivo/negativo
+(docs/20), não por comparação sistemática contra outros encoders; e não há
+comparação documentada com a literatura publicada de triagem de HCC.
+
 ---
 
 ## 9. O que destrava o resto
