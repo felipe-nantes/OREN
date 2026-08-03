@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 import numpy as np
+import pydicom
 import SimpleITK as sitk
 
 from dtwin.core import PipelineError
@@ -129,6 +130,49 @@ def _squeeze_trailing_singleton(image: sitk.Image, label: str) -> sitk.Image:
     return sitk.Extract(image, size, [0, 0, 0, 0])
 
 
+def _sort_files_spatially(files: list[str | Path]) -> list[str]:
+    """Order classic DICOM slices along their recorded slice normal.
+
+    ``select_best_mr_series`` intentionally returns deterministic lexical paths,
+    but lexical order is not spatial order (for example ``1-10`` precedes
+    ``1-2``).  Feeding that list directly to SimpleITK can flip the Z origin
+    while leaving a positive direction matrix, making otherwise identical
+    phases appear disjoint. Multi-frame series contain one file and are a no-op.
+    """
+    paths = [Path(path) for path in files]
+    if len(paths) <= 1:
+        return [str(path) for path in paths]
+    records: list[tuple[float | None, int | None, str, Path]] = []
+    for path in paths:
+        try:
+            ds = pydicom.dcmread(str(path), stop_before_pixels=True, force=True)
+            orientation = [float(value) for value in getattr(ds, "ImageOrientationPatient", [])]
+            position = [float(value) for value in getattr(ds, "ImagePositionPatient", [])]
+            projected = None
+            if len(orientation) == 6 and len(position) == 3:
+                row, column = orientation[:3], orientation[3:]
+                normal = (
+                    row[1] * column[2] - row[2] * column[1],
+                    row[2] * column[0] - row[0] * column[2],
+                    row[0] * column[1] - row[1] * column[0],
+                )
+                projected = sum(normal[index] * position[index] for index in range(3))
+            try:
+                instance = int(getattr(ds, "InstanceNumber"))
+            except (TypeError, ValueError, AttributeError):
+                instance = None
+        except Exception:  # noqa: BLE001
+            projected, instance = None, None
+        records.append((projected, instance, str(path), path))
+    if all(record[0] is not None for record in records):
+        records.sort(key=lambda record: (float(record[0]), record[2]))
+    elif all(record[1] is not None for record in records):
+        records.sort(key=lambda record: (int(record[1]), record[2]))
+    else:
+        records.sort(key=lambda record: record[2])
+    return [str(record[3]) for record in records]
+
+
 def read_phase_series(phase_dir: Path, *, min_slices: int = 3) -> sitk.Image:
     """Read the best MR series inside a phase folder as a 3D image."""
     from dtwin.benchmark.dataset_audit import select_best_mr_series
@@ -139,7 +183,7 @@ def read_phase_series(phase_dir: Path, *, min_slices: int = 3) -> sitk.Image:
             f"Nenhuma série de RM válida em {phase_dir.name} (mínimo {min_slices} cortes)."
         )
     reader = sitk.ImageSeriesReader()
-    reader.SetFileNames([str(path) for path in files])
+    reader.SetFileNames(_sort_files_spatially(files))
     image = reader.Execute()
     image = _squeeze_trailing_singleton(image, phase_dir.name)
     if image.GetDimension() != 3:
@@ -178,6 +222,7 @@ class MultiphaseCase:
     phase_paths: dict[str, Path]
     coarse_liver_mask_path: Path
     coverage: dict[str, float]
+    phase_resolution: dict[str, Any]
 
 
 def build_multiphase_case(
@@ -197,8 +242,35 @@ def build_multiphase_case(
     ``mask_organ.nii.gz``. Injecting it keeps this module testable and avoids
     duplicating the webapp's GPU/CPU fallback logic.
     """
+    phase_resolution: dict[str, Any]
     if phase_dirs is None:
-        resolved_phase_dirs = discover_phase_folders(Path(case_upload_dir))
+        upload_root = Path(case_upload_dir)
+        named_phase_dirs = [
+            path for path in upload_root.rglob("*")
+            if path.is_dir() and normalize_phase_name(path.name) is not None
+        ]
+        if named_phase_dirs:
+            # Never override a partially curated or ambiguous phase layout
+            # with an automatic guess.
+            resolved_phase_dirs = discover_phase_folders(upload_root)
+            phase_resolution = {
+                "schema": "argos-phase-resolution-summary-v1",
+                "method": "explicit_folder_names",
+                "confidence": 1.0,
+            }
+        else:
+            from dtwin.learning.raw_dicom_phase_resolver import resolve_raw_dicom_phases
+
+            raw_resolution = resolve_raw_dicom_phases(
+                upload_root, Path(output_dir) / "resolved_raw_phases"
+            )
+            resolved_phase_dirs = raw_resolution.phase_dirs
+            phase_resolution = {
+                "schema": "argos-phase-resolution-summary-v1",
+                "method": raw_resolution.method,
+                "confidence": raw_resolution.confidence,
+                "manifest": str(raw_resolution.manifest_path.name),
+            }
     else:
         keys = set(phase_dirs)
         if keys != set(REQUIRED_PHASES):
@@ -215,6 +287,11 @@ def build_multiphase_case(
             raise PipelineError("Mapeamento explícito contém diretório de fase inexistente.")
         if len(set(resolved_phase_dirs.values())) != len(REQUIRED_PHASES):
             raise PipelineError("Mapeamento explícito reutiliza um diretório em mais de uma fase.")
+        phase_resolution = {
+            "schema": "argos-phase-resolution-summary-v1",
+            "method": "authorized_explicit_mapping",
+            "confidence": 1.0,
+        }
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -248,4 +325,5 @@ def build_multiphase_case(
         phase_paths=phase_paths,
         coarse_liver_mask_path=mask_path,
         coverage=coverage,
+        phase_resolution=phase_resolution,
     )

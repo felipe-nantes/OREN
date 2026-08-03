@@ -85,5 +85,7 @@ experiments/massa_classe_real_vs_sintetico_v1/
 experiments/quatro_classes_sintetico_v1/
 experiments/synthetic_panel_embeddings_v1/
 experiments/sinal_no_sintetico_v1/
-experiments/subtipo_caminho_producao_v1/
-experiments/total_mr_vs_chaos_v1/
+
+# Artefatos locais de execucao (nunca versionados)
+.codex-temp/
+experiments/

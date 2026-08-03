@@ -187,6 +187,7 @@ def test_build_multiphase_case_produces_panel_ready_inputs(tmp_path, monkeypatch
         harmonized = sitk.ReadImage(str(result.phase_paths[phase]))
         assert harmonized.GetSize() == reference.GetSize()  # shares the 3D grid
     assert result.coverage[mi.VENOUS] == 1.0
+    assert result.phase_resolution["method"] == "explicit_folder_names"
 
 
 def test_build_multiphase_case_requires_segmentation_outputs(tmp_path):
@@ -244,6 +245,7 @@ def test_build_multiphase_case_accepts_explicit_authorized_phase_mapping(
     )
     assert seen["venous"] == explicit[mi.VENOUS].resolve()
     assert set(result.phase_paths) == set(mi.REQUIRED_PHASES)
+    assert result.phase_resolution["method"] == "authorized_explicit_mapping"
 
 
 def test_build_multiphase_case_rejects_incomplete_explicit_mapping(tmp_path):
