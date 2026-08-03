@@ -17,6 +17,18 @@ CALIBRATOR = Path(
     "shape_fusion_calibrator_v1.json"
 )
 
+# `casos/` é gitignorado de propósito: guarda dado derivado de paciente, que nunca
+# é versionado. Estes três testes leem o calibrador congelado de lá, então num
+# clone limpo eles não têm como rodar. Pular com motivo explícito é honesto;
+# falhar seria ruído que esconde regressão de verdade.
+requer_calibrador_local = pytest.mark.skipif(
+    not CALIBRATOR.is_file(),
+    reason=(
+        "exige o calibrador congelado em casos/, que não é versionado "
+        "(dado derivado de paciente)"
+    ),
+)
+
 
 def _write_bundle(tmp_path: Path, monkeypatch):
     calibrator_path = CALIBRATOR.resolve()
@@ -107,6 +119,7 @@ def _write_bundle(tmp_path: Path, monkeypatch):
     }, row
 
 
+@requer_calibrador_local
 def test_freezes_label_blind_predictions_atomically(monkeypatch, tmp_path: Path):
     kwargs, _ = _write_bundle(tmp_path, monkeypatch)
     result = module.freeze_lld_mmri_v23_predictions(**kwargs)
@@ -126,6 +139,7 @@ def test_freezes_label_blind_predictions_atomically(monkeypatch, tmp_path: Path)
     assert not any(output.parent.glob("._lldv23pred_*"))
 
 
+@requer_calibrador_local
 def test_rejects_tampered_signal_hash(monkeypatch, tmp_path: Path):
     kwargs, row = _write_bundle(tmp_path, monkeypatch)
     row["signals"][next(iter(V11_WEIGHTS))] = 123.0
@@ -136,6 +150,7 @@ def test_rejects_tampered_signal_hash(monkeypatch, tmp_path: Path):
         module.freeze_lld_mmri_v23_predictions(**kwargs)
 
 
+@requer_calibrador_local
 def test_rejects_protected_label_in_signal_record(monkeypatch, tmp_path: Path):
     kwargs, row = _write_bundle(tmp_path, monkeypatch)
     row["label"] = "POSITIVE"
