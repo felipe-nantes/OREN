@@ -3,15 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Argos — Benchmark de datasets</title>
-<link rel="stylesheet" href="/argos.css" />
+<title>OREN — Benchmark de datasets</title>
+<meta name="theme-color" content="#f8fbf9" />
+<link rel="icon" href="/oren-icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/argos.css?v=oren-20260803-4" />
+<script src="/oren-motion.js?v=oren-20260803" defer></script>
 </head>
-<body>
+<body data-page="benchmark">
 <div class="app-shell">
   <header class="app-header">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.2 12s3.2-5.2 8.8-5.2S20.8 12 20.8 12 17.6 17.2 12 17.2 3.2 12 3.2 12Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg></div>
-      <div><p class="brand-name">Argos</p><p class="brand-subtitle">Digital Twin Cirúrgico · UEM · GETS · HU</p></div>
+      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-width="13" transform="rotate(-90 50 50)"><circle cx="50" cy="50" r="40" stroke-dasharray="187.08 64.25"/><circle cx="50" cy="50" r="40" stroke-dasharray="43.28 208.05" stroke-dashoffset="-197.55"/></g></svg></div>
+      <div class="brand-lockup"><svg class="brand-wordmark" viewBox="0 0 252 60" fill="none" role="img" aria-label="OREN"><g stroke="currentColor" stroke-width="3.5"><circle cx="28" cy="30" r="24"/><path d="M76 55V5h20a13.5 13.5 0 0 1 0 27H76M94 32l18 23M134 6.5h40M134 30h40M134 53.5h40M198 55V5l34 50V5"/></g></svg><p class="brand-subtitle">Digital Twin Cirúrgico · UEM · GETS · HU</p></div>
     </div>
     <nav class="app-nav" aria-label="Navegação principal"><a href="/">Exame individual</a><a class="active" href="/benchmark.html">Benchmark</a></nav>
     <div class="header-context"><span class="status s-ok">Classificador visual, local</span><span class="research-pill">Modo Pesquisa</span></div>
@@ -41,11 +44,20 @@
           dataset e não validado clinicamente. Cada exame precisa das subpastas
           <code>arterial</code>, <code>venous</code> e <code>delayed</code>.
         </p>
-        <div class="types">
-          <label class="type"><input type="radio" name="kind" value="positive"><b>Positivo</b><span>Todos os exames são alterados.</span></label>
-          <label class="type"><input type="radio" name="kind" value="negative"><b>Negativo</b><span>Todos os exames são normais.</span></label>
-          <label class="type"><input type="radio" name="kind" value="mixed" checked><b>Misto</b><span>Rotule cada exame individualmente.</span></label>
+        <label class="caption">O que deseja medir</label>
+        <div class="types evaluation-types">
+          <label class="type"><input type="radio" name="evaluation" value="binary" checked><b>Triagem binária</b><span>Patologia-alvo positiva ou negativa.</span></label>
+          <label class="type"><input type="radio" name="evaluation" value="pathology_and_subtype"><b>Patologia + variação</b><span>HCC, FNH, hemangioma e cisto.</span></label>
         </div>
+        <div id="binaryTypeBlock">
+          <label class="caption">Composição do dataset</label>
+          <div class="types">
+            <label class="type"><input type="radio" name="kind" value="positive"><b>Positivo</b><span>Todos os exames são patologia-alvo.</span></label>
+            <label class="type"><input type="radio" name="kind" value="negative"><b>Negativo</b><span>Todos os exames são negativos para o alvo.</span></label>
+            <label class="type"><input type="radio" name="kind" value="mixed" checked><b>Misto</b><span>Rotule cada exame individualmente.</span></label>
+          </div>
+        </div>
+        <div id="subtypeSafetyNote" class="note hidden">O rótulo binário será derivado automaticamente: HCC é positivo para a patologia-alvo; FNH, hemangioma e cisto são negativos benignos. A referência de subtipo somente é anexada depois da inferência. As quatro classes são obrigatórias para validar a meta.</div>
       </section>
 
       <section class="card" id="uploadCard">
@@ -75,7 +87,7 @@
 
     <section class="card hidden" id="reportCard"></section>
   </main>
-  <footer>Resultados experimentais em modo Pesquisa. Não usar para diagnóstico, laudo ou decisão clínica.</footer>
+  <footer><span class="footer-brand">OREN</span><span>Resultados experimentais em modo Pesquisa. Não usar para diagnóstico, laudo ou decisão clínica.</span></footer>
 </div>
 <script>
 const $=s=>document.querySelector(s);const show=(e,on=true)=>e.classList.toggle('hidden',!on);
@@ -83,6 +95,9 @@ let uploadedItems=[],detectedCases=[],pollTimer=null,currentBenchmark=null;
 const selectedScenario='hybrid_supervised';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function selectedKind(){return document.querySelector('input[name=kind]:checked').value}
+function selectedEvaluation(){return document.querySelector('input[name=evaluation]:checked').value}
+const SUBTYPES={hcc:'HCC',fnh:'FNH',hemangioma:'Hemangioma',hepatic_cyst:'Cisto hepático'};
+const subtypeBinary=s=>s==='hcc'?'positive':'negative';
   const SCENARIO_LABEL={ hybrid_supervised:'Classificador visual' };
 // Sem toggle e sem checagem de gateway: o benchmark roda sempre o classificador
 // visual, que executa no próprio processo do servidor.
@@ -94,28 +109,37 @@ async function fromDrop(dt){const entries=[...(dt.items||[])].map(i=>i.webkitGet
 function fromInput(input){return [...input.files].map(f=>({file:f,rel:f.webkitRelativePath||f.name}))}
 function inferLabel(name){const n=name.toLowerCase();if(/(^|[-_ ])(pos|positive|positivo|alterado|doente)([-_ ]|$)/.test(n))return'positive';
   if(/(^|[-_ ])(neg|negative|negativo|normal|saudavel|saudável)([-_ ]|$)/.test(n))return'negative';return''}
+function inferSubtype(name){const n=name.toLowerCase();if(/(^|[-_ ])hcc([-_ ]|$)/.test(n))return'hcc';
+  if(/(^|[-_ ])fnh([-_ ]|$)/.test(n))return'fnh';if(/hemangioma/.test(n))return'hemangioma';
+  if(/hepatic[-_ ]?cyst|cisto/.test(n))return'hepatic_cyst';return''}
 function detectDataset(items){
   const split=items.map(x=>x.rel.replaceAll('\\','/').split('/').filter(Boolean));
   if(!split.length)return[];const first=split[0][0],hasCommonRoot=split.every(p=>p[0]===first&&p.length>1);
   const relative=split.map(p=>hasCommonRoot?p.slice(1):p);const canGroup=relative.every(p=>p.length>1);
   const groups=new Map();relative.forEach((parts,index)=>{const id=canGroup?parts[0]:(hasCommonRoot?first:'exame-001');
-    if(!groups.has(id))groups.set(id,{id,label:inferLabel(id),file_indices:[]});groups.get(id).file_indices.push(index)});
+    if(!groups.has(id))groups.set(id,{id,label:inferLabel(id),truth_subtype:inferSubtype(id),file_indices:[]});groups.get(id).file_indices.push(index)});
   return [...groups.values()]
 }
 function renderCases(){
-  const kind=selectedKind();if(kind!=='mixed')detectedCases.forEach(c=>c.label=kind);
+  const evaluation=selectedEvaluation(),kind=selectedKind();
+  show($('#binaryTypeBlock'),evaluation==='binary');show($('#subtypeSafetyNote'),evaluation==='pathology_and_subtype');
+  if(evaluation==='binary'&&kind!=='mixed')detectedCases.forEach(c=>c.label=kind);
+  if(evaluation==='pathology_and_subtype')detectedCases.forEach(c=>{c.label=c.truth_subtype?subtypeBinary(c.truth_subtype):''});
   const list=$('#caseList');list.innerHTML='<div class="case-row head"><span>#</span><span>Exame</span><span>Arquivos</span><span>Referência</span></div>';
   detectedCases.forEach((c,i)=>{const row=document.createElement('div');row.className='case-row';
-    const select=kind==='mixed'?`<select data-index="${i}"><option value="">Selecione…</option><option value="positive" ${c.label==='positive'?'selected':''}>Positivo · alterado</option><option value="negative" ${c.label==='negative'?'selected':''}>Negativo · normal</option></select>`
+    const select=evaluation==='pathology_and_subtype'
+      ? `<select data-index="${i}" data-role="subtype"><option value="">Selecione o subtipo…</option>${Object.entries(SUBTYPES).map(([v,l])=>`<option value="${v}" ${c.truth_subtype===v?'selected':''}>${l}${v==='hcc'?' · patologia-alvo':' · benigno'}</option>`).join('')}</select>`
+      : kind==='mixed'?`<select data-index="${i}" data-role="binary"><option value="">Selecione…</option><option value="positive" ${c.label==='positive'?'selected':''}>Positivo · patologia-alvo</option><option value="negative" ${c.label==='negative'?'selected':''}>Negativo para o alvo</option></select>`
       :`<span class="status ${kind==='positive'?'s-bad':'s-ok'}">${kind==='positive'?'POSITIVO':'NEGATIVO'}</span>`;
     row.innerHTML=`<span>${i+1}</span><span class="case-id" title="${esc(c.id)}">${esc(c.id)}</span><span>${c.file_indices.length}</span><span>${select}</span>`;list.appendChild(row)});
-  list.querySelectorAll('select').forEach(s=>s.onchange=()=>{detectedCases[+s.dataset.index].label=s.value;validate()});validate()
+  list.querySelectorAll('select').forEach(s=>s.onchange=()=>{const c=detectedCases[+s.dataset.index];if(s.dataset.role==='subtype'){c.truth_subtype=s.value;c.label=s.value?subtypeBinary(s.value):''}else c.label=s.value;validate()});validate()
 }
-function validate(){const ok=$('#datasetName').value.trim()&&uploadedItems.length&&detectedCases.length&&detectedCases.every(c=>['positive','negative'].includes(c.label));$('#startBtn').disabled=!ok}
+function validate(){const subtypeMode=selectedEvaluation()==='pathology_and_subtype';const ok=$('#datasetName').value.trim()&&uploadedItems.length&&detectedCases.length&&detectedCases.every(c=>['positive','negative'].includes(c.label)&&(!subtypeMode||Object.hasOwn(SUBTYPES,c.truth_subtype)));$('#startBtn').disabled=!ok}
 function loadItems(items){uploadedItems=items.filter(x=>x.file.size>0);detectedCases=detectDataset(uploadedItems);
   $('#caseCount').textContent=detectedCases.length;$('#fileCount').textContent=uploadedItems.length;show($('#detected'),true);show($('#clearBtn'),true);renderCases()}
 function clearDataset(){uploadedItems=[];detectedCases=[];$('#folderInput').value='';show($('#detected'),false);show($('#clearBtn'),false);validate()}
 document.querySelectorAll('input[name=kind]').forEach(r=>r.onchange=renderCases);$('#datasetName').oninput=validate;
+document.querySelectorAll('input[name=evaluation]').forEach(r=>r.onchange=renderCases);
 $('#drop').onclick=()=>$('#folderInput').click();$('#folderInput').onchange=e=>loadItems(fromInput(e.target));$('#clearBtn').onclick=clearDataset;
 ['dragenter','dragover'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.add('hot')}));
 ['dragleave','drop'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.remove('hot')}));
@@ -124,7 +148,8 @@ $('#startBtn').onclick=async()=>{
   validate();if($('#startBtn').disabled)return;
   $('#startBtn').disabled=true;show($('#setupCard'),false);show($('#uploadCard'),false);show($('#progressCard'),true);
   $('#currentCase').textContent=`Preparando dataset (${SCENARIO_LABEL[selectedScenario]})…`;
-  const manifest={dataset_name:$('#datasetName').value.trim(),dataset_kind:selectedKind(),scenario:selectedScenario,cases:detectedCases};const fd=new FormData();
+  const evaluationMode=selectedEvaluation();
+  const manifest={dataset_name:$('#datasetName').value.trim(),dataset_kind:evaluationMode==='pathology_and_subtype'?'mixed':selectedKind(),evaluation_mode:evaluationMode,scenario:selectedScenario,cases:detectedCases};const fd=new FormData();
   uploadedItems.forEach(x=>fd.append('files',x.file,x.file.name));fd.append('manifest',JSON.stringify(manifest));
   // O cenario visual precisa saber de qual subpasta (fase) cada arquivo veio.
   fd.append('relpaths',JSON.stringify(uploadedItems.map(x=>x.rel||x.file.name)));
@@ -138,6 +163,17 @@ function pollBenchmark(){clearInterval(pollTimer);pollTimer=setInterval(async()=
 const pct=v=>v==null?'—':(v*100).toFixed(1)+'%';
 const ci=(m,key)=>{const v=m.confidence_intervals_95?.[key];return v?`IC 95% ${pct(v.low)}–${pct(v.high)}`:'IC 95% indisponível'};
 function metric(label,value,detail,cls=''){return`<div class="metric ${cls}"><div class="k">${label}</div><div class="v">${value}</div><div class="d">${detail}</div></div>`}
+function subtypeSection(sm){if(!sm)return'';const labels=sm.labels_pt||SUBTYPES;
+  const target=sm.target?.met?'<span class="status s-ok">META 75% ATINGIDA</span>':'<span class="status s-bad">META 75% NÃO ATINGIDA</span>';
+  const topCi=sm.confidence_intervals_95?.top1_accuracy;const topDetail=topCi?`IC 95% ${pct(topCi.low)}–${pct(topCi.high)}`:'IC 95% indisponível';
+  const perClass=sm.classes.map(k=>{const p=sm.per_class[k];const c=p.confidence_interval_95;return`<tr><td>${esc(labels[k]||k)}</td><td>${p.total}</td><td>${p.correct}</td><td>${pct(p.recall)}</td><td>${c?`${pct(c.low)}–${pct(c.high)}`:'—'}</td></tr>`}).join('');
+  const columns=[...sm.classes,'undetermined'];const matrixHead=columns.map(k=>`<th>${k==='undetermined'?'Não determinado':esc(labels[k]||k)}</th>`).join('');
+  const matrixRows=sm.classes.map(t=>`<tr><th>${esc(labels[t]||t)}</th>${columns.map(p=>`<td class="${p===t?'diag':''}">${sm.confusion_matrix[t][p]}</td>`).join('')}</tr>`).join('');
+  const coverage=sm.class_coverage_complete?'4/4 classes representadas':`${sm.represented_classes.length}/4 classes; gate inválido`;
+  return`<section class="subtype-report"><div class="section-report-title"><div><h3>2. Identificação da variação</h3><div class="hint">Acurácia multiclasse; falha ou subtipo não determinado conta como erro.</div></div>${target}</div>
+    <div class="metrics">${metric('Acurácia balanceada',pct(sm.balanced_accuracy),coverage,'primary-m')}${metric('Acurácia top-1',pct(sm.top1_accuracy),topDetail)}${metric('Subtipo determinado',pct(sm.determination_rate),`${sm.determined_cases} de ${sm.total_cases}`,'good')}${metric('Erros de subtipo',sm.error_cases,`${sm.undetermined_cases} não determinados`)}</div>
+    <div class="split subtype-split"><div class="card results"><h3>Desempenho por classe</h3><table><thead><tr><th>Subtipo</th><th>Casos</th><th>Acertos</th><th>Recall</th><th>IC 95%</th></tr></thead><tbody>${perClass}</tbody></table></div>
+    <div class="card results"><h3>Matriz de confusão multiclasse</h3><table class="multiclass-matrix"><thead><tr><th>Real \ Predito</th>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div></div></section>`}
 function renderReport(report){show($('#progressCard'),false);const card=$('#reportCard');show(card,true);const m=report.metrics,cm=m.confusion_matrix;
   const rows=report.cases.map(c=>{const state=c.status==='decisive'?(c.correct?'s-ok':'s-bad'):c.status==='inconclusive'?'s-inc':'s-bad';
     const technical={failed:'FALHA',failure:'FALHA',timeout:'TIMEOUT',invalid_response:'RESPOSTA INVÁLIDA'};
@@ -149,8 +185,10 @@ function renderReport(report){show($('#progressCard'),false);const card=$('#repo
       : (c.prediction==='POSITIVA'&&c.status==='decisive'
           ? '<span style="color:var(--mut)" title="'+esc(c.subtype_unavailable_reason||'')+'">não determinado</span>'
           : '<span style="color:var(--mut)">—</span>');
-    return`<tr><td>${esc(c.case_id)}</td><td>${c.truth==='positive'?'Positivo':'Negativo'}</td><td>${esc(c.prediction||'—')}</td><td>${sub}</td><td><span class="status ${state}">${label}</span></td><td>${esc(c.confidence||'—')}</td><td>${c.duration_seconds}s</td></tr>`}).join('');
-  const gate=m.target?.met===true?'<span class="status s-ok">META 75% ATINGIDA</span>':'<span class="status s-bad">META 75% NÃO ATINGIDA</span>';
+    const ref=c.truth_subtype?(SUBTYPES[c.truth_subtype]||c.truth_subtype):(c.truth==='positive'?'Positivo':'Negativo');
+    const rowCorrect=report.subtype_metrics?c.subtype_correct:c.correct;const rowState=c.status==='decisive'?(rowCorrect?'s-ok':'s-bad'):state;const rowLabel=c.status==='decisive'?(rowCorrect?'CORRETO':'INCORRETO'):label;
+    return`<tr><td>${esc(c.case_id)}</td><td>${esc(ref)}</td><td>${esc(c.prediction||'—')}</td><td>${sub}</td><td><span class="status ${rowState}">${rowLabel}</span></td><td>${esc(c.confidence||'—')}</td><td>${c.duration_seconds}s</td></tr>`}).join('');
+  const gate=(report.combined_target?.met??m.target?.met)===true?'<span class="status s-ok">META COMPLETA ATINGIDA</span>':'<span class="status s-bad">META COMPLETA NÃO ATINGIDA</span>';
   const scenarioName=SCENARIO_LABEL[report.scenario]||report.scenario||'—';
   // Procedencia ANTES das metricas: se os casos podem ter sido vistos no treino,
   // o leitor precisa saber disso antes de ler a acuracia, nao depois.
@@ -161,6 +199,7 @@ function renderReport(report){show($('#progressCard'),false);const card=$('#repo
   card.innerHTML=`<div class="report-head"><div><h3>${esc(report.dataset_name)}</h3><div class="hint">${m.total_cases} exames · <b>${esc(scenarioName)}</b> · ${esc(report.model.model_version||report.model.model_id||'MedGemma')} · ${gate}</div></div>
     <div class="download"><a href="/api/benchmarks/${currentBenchmark}/report.json">Baixar JSON</a><a href="/api/benchmarks/${currentBenchmark}/report.csv">Baixar CSV</a></div></div>
     ${provBanner}
+    <div class="section-report-title"><div><h3>1. Triagem da patologia-alvo</h3><div class="hint">HCC positivo; FNH, hemangioma e cisto negativos benignos.</div></div><span class="status ${m.target?.met?'s-ok':'s-bad'}">${m.target?.met?'META 75% ATINGIDA':'META 75% NÃO ATINGIDA'}</span></div>
     <div class="metrics">${metric('Acurácia',pct(m.accuracy),ci(m,'accuracy'),'primary-m')}${metric('Sensibilidade',pct(m.sensitivity),ci(m,'sensitivity'))}
       ${metric('Especificidade',pct(m.specificity),ci(m,'specificity'))}${metric('F1-score',pct(m.f1_score),'inconclusivos/falhas penalizados')}
       ${metric('Precisão',pct(m.precision),'valor preditivo positivo')}${metric('Cobertura',pct(m.coverage_rate),`${m.decisive_cases} de ${m.total_cases} decisivos`,'good')}
@@ -169,6 +208,7 @@ function renderReport(report){show($('#progressCard'),false);const card=$('#repo
       <div class="cell err"><b>${cm.fp}</b><span>Falsos positivos</span></div><div class="cell err"><b>${cm.fn}</b><span>Falsos negativos</span></div>
       <div class="cell ok"><b>${cm.tn}</b><span>Verdadeiros negativos</span></div></div></div>
       <div class="card results"><h3>Resultados por exame</h3><table><thead><tr><th>Exame</th><th>Referência</th><th>Predição</th><th>Alteração</th><th>Resultado</th><th>Confiança</th><th>Tempo</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+    ${subtypeSection(report.subtype_metrics)}
     <div class="note">Política conservadora: INCONCLUSIVA e falha contam como erro na matriz e nas métricas principais. Cobertura e a leitura somente das decisões permanecem no JSON para diagnóstico, mas não podem inflar o gate de sensibilidade e especificidade ≥75%.</div>
     <div class="actions"><button class="primary" onclick="location.reload()">Novo benchmark</button></div>`;
 }
