@@ -199,12 +199,14 @@ o próprio resultado** (fígado de 485 mL, abaixo da faixa típica).
 2. **A coorte é previsível a 100%** por um classificador de domínio (docs/131).
    Há confundimento entre coortes não resolvido.
 3. **O único sinal externo disponível é 45,45%** de sensibilidade (n=11).
-4. **A segmentação hepática subestima o volume na maioria da coorte principal**
-   ([docs/175](175_TESTE_FRONTEND_E_VOLUME_HEPATICO.md)): nos 321 casos LLD a
-   mediana é 637 mL e **76% ficam abaixo de 900 mL**, o piso adulto que o próprio
-   webapp usa para avisar. Não invalida a classificação — treino e medição usaram
-   estas mesmas máscaras —, mas limita o modelo 3D e o quanto os painéis
-   representam o órgão inteiro. O volume aparece na tela com aviso automático.
+4. **A segmentação hepática subestima o volume na fase com contraste**
+   ([docs/176](176_TOTAL_MR_VALIDADO_CONTRA_REFERENCIA_HUMANA.md)). Nos 321 casos
+   LLD a mediana é 637 mL, com **76% abaixo de 900 mL**. A causa foi medida, não
+   suposta: contra anotação humana (CHAOS, T1 sem contraste) o segmentador atinge
+   **Dice 0,908**; ele degrada na fase venosa com contraste, que é a que o
+   pipeline usa. Não invalida a classificação — treino e medição usaram estas
+   mesmas máscaras —, mas limita o modelo 3D. O volume aparece na tela com aviso
+   automático.
 5. `clinical_use_allowed` permanece `false` em todo artefato.
 
 ---

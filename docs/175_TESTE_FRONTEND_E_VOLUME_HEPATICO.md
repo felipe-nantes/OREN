@@ -142,10 +142,14 @@ máscaras encostam na borda do volume. Nos piores casos o fígado segmentado ocu
 - ~~**Unificar o gate** entre o caminho individual e o de benchmark.~~
   **FEITO — ver §7.**
 - **Revisar o piso de 300 mL.** Ele reprova 17% quando 76% estão abaixo da faixa
-  adulta: pega desastres, não sub-segmentação moderada.
-- **Investigar a sub-segmentação do `total_mr` nesta coorte.** Trocar a máscara
-  invalidaria as métricas congeladas (os painéis saem dela), então isso é
-  trabalho planejado, não conserto de véspera.
+  adulta: pega desastres, não sub-segmentação moderada. Continua sem calibração
+  possível nesta coorte — não há referência humana de fígado no LLD —, mas
+  docs/176 estabeleceu contra o quê calibrar.
+- ~~**Investigar a sub-segmentação do `total_mr` nesta coorte.**~~
+  **FEITO — [docs/176](176_TOTAL_MR_VALIDADO_CONTRA_REFERENCIA_HUMANA.md).** O
+  modelo não está quebrado: Dice 0,908 contra anotação humana. Ele degrada na
+  fase com contraste, que é a que o pipeline usa. Trocar a máscara segue sendo
+  trabalho planejado, mas agora com direção.
 
 ---
 
