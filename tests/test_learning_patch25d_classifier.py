@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dtwin.learning.patch25d_classifier import _aggregate, _best_threshold, _confusion
+from dtwin.learning.patch25d_classifier import _fit, _scores
+import numpy as np
 
 
 def test_candidate_aggregations():
@@ -26,3 +28,19 @@ def test_inner_threshold_balances_axes():
     )
     assert 0.2 < threshold <= 0.8
     assert metrics["balanced_accuracy"] == 1.0
+
+
+def test_candidate_fit_preserves_non_sequential_localized_ids():
+    embeddings = {
+        "p": [("localized-004", np.array([1.0, 1.0])), ("localized-011", np.array([2.0, 2.0]))],
+        "n": [("localized-002", np.array([-1.0, -1.0])), ("localized-019", np.array([-2.0, -2.0]))],
+    }
+    targets = {
+        ("p", "localized-004"): 1,
+        ("p", "localized-011"): 1,
+        ("n", "localized-002"): 0,
+        ("n", "localized-019"): 0,
+    }
+    model = _fit(["p", "n"], embeddings, targets, c_value=1.0, seed=7, max_iter=500)
+    scores = _scores(model, ["p", "n"], embeddings, "max")
+    assert scores["p"] > scores["n"]

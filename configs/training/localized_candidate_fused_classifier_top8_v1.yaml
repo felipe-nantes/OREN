@@ -1,0 +1,23 @@
+schema: argos-hybrid-patch25d-classifier-config-v1
+candidate_id: hybrid_v1_medsiglip_localized_dynamic_fusion_top8
+model: frozen_medsiglip_plus_local_dynamic_l2_logistic_candidate_classifier
+representation: seven_axial_slices_rgb_plus_87_label_blind_dynamic_features
+automatic_candidate_selection: proposal_voxels_desc_top8
+regularization_c_grid:
+  - 0.0001
+  - 0.001
+  - 0.01
+  - 0.1
+  - 1.0
+aggregations:
+  - max
+  - top2_mean
+  - top3_mean
+threshold_selection: inner_oof_only
+seed: 20260804
+max_iter: 4000
+technical_failures_count_as_errors: true
+lesion_masks_used_for_training_targets_only: true
+lesion_masks_used_at_inference: false
+research_only: true
+clinical_use_allowed: false

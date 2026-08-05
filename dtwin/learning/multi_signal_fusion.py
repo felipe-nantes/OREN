@@ -99,6 +99,9 @@ def load_fusion_config(path: Path) -> dict[str, Any]:
         raise PipelineError("Threshold da fusão deve ser selecionado só no inner CV.")
     if value.get("technical_failures_count_as_errors") is not True:
         raise PipelineError("Falhas técnicas devem contar como erros.")
+    missing_policy = value.get("missing_signal_policy", "fail_case")
+    if missing_policy not in ("fail_case", "zero_margin_with_indicator"):
+        raise PipelineError("missing_signal_policy inválida.")
     return value
 
 
@@ -201,9 +204,14 @@ def align_signals(
 
 
 def _feature_vector(
-    case_id: str, signal_scores: dict[str, dict[str, dict[str, Any]]], signal_names: list[str]
+    case_id: str,
+    signal_scores: dict[str, dict[str, dict[str, Any]]],
+    signal_names: list[str],
+    missing_signal_policy: str = "fail_case",
 ) -> np.ndarray | None:
     values: list[float] = []
+    missing: list[float] = []
+    valid_count = 0
     for name in signal_names:
         entry = signal_scores[name].get(case_id)
         if (
@@ -212,8 +220,18 @@ def _feature_vector(
             or entry.get("score") is None
             or entry.get("threshold") is None
         ):
-            return None
+            if missing_signal_policy == "fail_case":
+                return None
+            values.append(0.0)
+            missing.append(1.0)
+            continue
         values.append(float(entry["score"]) - float(entry["threshold"]))
+        missing.append(0.0)
+        valid_count += 1
+    if valid_count == 0:
+        return None
+    if missing_signal_policy == "zero_margin_with_indicator":
+        values.extend(missing)
     return np.asarray(values, dtype=np.float64)
 
 
@@ -251,11 +269,14 @@ def _fit_meta_model(
     c_value: float,
     seed: int,
     max_iter: int,
+    missing_signal_policy: str = "fail_case",
 ) -> Pipeline:
     features: list[np.ndarray] = []
     labels: list[int] = []
     for case_id in train_ids:
-        vector = _feature_vector(case_id, signal_scores, signal_names)
+        vector = _feature_vector(
+            case_id, signal_scores, signal_names, missing_signal_policy
+        )
         if vector is None:
             continue
         features.append(vector)
@@ -286,10 +307,13 @@ def _meta_scores(
     case_ids: Iterable[str],
     signal_scores: dict[str, dict[str, dict[str, Any]]],
     signal_names: list[str],
+    missing_signal_policy: str = "fail_case",
 ) -> dict[str, float | None]:
     result: dict[str, float | None] = {}
     for case_id in case_ids:
-        vector = _feature_vector(case_id, signal_scores, signal_names)
+        vector = _feature_vector(
+            case_id, signal_scores, signal_names, missing_signal_policy
+        )
         if vector is None:
             result[case_id] = None
             continue
@@ -375,6 +399,7 @@ def _inner_oof_scores(
     c_value: float,
     seed: int,
     max_iter: int,
+    missing_signal_policy: str = "fail_case",
 ) -> tuple[list[str], dict[str, float | None]]:
     validation_ids: list[str] = []
     scores: dict[str, float | None] = {}
@@ -391,8 +416,15 @@ def _inner_oof_scores(
             c_value=c_value,
             seed=seed + int(inner["inner_fold"]),
             max_iter=max_iter,
+            missing_signal_policy=missing_signal_policy,
         )
-        current_scores = _meta_scores(model, current_validation, signal_scores, signal_names)
+        current_scores = _meta_scores(
+            model,
+            current_validation,
+            signal_scores,
+            signal_names,
+            missing_signal_policy,
+        )
         overlap = set(scores) & set(current_scores)
         if overlap:
             raise PipelineError("Score interno duplicado na fusão.")
@@ -498,6 +530,7 @@ def generate_oof_predictions(
     c_grid = [float(value) for value in config["regularization_c_grid"]]
     seed = int(config.get("seed", 20260724))
     max_iter = int(config.get("max_iter", 2000))
+    missing_signal_policy = str(config.get("missing_signal_policy", "fail_case"))
 
     predictions: list[dict[str, Any]] = []
     selections: list[dict[str, Any]] = []
@@ -523,6 +556,7 @@ def generate_oof_predictions(
                 c_value=c_value,
                 seed=seed + outer_index * 100,
                 max_iter=max_iter,
+                missing_signal_policy=missing_signal_policy,
             )
             if not validation_ids:
                 continue
@@ -546,8 +580,15 @@ def generate_oof_predictions(
             c_value=selected["c_value"],
             seed=seed + outer_index,
             max_iter=max_iter,
+            missing_signal_policy=missing_signal_policy,
         )
-        test_scores = _meta_scores(model, outer_test_ids, signal_scores, signal_names)
+        test_scores = _meta_scores(
+            model,
+            outer_test_ids,
+            signal_scores,
+            signal_names,
+            missing_signal_policy,
+        )
         selection = {
             "outer_fold": outer_index,
             **selected,
@@ -609,6 +650,7 @@ def generate_oof_predictions(
         "status": "frozen_before_final_metric_calculation",
         "candidate_id": str(config["candidate_id"]),
         "signals": signal_names,
+        "missing_signal_policy": missing_signal_policy,
         "training_protocol_signature": protocol["protocol_signature"],
         "signal_source_signatures": signal_source_signatures,
         "fusion_config_sha256": sha256_file(fusion_config_path),

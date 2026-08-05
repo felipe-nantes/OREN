@@ -1,5 +1,6 @@
 from pathlib import Path
 import time
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 import pytest
@@ -447,7 +448,64 @@ def test_visual_job_falls_back_only_for_insufficient_dynamic_phases(monkeypatch,
     assert assessment["dynamic_enhancement_information_present"] is False
     assert assessment["synthetic_phases_created"] is False
     assert assessment["validated_triphase_metrics_applicable"] is False
+    assert assessment["monophase_sequence_contract"]["selected_sequence_class"] == "UNKNOWN"
+    assert assessment["monophase_sequence_contract"]["cross_phase_claims_allowed"] is False
     assert server._jobs[job_id]["analysis_scenario"] == "monophase_rag"
+
+
+def test_visual_job_routes_explicit_delayed_monophase_to_medsiglip(monkeypatch, tmp_path):
+    from dtwin.learning import multiphase_ingest
+    from dtwin.learning.raw_dicom_phase_resolver import RawPhaseResolutionError
+
+    job_id = "monodelay001"
+    raw = tmp_path / "upload"
+    raw.mkdir()
+    workspace = tmp_path / "workspace"
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "bundle_manifest.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(server, "WORKSPACE", workspace)
+    monkeypatch.setattr(server, "REPO", tmp_path)
+    monkeypatch.setattr(server, "MONOPHASE_DELAYED_VISUAL_BUNDLE", "bundle")
+    monkeypatch.setattr(server, "MONOPHASE_DELAYED_VISUAL_AUTO_PROMOTED", True)
+    server._jobs[job_id] = {
+        "state": "queued", "step": "recebendo", "progress": 5,
+        "result": None, "analysis_scenario": "hybrid_supervised",
+    }
+
+    def insufficient(**_kwargs):
+        raise RawPhaseResolutionError(
+            "fases insuficientes", code="insufficient_dynamic_phases"
+        )
+
+    captured = {}
+    monkeypatch.setattr(multiphase_ingest, "build_multiphase_case", insufficient)
+    monkeypatch.setattr(
+        server,
+        "select_best_mr_series",
+        lambda *_a, **_k: (
+            [str(raw / "one.dcm")], 30,
+            {"selected": {"sequence_class": "T1_DELAYED"}},
+        ),
+    )
+    monkeypatch.setattr(
+        server,
+        "process_monophase_medsiglip_job",
+        lambda *args, **kwargs: captured.update(args=args, kwargs=kwargs),
+    )
+    monkeypatch.setattr(
+        server, "process_job", lambda *_a, **_k: pytest.fail("4B fallback was called")
+    )
+
+    server.process_visual_job(job_id, raw)
+
+    assert captured["args"] == (job_id, raw)
+    assessment = captured["kwargs"]["input_assessment"]
+    assert assessment["selected_sequence_class"] == "T1_DELAYED"
+    assert assessment["monophase_sequence_contract"]["source_phase_key"] == "t1_delayed"
+    assert assessment["monophase_sequence_contract"]["washout_claim_allowed"] is False
+    assert assessment["single_phase_reader"].startswith("MedSigLIP")
+    assert server._jobs[job_id]["analysis_scenario"] == "monophase_medsiglip_delayed"
 
 
 def test_visual_job_keeps_ambiguous_raw_study_fail_closed(monkeypatch, tmp_path):
@@ -512,6 +570,115 @@ def test_monophase_viewer_result_preserves_input_assessment():
     assert result["analysis_scenario"] == "monophase_rag"
     assert result["input_assessment"] == assessment
     assert result["status"] == "concluido"
+
+
+def test_delayed_medsiglip_runs_only_as_persisted_advisory(monkeypatch, tmp_path):
+    from dtwin.learning import exam_to_panels, monophase_visual_inference
+
+    case_dir = tmp_path / "case"
+    case_dir.mkdir()
+    (case_dir / "volume.nii.gz").write_bytes(b"volume")
+    (case_dir / "mask_organ.nii.gz").write_bytes(b"mask")
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "bundle_manifest.json").write_text("{}", encoding="utf-8")
+    panel = tmp_path / "panel.png"
+    panel.write_bytes(b"panel")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr(server, "REPO", tmp_path)
+    monkeypatch.setattr(server, "MONOPHASE_DELAYED_VISUAL_BUNDLE", "bundle")
+    monkeypatch.setattr(server, "MONOPHASE_DELAYED_ADVISORY_ENABLED", True)
+    monkeypatch.setattr(
+        exam_to_panels,
+        "build_monophase_exam_panels",
+        lambda **_kwargs: SimpleNamespace(
+            panel_paths=[panel], panel_count=1, manifest_path=manifest
+        ),
+    )
+    monkeypatch.setattr(
+        monophase_visual_inference,
+        "infer_monophase_case_from_panels",
+        lambda **_kwargs: {
+            "prediction": "NEGATIVE",
+            "score": 0.21,
+            "threshold": 0.59,
+            "panel_count": 1,
+            "panel_manifest_sha256": "a" * 64,
+            "class_probabilities": {"negative_unspecified": 0.79, "positive_unspecified": 0.21},
+        },
+    )
+    assessment = {
+        "mode": "single_phase",
+        "monophase_sequence_contract": {
+            "source_phase_key": "t1_delayed",
+            "sequence_specific_medsiglip_bundle_allowed": True,
+        },
+    }
+
+    result = server._run_delayed_medsiglip_advisory(
+        case_dir=case_dir,
+        case_id="case123",
+        input_assessment=assessment,
+        primary_prediction="POSITIVA",
+    )
+
+    assert result["status"] == "completed"
+    assert result["prediction"] == "NEGATIVA"
+    assert result["agreement_with_primary"] is False
+    assert result["review_priority"] == "elevated"
+    assert result["affects_primary_decision"] is False
+    persisted = case_dir / "outputs" / "second_reader" / "medsiglip_advisory.json"
+    assert persisted.is_file()
+    assert '"affects_primary_decision": false' in persisted.read_text(encoding="utf-8")
+
+
+def test_medsiglip_advisory_rejects_non_delayed_sequence_without_inference(
+    monkeypatch, tmp_path
+):
+    from dtwin.learning import exam_to_panels
+
+    monkeypatch.setattr(server, "MONOPHASE_DELAYED_ADVISORY_ENABLED", True)
+    monkeypatch.setattr(
+        exam_to_panels,
+        "build_monophase_exam_panels",
+        lambda **_kwargs: pytest.fail("painéis não devem ser gerados para fase inelegível"),
+    )
+    result = server._run_delayed_medsiglip_advisory(
+        case_dir=tmp_path,
+        case_id="case123",
+        input_assessment={
+            "mode": "single_phase",
+            "monophase_sequence_contract": {
+                "source_phase_key": "t2",
+                "sequence_specific_medsiglip_bundle_allowed": False,
+            },
+        },
+        primary_prediction="NEGATIVA",
+    )
+
+    assert result["status"] == "not_eligible"
+    assert result["affects_primary_decision"] is False
+
+
+def test_monophase_viewer_result_exposes_secondary_reader_without_changing_report():
+    second = {
+        "status": "completed",
+        "prediction": "NEGATIVA",
+        "affects_primary_decision": False,
+    }
+    result = server._viewer_result(
+        {"report": {"resultado_hipotese": "POSITIVA"}},
+        "abc123",
+        False,
+        analysis_scenario="monophase_rag",
+        input_assessment={"mode": "single_phase"},
+        secondary_reader=second,
+    )
+
+    assert result["report"]["resultado_hipotese"] == "POSITIVA"
+    assert result["secondary_reader"] == second
 
 
 def test_benchmark_metrics_keep_failures_and_inconclusives_visible():

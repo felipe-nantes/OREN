@@ -11,6 +11,22 @@ from dtwin.learning.multi_signal_fusion import (
 )
 
 
+def _named_signal_roots(values: list[str] | None) -> dict[str, Path]:
+    roots: dict[str, Path] = {}
+    for value in values or []:
+        name, separator, raw_path = value.partition("=")
+        name = name.strip()
+        raw_path = raw_path.strip()
+        if not separator or not name or not raw_path:
+            raise argparse.ArgumentTypeError(
+                "--signal-root exige NAME=PATH com ambos os valores presentes"
+            )
+        if name in roots:
+            raise argparse.ArgumentTypeError(f"Sinal duplicado: {name}")
+        roots[name] = Path(raw_path)
+    return roots
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=("predict-oof", "evaluate"))
@@ -61,6 +77,13 @@ def main() -> int:
         type=Path,
         default=Path("casos/qualification/hybrid_v1/multi_signal_fusion_oof_evaluation_v1"),
     )
+    parser.add_argument(
+        "--signal-root",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help="Raiz nomeada de sinal; pode ser repetida e sobrescreve aliases legados.",
+    )
     parser.add_argument("--workspace-root", type=Path, default=Path.cwd())
     args = parser.parse_args()
 
@@ -69,6 +92,7 @@ def main() -> int:
         "medsiglip_phase5": args.medsiglip_phase5,
         "medsiglip_lora_stage3": args.medsiglip_lora_stage3,
     }
+    signal_roots.update(_named_signal_roots(args.signal_root))
 
     if args.command == "predict-oof":
         result = generate_oof_predictions(

@@ -8,6 +8,7 @@ from dtwin.benchmark.dataset_audit import (
     AUDIT_SCHEMA,
     audit_dataset_roots,
     select_best_mr_series,
+    select_monophase_evidence_series,
 )
 
 
@@ -130,3 +131,29 @@ def test_selector_rejects_ct_even_when_larger(tmp_path: Path) -> None:
     assert slices == 10
     assert metadata is not None
     assert metadata["selected"]["modality"] == "MR"
+
+
+def test_monophase_evidence_selector_preserves_complementary_real_sequences(tmp_path: Path) -> None:
+    _write_series(tmp_path / "arterial", description="VIBE arterial post gad", slices=24)
+    _write_series(tmp_path / "t2-low", description="T2 HASTE", slices=18)
+    _write_series(tmp_path / "t2-high", description="T2 HASTE", slices=28)
+    _write_series(tmp_path / "dwi", description="DWI b800", slices=22)
+    _write_series(tmp_path / "adc", description="ADC map", slices=22)
+
+    paths, metadata = select_monophase_evidence_series(tmp_path, min_slices=3)
+
+    assert metadata is not None
+    assert metadata["primary_sequence_class"] == "T1_ARTERIAL"
+    assert metadata["complementary_sequence_classes"] == ["T2", "DWI", "ADC"]
+    assert metadata["selected_sequence_classes"] == ["ADC", "DWI", "T1_ARTERIAL", "T2"]
+    assert len(paths["T2"]) == 28  # one deterministic best series, not both T2 series
+    assert metadata["synthetic_phases_created"] is False
+    assert metadata["raw_paths_persisted"] is False
+    assert "t2-high" not in str(metadata)
+
+
+def test_monophase_evidence_selector_returns_no_series_for_ct_only(tmp_path: Path) -> None:
+    _write_series(tmp_path / "ct", description="CT portal", slices=40, modality="CT")
+    paths, metadata = select_monophase_evidence_series(tmp_path, min_slices=3)
+    assert paths == {}
+    assert metadata is None

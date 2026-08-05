@@ -1,0 +1,27 @@
+schema: argos-hybrid-medsiglip-multiclass-config-v1
+candidate_id: oren_medsiglip_monophase_openswiss_axial_mil_v1
+model: class_balanced_logistic_regression_with_iterative_topk_mil
+solver: lbfgs
+label_granularity: binary
+restrict_to_dataset_ids: [openswisshcc_development]
+positive_classes: [positive_unspecified]
+regularization_c_grid: [0.01, 0.1, 1.0]
+panel_probability_aggregations: [max, top2_mean]
+standardization: inner_or_outer_training_instances_only
+training_instance_selection:
+  mode: iterative_topk_mil
+  positive_top_k: 2
+  negative_hard_top_k: 3
+  negative_easy_anchors_per_case: 1
+  iterations: 2
+threshold_selection: inner_oof_only
+seed: 20260804
+max_iter: 3000
+technical_failures_count_as_errors: true
+representation_contract:
+  sequence: t1_delayed
+  coverage: every_axial_liver_slice_exactly_once
+  synthetic: false
+  lesion_mask_allowed: false
+research_only: true
+clinical_use_allowed: false

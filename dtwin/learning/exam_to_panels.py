@@ -39,6 +39,9 @@ from dtwin.medgemma_panel_liver_enriched import (
 # any other panel config would shift the input distribution away from what the
 # production bundle was trained on.
 DEFAULT_LIVER_ENRICHED_PANEL_CONFIG = "configs/medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml"
+DEFAULT_MONOPHASE_MEDSIGLIP_PANEL_CONFIG = (
+    "configs/medsiglip_monophase_liver_enriched_v1.yaml"
+)
 # ``LIVER_ENRICHED_POLICY`` is imported from the renderer rather than restated
 # here: the value written into the manifest ("coarse_liver_localized_full_fov_
 # interleaved_2or3x9_v1") is NOT the config's ``spatial_focus``
@@ -130,6 +133,7 @@ def build_exam_panels(
     output_dir: Path,
     panel_config_path: Path | str = DEFAULT_LIVER_ENRICHED_PANEL_CONFIG,
     visible_phi_confirmed: bool = False,
+    renderer_model_trace: Mapping[str, Any] | None = None,
 ) -> ExamPanelResult:
     """Render one exam's liver-enriched multiphase panels.
 
@@ -166,7 +170,11 @@ def build_exam_panels(
         case_manifest_path=case_manifest,
         screening_config=config,
         output_dir=output_dir,
-        model_trace=model_trace(config),
+        model_trace=(
+            dict(renderer_model_trace)
+            if renderer_model_trace is not None
+            else model_trace(config)
+        ),
         visible_phi_confirmed=visible_phi_confirmed,
     )
     manifest = json.loads(Path(result.manifest_path).read_text(encoding="utf-8"))
@@ -186,3 +194,58 @@ def build_exam_panels(
         panel_count=int(result.panel_count),
         manifest_path=Path(result.manifest_path),
     )
+
+
+def build_monophase_exam_panels(
+    *,
+    case_id: str,
+    volume_path: Path,
+    coarse_liver_mask_path: Path,
+    output_dir: Path,
+    panel_config_path: Path | str = DEFAULT_MONOPHASE_MEDSIGLIP_PANEL_CONFIG,
+    visible_phi_confirmed: bool = False,
+) -> ExamPanelResult:
+    """Render one real series as grayscale RGB for the frozen MedSigLIP encoder.
+
+    The same source voxels populate R/G/B; this is an encoder compatibility
+    operation, not phase synthesis.  The manifest must explicitly prove that no
+    dynamic enhancement information or lesion/ground-truth signal was added.
+    """
+
+    result = build_exam_panels(
+        case_id=case_id,
+        phase_paths={"mono": Path(volume_path)},
+        coarse_liver_mask_path=coarse_liver_mask_path,
+        output_dir=output_dir,
+        panel_config_path=panel_config_path,
+        visible_phi_confirmed=visible_phi_confirmed,
+        renderer_model_trace={
+            "model_family": "MedSigLIP",
+            "model_version": "google/medsiglip-448",
+            "execution_role": "frozen_image_encoder_input_representation",
+        },
+    )
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    channel_map = manifest.get("fusion_channel_map")
+    if (
+        manifest.get("input_type")
+        != "mri_single_phase_replicated_grayscale_full_fov_liver_enriched"
+        or manifest.get("single_phase_replicated_across_rgb") is not True
+        or manifest.get("dynamic_enhancement_information_present") is not False
+        or not isinstance(channel_map, dict)
+        or set(channel_map.values()) != {"mono"}
+        or manifest.get("lesion_mask_used") is not False
+        or manifest.get("ground_truth_used") is not False
+    ):
+        raise PipelineError("Painel monofásico MedSigLIP violou o contrato técnico.")
+    return result
+
+
+__all__ = [
+    "DEFAULT_LIVER_ENRICHED_PANEL_CONFIG",
+    "DEFAULT_MONOPHASE_MEDSIGLIP_PANEL_CONFIG",
+    "ExamPanelResult",
+    "anonymous_manifest_case_id",
+    "build_exam_panels",
+    "build_monophase_exam_panels",
+]

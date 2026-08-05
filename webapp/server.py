@@ -57,6 +57,7 @@ from dtwin.benchmark.runner import classify_screening_failure
 from dtwin.benchmark.dataset_audit import (
     describe_selected_series,
     select_best_mr_series,
+    select_monophase_evidence_series,
 )
 from dtwin.benchmark.operational_timing import (
     DEFAULT_REPORT_BUDGET_SECONDS,
@@ -72,6 +73,10 @@ from dtwin.medgemma_client import (
 from dtwin.medgemma_volumetric import effective_screening_timeout
 from dtwin.segmentation_subprocess import run_segmentation_subprocess
 from dtwin.candidate_subprocess import candidate_error, run_candidate_subprocess
+from dtwin.learning.monophase_protocol import (
+    build_hierarchical_screening_result,
+    resolve_monophase_sequence_contract,
+)
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 log = logging.getLogger("dtwin.webapp")
@@ -129,6 +134,25 @@ VISUAL_PANEL_CONFIG = os.environ.get(
 )
 VISUAL_EMBEDDING_CONFIG = os.environ.get(
     "WEBAPP_VISUAL_EMBEDDING_CONFIG", "configs/training/medsiglip_frozen_v1.yaml"
+)
+MONOPHASE_DELAYED_VISUAL_BUNDLE = os.environ.get(
+    "WEBAPP_MONOPHASE_DELAYED_VISUAL_BUNDLE",
+    "casos/qualification/hybrid_v1/medsiglip_monophase_delayed_production_bundle_v2",
+)
+# Promotion is deliberately fail-closed. The internal LLD gate passed, but the
+# label-blind OpenSwiss evaluation failed sensitivity (25.40%). Keep the worker
+# available for reproducible research without silently making it the product
+# fallback. A future signed external gate may replace this environment switch.
+MONOPHASE_DELAYED_VISUAL_AUTO_PROMOTED = (
+    os.environ.get("WEBAPP_MONOPHASE_DELAYED_MEDSIGLIP_AUTO_PROMOTED", "0") == "1"
+)
+# The delayed head remains useful as an independent research signal even though
+# it failed the external promotion gate.  In advisory mode it is never allowed
+# to overwrite the MedGemma report; it only exposes agreement/disagreement for
+# mandatory human review.  This is enabled by default because the primary
+# decision remains unchanged and every limitation is persisted with the result.
+MONOPHASE_DELAYED_ADVISORY_ENABLED = (
+    os.environ.get("WEBAPP_MONOPHASE_DELAYED_MEDSIGLIP_ADVISORY", "1") == "1"
 )
 # Índice server-side autorizado para o benchmark interno. O navegador nunca
 # envia esse caminho e o conteúdo privado nunca é encaminhado ao modelo.
@@ -538,6 +562,7 @@ def _viewer_result(
     *,
     analysis_scenario: str = "volumetric_rag",
     input_assessment: dict[str, Any] | None = None,
+    secondary_reader: dict[str, Any] | None = None,
 ) -> dict:
     """Acrescenta a visualizacao sem alterar o contrato do relatorio MedGemma."""
     result = _success_result(report)
@@ -551,6 +576,7 @@ def _viewer_result(
         approval={"status": "pending"} if viewer_ready else None,
         analysis_scenario=analysis_scenario,
         input_assessment=input_assessment,
+        secondary_reader=secondary_reader,
     )
     return result
 
@@ -722,6 +748,159 @@ def _localize_candidate(case_dir: Path, decision: dict[str, Any]) -> dict[str, A
     }
 
 
+def process_monophase_medsiglip_job(
+    job_id: str,
+    raw_dir: Path,
+    *,
+    input_assessment: dict[str, Any],
+) -> None:
+    """Classify an explicitly identified delayed single phase with MedSigLIP.
+
+    The LLD nested-OOF gate applies only to the delayed representation.  A
+    generic/arterial/venous series must never enter this worker.
+    """
+    from dtwin.learning.exam_to_panels import build_monophase_exam_panels
+    from dtwin.learning.monophase_visual_inference import infer_monophase_case_from_panels
+    from dtwin.learning.visual_inference import in_sample_status, load_production_bundle
+
+    case_dir = (WORKSPACE / job_id / "case").resolve()
+    started = time.monotonic()
+    durations: dict[str, float] = {}
+    try:
+        _set(job_id, state="processing", step="ingestao_monofasica", progress=18)
+        selection_started = time.monotonic()
+        best_files, frames, selection = select_best_mr_series(raw_dir, min_slices=MIN_SLICES)
+        selected = (selection or {}).get("selected") or {}
+        sequence_contract = resolve_monophase_sequence_contract(selected)
+        if not best_files or frames < MIN_SLICES:
+            raise PipelineError("Nenhuma série DICOM de RM válida foi encontrada.")
+        if selected.get("sequence_class") != "T1_DELAYED":
+            raise PipelineError("O bundle MedSigLIP monofásico exige uma fase tardia identificada.")
+        series_dir = WORKSPACE / job_id / "_series"
+        series_dir.mkdir(parents=True, exist_ok=True)
+        for index, source in enumerate(best_files):
+            shutil.copyfile(source, series_dir / f"{index:05d}_{Path(source).name}")
+        durations["series_selection_and_copy"] = round(time.monotonic() - selection_started, 4)
+
+        _set(job_id, step="segmentacao", progress=45)
+        segment_started = time.monotonic()
+        mask_quality = _segmentar_figado_com_gate(
+            series_dir, case_dir, f"Job MedSigLIP monofásico {job_id}"
+        )
+        durations["preparation_and_segmentation"] = round(
+            time.monotonic() - segment_started, 4
+        )
+        _persist_series_selection(case_dir, best_files)
+
+        _set(job_id, step="paineis", progress=65)
+        panel_started = time.monotonic()
+        panels = build_monophase_exam_panels(
+            case_id=job_id,
+            volume_path=case_dir / "volume.nii.gz",
+            coarse_liver_mask_path=case_dir / "mask_organ.nii.gz",
+            output_dir=case_dir / "monophase_medsiglip_panels",
+            panel_config_path=REPO / "configs/medsiglip_monophase_liver_enriched_v1.yaml",
+        )
+        durations["panels"] = round(time.monotonic() - panel_started, 4)
+
+        _set(job_id, step="classificacao", progress=82)
+        inference_started = time.monotonic()
+        bundle_root = (REPO / MONOPHASE_DELAYED_VISUAL_BUNDLE).resolve()
+        decision = infer_monophase_case_from_panels(
+            bundle_root=bundle_root,
+            panel_manifest_path=panels.manifest_path,
+            panel_paths=panels.panel_paths,
+            source_phase_key="t1_delayed",
+            embedding_config_path=REPO / VISUAL_EMBEDDING_CONFIG,
+        )
+        durations["classification"] = round(time.monotonic() - inference_started, 4)
+
+        _set(job_id, step="localizacao_candidata", progress=88)
+        localization_started = time.monotonic()
+        try:
+            candidate_localization = _localize_candidate(case_dir, decision)
+        except Exception as exc:  # localization never changes the frozen decision
+            candidate_localization = {
+                "status": "localization_unavailable",
+                "candidate_present": False,
+                "used_by_screening_inference": False,
+                "requires_human_review": True,
+                "reason": type(exc).__name__,
+            }
+        durations["candidate_localization_after_inference"] = round(
+            time.monotonic() - localization_started, 4
+        )
+
+        _set(job_id, step="modelo_3d", progress=94)
+        model_started = time.monotonic()
+        try:
+            viewer_ready, viewer_error = _build_model(case_dir)
+        except Exception as exc:  # noqa: BLE001
+            viewer_ready, viewer_error = False, type(exc).__name__
+        durations["model_3d"] = round(time.monotonic() - model_started, 4)
+        durations["total"] = round(time.monotonic() - started, 4)
+
+        bundle = load_production_bundle(bundle_root)
+        status = in_sample_status(bundle, case_id=job_id)
+        positive = decision["prediction"] == "POSITIVE"
+        result = {
+            "status": "concluido",
+            "analysis_scenario": "monophase_medsiglip_delayed",
+            "prediction": "POSITIVA" if positive else "NEGATIVA",
+            "visual_score": decision["score"],
+            "visual_threshold": decision["threshold"],
+            "panel_count": decision["panel_count"],
+            "panel_manifest_sha256": decision["panel_manifest_sha256"],
+            "class_probabilities": decision["class_probabilities"],
+            "source_phase_key": "t1_delayed",
+            "selected_sequence_class": "T1_DELAYED",
+            "monophase_sequence_contract": sequence_contract,
+            "dynamic_enhancement_information_present": False,
+            "validated_triphase_metrics_applicable": False,
+            "monophase_reference_metrics": {
+                "cohort": "LLD-MMRI nested patient-grouped OOF",
+                "sensitivity": 0.7770700636942676,
+                "specificity": 0.7584269662921348,
+                "technical_failures_count_as_errors": True,
+                "external_validation": False,
+            },
+            "input_assessment": input_assessment,
+            "in_sample": status["in_sample"],
+            "in_sample_verdict": status["verdict"],
+            "durations_seconds": durations,
+            "liver_mask_quality": mask_quality,
+            "liver_volume_warning": _aviso_volume_figado(mask_quality),
+            "candidate_localization": candidate_localization,
+            "viewer_ready": bool(viewer_ready),
+            "viewer_url": (
+                f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}"
+                if viewer_ready else None
+            ),
+            "viewer_error": viewer_error or None,
+            "approval": {"status": "pending"} if viewer_ready else None,
+            "requires_human_review": True,
+            "research_only": True,
+            "clinical_use_allowed": False,
+            "disclaimer": DISCLAIMER,
+        }
+        result["hierarchical_assessment"] = build_hierarchical_screening_result(
+            prediction=decision["prediction"],
+            subtype=decision.get("subtype"),
+            sequence_contract=sequence_contract,
+        )
+        result.update(_subtype_fields(decision["subtype"], positive))
+        _set(job_id, state="done", step="concluido", progress=100, result=result)
+    except subprocess.TimeoutExpired:
+        _set(job_id, state="done", step="concluido", progress=100, result=_graceful(
+            "O processamento excedeu o tempo limite.", "timeout"))
+    except PipelineError as exc:
+        _set(job_id, state="done", step="concluido", progress=100, result=_graceful(str(exc)))
+    except Exception as exc:  # noqa: BLE001
+        log.exception("Job MedSigLIP monofásico %s: falha inesperada", job_id)
+        _set(job_id, state="done", step="concluido", progress=100, result=_graceful(
+            "Não foi possível concluir a análise monofásica.", type(exc).__name__))
+
+
 def process_visual_job(job_id: str, raw_dir: Path) -> None:
     """Exame individual pelo classificador visual da Etapa C.
 
@@ -773,7 +952,27 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
                 raise
             # Never make fake RGB phases. Use the best real series through a
             # dedicated single-phase reader and carry its limitations forward.
-            scenario = "monophase_rag"
+            _files, _frames, selection = select_best_mr_series(
+                Path(raw_dir), min_slices=MIN_SLICES
+            )
+            _evidence_paths, evidence_selection = select_monophase_evidence_series(
+                Path(raw_dir), min_slices=MIN_SLICES
+            )
+            selected_sequence_class = str(
+                ((selection or {}).get("selected") or {}).get("sequence_class") or "UNKNOWN"
+            )
+            sequence_contract = resolve_monophase_sequence_contract(
+                ((selection or {}).get("selected") or {})
+            )
+            delayed_medsiglip = (
+                MONOPHASE_DELAYED_VISUAL_AUTO_PROMOTED
+                and
+                selected_sequence_class == "T1_DELAYED"
+                and (REPO / MONOPHASE_DELAYED_VISUAL_BUNDLE / "bundle_manifest.json").is_file()
+            )
+            scenario = (
+                "monophase_medsiglip_delayed" if delayed_medsiglip else "monophase_rag"
+            )
             assessment = {
                 "schema": "oren-input-assessment-v1",
                 "mode": "single_phase",
@@ -781,6 +980,27 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
                 "synthetic_phases_created": False,
                 "validated_triphase_metrics_applicable": False,
                 "fallback_reason_code": exc.code,
+                "selected_sequence_class": selected_sequence_class,
+                "monophase_sequence_contract": sequence_contract,
+                "available_real_sequence_classes": (
+                    list(evidence_selection.get("selected_sequence_classes") or [])
+                    if evidence_selection else [selected_sequence_class]
+                ),
+                "complementary_real_sequence_classes": (
+                    list(evidence_selection.get("complementary_sequence_classes") or [])
+                    if evidence_selection else []
+                ),
+                "complementary_sequences_used_by_current_reader": False,
+                "single_phase_reader": (
+                    "MedSigLIP delayed frozen classifier"
+                    if delayed_medsiglip
+                    else (
+                        "MedGemma 4B + RAG (primário) + MedSigLIP tardio (segundo leitor)"
+                        if selected_sequence_class == "T1_DELAYED"
+                        and MONOPHASE_DELAYED_ADVISORY_ENABLED
+                        else "MedGemma 4B + RAG"
+                    )
+                ),
                 "limitations": [
                     "Apenas uma série de RM foi usada.",
                     "O painel contém nove cortes sistematicamente amostrados e não representa cobertura axial integral.",
@@ -795,6 +1015,13 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
                 step="ingestao_monofasica",
                 progress=18,
             )
+            if delayed_medsiglip:
+                process_monophase_medsiglip_job(
+                    job_id,
+                    raw_dir,
+                    input_assessment=assessment,
+                )
+                return
             process_job(
                 job_id,
                 raw_dir,
@@ -951,6 +1178,112 @@ class ApprovalPayload(BaseModel):
     ] | None = None
 
 
+def _run_delayed_medsiglip_advisory(
+    *,
+    case_dir: Path,
+    case_id: str,
+    input_assessment: dict[str, Any],
+    primary_prediction: str,
+) -> dict[str, Any]:
+    """Run the delayed MedSigLIP head strictly as a non-decisional reader.
+
+    The head passed its internal LLD gate but did not generalize to OpenSwissHCC.
+    Consequently this function deliberately has no way to change the primary
+    MedGemma prediction.  Its signed, auditable output is useful to the human
+    reviewer and to future paired validation, while remaining honest for an
+    arbitrary DICOM upload whose source domain is unknown.
+    """
+    from dtwin.learning.exam_to_panels import build_monophase_exam_panels
+    from dtwin.learning.monophase_visual_inference import infer_monophase_case_from_panels
+    from dtwin.medgemma_screening import _write_json_atomic
+
+    started = time.monotonic()
+    contract = dict(input_assessment.get("monophase_sequence_contract") or {})
+    output_path = case_dir / "outputs" / "second_reader" / "medsiglip_advisory.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    base: dict[str, Any] = {
+        "schema": "oren-monophase-second-reader-v1",
+        "role": "advisory_second_reader",
+        "affects_primary_decision": False,
+        "primary_reader": "MedGemma 4B + RAG",
+        "primary_prediction": str(primary_prediction).upper(),
+        "source_phase_key": contract.get("source_phase_key"),
+        "external_gate_passed": False,
+        "auto_promotion_allowed": False,
+        "requires_human_review": True,
+        "research_only": True,
+        "clinical_use_allowed": False,
+    }
+    if not MONOPHASE_DELAYED_ADVISORY_ENABLED:
+        result = {**base, "status": "disabled", "reason": "advisory_disabled_by_configuration"}
+        _write_json_atomic(output_path, result)
+        return result
+    if (
+        contract.get("source_phase_key") != "t1_delayed"
+        or contract.get("sequence_specific_medsiglip_bundle_allowed") is not True
+    ):
+        result = {
+            **base,
+            "status": "not_eligible",
+            "reason": "validated_head_requires_explicit_t1_delayed_series",
+        }
+        _write_json_atomic(output_path, result)
+        return result
+
+    bundle_root = (REPO / MONOPHASE_DELAYED_VISUAL_BUNDLE).resolve()
+    if not (bundle_root / "bundle_manifest.json").is_file():
+        result = {**base, "status": "unavailable", "reason": "signed_bundle_not_found"}
+        _write_json_atomic(output_path, result)
+        return result
+
+    panels = build_monophase_exam_panels(
+        case_id=case_id,
+        volume_path=case_dir / "volume.nii.gz",
+        coarse_liver_mask_path=case_dir / "mask_organ.nii.gz",
+        output_dir=case_dir / "monophase_medsiglip_advisory_panels",
+        panel_config_path=REPO / "configs/medsiglip_monophase_liver_enriched_v1.yaml",
+    )
+    decision = infer_monophase_case_from_panels(
+        bundle_root=bundle_root,
+        panel_manifest_path=panels.manifest_path,
+        panel_paths=panels.panel_paths,
+        source_phase_key="t1_delayed",
+        embedding_config_path=REPO / VISUAL_EMBEDDING_CONFIG,
+    )
+    advisory_prediction = "POSITIVA" if decision["prediction"] == "POSITIVE" else "NEGATIVA"
+    primary = str(primary_prediction).upper()
+    comparable = primary in {"POSITIVA", "NEGATIVA"}
+    result = {
+        **base,
+        "status": "completed",
+        "prediction": advisory_prediction,
+        "score": decision["score"],
+        "threshold": decision["threshold"],
+        "panel_count": decision["panel_count"],
+        "panel_manifest_sha256": decision["panel_manifest_sha256"],
+        "class_probabilities": decision["class_probabilities"],
+        "agreement_with_primary": (
+            advisory_prediction == primary if comparable else None
+        ),
+        "review_priority": (
+            "standard" if comparable and advisory_prediction == primary else "elevated"
+        ),
+        "interpretation": (
+            "Os dois leitores concordaram; a decisão continua sendo do MedGemma e exige revisão humana."
+            if comparable and advisory_prediction == primary
+            else "Os leitores discordaram ou o leitor principal foi inconclusivo; priorize a revisão humana."
+        ),
+        "known_limitations": [
+            "O classificador foi desenvolvido no LLD-MMRI.",
+            "A validação externa OpenSwissHCC não atingiu o gate de sensibilidade.",
+            "O resultado não substitui nem altera o relatório MedGemma.",
+        ],
+        "latency_seconds": round(time.monotonic() - started, 4),
+    }
+    _write_json_atomic(output_path, result)
+    return result
+
+
 def process_job(
     job_id: str,
     raw_dir: Path,
@@ -969,6 +1302,7 @@ def process_job(
     segmentation_device: str | None = None
     report_available = False
     viewer_ready = False
+    secondary_reader: dict[str, Any] | None = None
     try:
         _set(job_id, state="processing", step="ingestao", progress=15)
         series_started = time.monotonic()
@@ -1068,6 +1402,39 @@ def process_job(
         })
         durations_seconds["time_to_report"] = round(time.monotonic() - worker_started, 4)
 
+        # A delayed MedSigLIP head is useful as a second opinion, but its failed
+        # external gate forbids automatic promotion.  Run it only after a valid
+        # primary report exists and never let an advisory failure invalidate the
+        # MedGemma result.
+        if input_assessment and input_assessment.get("mode") == "single_phase":
+            advisory_started = time.monotonic()
+            _set(job_id, step="segundo_leitor", progress=88)
+            try:
+                secondary_reader = _run_delayed_medsiglip_advisory(
+                    case_dir=case_dir,
+                    case_id=job_id,
+                    input_assessment=input_assessment,
+                    primary_prediction=str(
+                        (report.get("report") or {}).get("resultado_hipotese") or "INCONCLUSIVA"
+                    ),
+                )
+            except Exception as exc:  # advisory evidence must not erase a valid report
+                log.exception("Job %s: segundo leitor MedSigLIP indisponível", job_id)
+                secondary_reader = {
+                    "schema": "oren-monophase-second-reader-v1",
+                    "role": "advisory_second_reader",
+                    "status": "unavailable",
+                    "reason": type(exc).__name__,
+                    "affects_primary_decision": False,
+                    "external_gate_passed": False,
+                    "requires_human_review": True,
+                    "research_only": True,
+                    "clinical_use_allowed": False,
+                }
+            durations_seconds["medsiglip_advisory"] = round(
+                time.monotonic() - advisory_started, 4
+            )
+
         # Fase 3: máscara hepática -> malha/STL para revisão humana.
         failure_stage = "model_3d"
         _set(job_id, step="modelo_3d", progress=92)
@@ -1101,6 +1468,7 @@ def process_job(
                 viewer_ready,
                 analysis_scenario=analysis_scenario,
                 input_assessment=input_assessment,
+                secondary_reader=secondary_reader,
             ),
         )
     except subprocess.TimeoutExpired:

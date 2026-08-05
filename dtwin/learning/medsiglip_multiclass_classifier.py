@@ -128,6 +128,61 @@ def load_multiclass_config(path: Path) -> dict[str, Any]:
         not isinstance(restrict, list) or not restrict or any(not str(v).strip() for v in restrict)
     ):
         raise PipelineError("restrict_to_dataset_ids deve ser lista não vazia de dataset_id.")
+    persist_class_mass = value.get("persist_label_blind_class_probabilities", False)
+    if not isinstance(persist_class_mass, bool):
+        raise PipelineError("persist_label_blind_class_probabilities deve ser booleano.")
+    subtype_aggregation = value.get("subtype_probability_aggregation", "mean")
+    if subtype_aggregation not in allowed:
+        raise PipelineError("subtype_probability_aggregation inválida.")
+    instance_selection = value.get("training_instance_selection")
+    if instance_selection is not None:
+        if not isinstance(instance_selection, dict):
+            raise PipelineError("training_instance_selection deve ser objeto.")
+        if instance_selection.get("mode") != "iterative_topk_mil":
+            raise PipelineError("Modo de seleção de instâncias inválido.")
+        for key in ("positive_top_k", "negative_hard_top_k", "iterations"):
+            item = instance_selection.get(key)
+            if not isinstance(item, int) or isinstance(item, bool) or item <= 0:
+                raise PipelineError(f"{key} deve ser inteiro positivo.")
+        if int(instance_selection["iterations"]) > 10:
+            raise PipelineError("iterations excede o limite seguro de 10.")
+        if instance_selection.get("negative_easy_anchors_per_case", 1) not in (0, 1):
+            raise PipelineError("negative_easy_anchors_per_case deve ser 0 ou 1.")
+    weighting = value.get("training_case_weighting", "class_balanced_panels")
+    if weighting not in ("class_balanced_panels", "equal_dataset_class_case"):
+        raise PipelineError("training_case_weighting inválido.")
+    deployment = value.get("deployment")
+    if deployment is not None:
+        if not isinstance(deployment, dict):
+            raise PipelineError("deployment deve ser objeto.")
+        required = {
+            "analysis_scenario",
+            "panel_image_mode",
+            "expected_panel_counts",
+            "source_phase_contract",
+            "dynamic_enhancement_information_present",
+            "generalization_estimate_source",
+        }
+        missing = sorted(required - set(deployment))
+        if missing:
+            raise PipelineError(f"Contrato de deployment incompleto: {missing}")
+        counts = deployment.get("expected_panel_counts")
+        if (
+            not isinstance(counts, list)
+            or not counts
+            or any(not isinstance(item, int) or item <= 0 for item in counts)
+            or len(counts) != len(set(counts))
+        ):
+            raise PipelineError("expected_panel_counts deve conter inteiros positivos únicos.")
+        if not all(str(deployment.get(key) or "").strip() for key in (
+            "analysis_scenario",
+            "panel_image_mode",
+            "source_phase_contract",
+            "generalization_estimate_source",
+        )):
+            raise PipelineError("Contrato de deployment contém texto vazio.")
+        if not isinstance(deployment.get("dynamic_enhancement_information_present"), bool):
+            raise PipelineError("Flag de dinâmica de contraste inválida no deployment.")
     return value
 
 
@@ -284,29 +339,105 @@ def _fit_model(
     c_value: float,
     seed: int,
     max_iter: int,
+    instance_selection: dict[str, Any] | None = None,
+    dataset_by_case: dict[str, str] | None = None,
+    case_weighting: str = "class_balanced_panels",
 ) -> Pipeline:
+    case_ids = list(case_ids)
     matrix, labels = _panel_matrix(case_ids, embedding_map, class_index, class_by_case)
     present = set(labels.tolist())
     if not (present & positive_indices):
         raise PipelineError("Treino multiclasse sem classe positiva presente.")
     if not (present - positive_indices):
         raise PipelineError("Treino multiclasse sem classe negativa presente.")
-    model = Pipeline(
-        [
-            ("scaler", StandardScaler()),
-            (
-                "classifier",
-                LogisticRegression(
-                    C=float(c_value),
-                    class_weight="balanced",
-                    max_iter=max_iter,
-                    random_state=seed,
-                    solver="lbfgs",
+    if case_weighting == "equal_dataset_class_case" and dataset_by_case is None:
+        raise PipelineError("Ponderação por domínio exige dataset_by_case.")
+
+    def weights_for(selected_case_ids: list[str]) -> np.ndarray | None:
+        if case_weighting == "class_balanced_panels":
+            return None
+        groups: dict[tuple[str, str], list[str]] = defaultdict(list)
+        for case_id in case_ids:
+            groups[(str(dataset_by_case[case_id]), class_by_case[case_id])].append(case_id)
+        case_weights = {
+            case_id: 1.0 / len(group_ids)
+            for group_ids in groups.values() for case_id in group_ids
+        }
+        instance_counts: dict[str, int] = defaultdict(int)
+        for case_id in selected_case_ids:
+            instance_counts[case_id] += 1
+        return np.asarray([
+            case_weights[case_id] / instance_counts[case_id]
+            for case_id in selected_case_ids
+        ], dtype=np.float64)
+
+    initial_case_ids = [
+        case_id for case_id in case_ids for _ in embedding_map.get(case_id, [])
+    ]
+
+    def fit(
+        values: np.ndarray, targets: np.ndarray, iteration: int,
+        selected_case_ids: list[str],
+    ) -> Pipeline:
+        current = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    LogisticRegression(
+                        C=float(c_value),
+                        class_weight="balanced",
+                        max_iter=max_iter,
+                        random_state=seed + iteration,
+                        solver="lbfgs",
+                    ),
                 ),
-            ),
-        ]
-    )
-    model.fit(matrix, labels)
+            ]
+        )
+        sample_weights = weights_for(selected_case_ids)
+        if sample_weights is None:
+            current.fit(values, targets)
+        else:
+            current.fit(values, targets, classifier__sample_weight=sample_weights)
+        return current
+
+    model = fit(matrix, labels, 0, initial_case_ids)
+    if instance_selection is None:
+        return model
+
+    positive_top_k = int(instance_selection["positive_top_k"])
+    negative_hard_top_k = int(instance_selection["negative_hard_top_k"])
+    easy_anchors = int(instance_selection.get("negative_easy_anchors_per_case", 1))
+    for iteration in range(1, int(instance_selection["iterations"]) + 1):
+        selected_values: list[np.ndarray] = []
+        selected_labels: list[int] = []
+        selected_case_ids: list[str] = []
+        for case_id in case_ids:
+            vectors = embedding_map.get(case_id, [])
+            if not vectors:
+                continue
+            case_matrix = np.stack(vectors)
+            scores = _positive_probability(model, case_matrix, positive_indices)
+            label = class_index[class_by_case[case_id]]
+            order = np.argsort(scores)
+            if label in positive_indices:
+                selected = order[-min(positive_top_k, len(order)) :]
+            else:
+                hard = order[-min(negative_hard_top_k, len(order)) :].tolist()
+                anchors = order[:easy_anchors].tolist() if easy_anchors else []
+                selected = np.asarray(sorted(set(hard + anchors)), dtype=np.int64)
+            for index in selected.tolist():
+                selected_values.append(case_matrix[index])
+                selected_labels.append(label)
+                selected_case_ids.append(case_id)
+        if not selected_values or len(set(selected_labels)) < 2:
+            raise PipelineError("Seleção MIL não preservou as duas classes.")
+        model = fit(
+            np.stack(selected_values),
+            np.asarray(selected_labels, dtype=np.int64),
+            iteration,
+            selected_case_ids,
+        )
     return model
 
 
@@ -347,6 +478,40 @@ def _case_scores(
             continue
         scores = _positive_probability(model, np.stack(vectors), positive_indices)
         result[case_id] = _aggregate(scores.tolist(), aggregation)
+    return result
+
+
+def _case_class_probability_mass(
+    model: Pipeline,
+    case_ids: Iterable[str],
+    embedding_map: dict[str, list[np.ndarray]],
+    class_names: list[str],
+    aggregation: str,
+) -> dict[str, dict[str, float]]:
+    """Aggregate per-panel class evidence without reading case labels.
+
+    Max/top-2 aggregation is normalized back onto the probability simplex so
+    the persisted values remain interpretable class mass.  This artifact is
+    safe to freeze before evaluation: it contains model output only.
+    """
+
+    result: dict[str, dict[str, float]] = {}
+    classes = list(model.named_steps["classifier"].classes_)
+    for case_id in case_ids:
+        vectors = embedding_map.get(case_id, [])
+        if not vectors:
+            continue
+        probabilities = np.asarray(model.predict_proba(np.stack(vectors)), dtype=np.float64)
+        aggregated = {
+            class_names[int(label)]: _aggregate(probabilities[:, column].tolist(), aggregation)
+            for column, label in enumerate(classes)
+        }
+        total = float(sum(aggregated.values()))
+        if not math.isfinite(total) or total <= 0:
+            raise PipelineError("Massa de classe agregada inválida.")
+        result[case_id] = {
+            name: float(aggregated.get(name, 0.0) / total) for name in class_names
+        }
     return result
 
 
@@ -429,6 +594,9 @@ def _inner_oof_scores(
     aggregation: str,
     seed: int,
     max_iter: int,
+    instance_selection: dict[str, Any] | None = None,
+    dataset_by_case: dict[str, str] | None = None,
+    case_weighting: str = "class_balanced_panels",
 ) -> tuple[list[str], dict[str, float]]:
     validation_ids: list[str] = []
     scores: dict[str, float] = {}
@@ -442,6 +610,9 @@ def _inner_oof_scores(
             c_value=c_value,
             seed=seed + int(inner["inner_fold"]),
             max_iter=max_iter,
+            instance_selection=instance_selection,
+            dataset_by_case=dataset_by_case,
+            case_weighting=case_weighting,
         )
         current_validation = list(inner["validation_case_ids"])
         current = _case_scores(
@@ -513,12 +684,17 @@ def generate_oof_predictions(
     class_index = {name: index for index, name in enumerate(class_names)}
     positive_indices = {class_index[name] for name in positive_classes}
     protected_by_id = {case.case_id: case for case in protected_cases}
+    dataset_by_case = {case.case_id: case.dataset_id for case in protected_cases}
 
     embedding_map, candidate_map = _load_embedding_map(embedding_root)
     c_grid = [float(v) for v in config["regularization_c_grid"]]
     aggregations = list(config["panel_probability_aggregations"])
     seed = int(config.get("seed", 20260724))
     max_iter = int(config.get("max_iter", 3000))
+    persist_class_mass = bool(config.get("persist_label_blind_class_probabilities", False))
+    subtype_aggregation = str(config.get("subtype_probability_aggregation", "mean"))
+    instance_selection = config.get("training_instance_selection")
+    case_weighting = str(config.get("training_case_weighting", "class_balanced_panels"))
 
     predictions: list[dict[str, Any]] = []
     selections: list[dict[str, Any]] = []
@@ -543,6 +719,9 @@ def generate_oof_predictions(
                     aggregation=aggregation,
                     seed=seed + outer_index * 100,
                     max_iter=max_iter,
+                    instance_selection=instance_selection,
+                    dataset_by_case=dataset_by_case,
+                    case_weighting=case_weighting,
                 )
                 threshold, metrics = _best_threshold(
                     validation_ids, scores, binary_by_case
@@ -573,9 +752,23 @@ def generate_oof_predictions(
             c_value=selected["c_value"],
             seed=seed + outer_index,
             max_iter=max_iter,
+            instance_selection=instance_selection,
+            dataset_by_case=dataset_by_case,
+            case_weighting=case_weighting,
         )
         test_scores = _case_scores(
             model, outer_test_ids, embedding_map, positive_indices, selected["aggregation"]
+        )
+        test_class_mass = (
+            _case_class_probability_mass(
+                model,
+                outer_test_ids,
+                embedding_map,
+                class_names,
+                subtype_aggregation,
+            )
+            if persist_class_mass
+            else {}
         )
         model_path = output_root / f"outer_fold_{outer_index}.joblib"
         descriptor, temporary_name = tempfile.mkstemp(
@@ -600,6 +793,7 @@ def generate_oof_predictions(
         )
         for case_id in outer_test_ids:
             score = test_scores.get(case_id)
+            class_mass = test_class_mass.get(case_id)
             predictions.append(
                 {
                     "schema": PREDICTION_SCHEMA,
@@ -621,6 +815,15 @@ def generate_oof_predictions(
                     "ground_truth_in_artifact": False,
                     "held_out_label_used": False,
                     "research_only": True,
+                    **(
+                        {
+                            "class_probabilities": class_mass,
+                            "predicted_class": max(class_mass, key=class_mass.get),
+                            "subtype_probability_aggregation": subtype_aggregation,
+                        }
+                        if class_mass is not None
+                        else {}
+                    ),
                 }
             )
 
@@ -659,11 +862,29 @@ def generate_oof_predictions(
             if restrict
             else {}
         ),
+        **(
+            {"training_instance_selection": instance_selection}
+            if instance_selection is not None
+            else {}
+        ),
+        **(
+            {"training_case_weighting": case_weighting}
+            if case_weighting != "class_balanced_panels"
+            else {}
+        ),
         "positive_classes": positive_classes,
         "class_case_counts": {
             name: sum(1 for value in class_by_case.values() if value == name)
             for name in class_names
         },
+        **(
+            {
+                "label_blind_class_probabilities_persisted": True,
+                "subtype_probability_aggregation": subtype_aggregation,
+            }
+            if persist_class_mass
+            else {}
+        ),
         "training_protocol_signature": protocol["protocol_signature"],
         "embedding_signature": embedding_manifest["embedding_signature"],
         "multiclass_config_sha256": sha256_file(multiclass_config_path),
@@ -706,6 +927,90 @@ def _auc(labels: list[int], scores: list[float]) -> float | None:
         return None
     wins = sum(1.0 if p > n else 0.5 if p == n else 0.0 for p in positives for n in negatives)
     return wins / (len(positives) * len(negatives))
+
+
+def _subtype_classification_metrics(
+    rows: list[dict[str, Any]],
+    subtype_by_id: dict[str, str],
+    class_names: list[str],
+) -> dict[str, Any]:
+    """Attach protected subtype labels only after OOF predictions are frozen."""
+
+    truth_classes = sorted(
+        {subtype_by_id[str(row["case_id"])] for row in rows if str(row["case_id"]) in subtype_by_id}
+    )
+    if not truth_classes:
+        return {
+            "eligible_case_count": 0,
+            "balanced_accuracy": None,
+            "top1_accuracy": None,
+            "top2_accuracy": None,
+            "passed_75_balanced_accuracy": False,
+            "reason": "no_explicit_subtype_labels",
+        }
+    unknown_truth = sorted(set(truth_classes) - set(class_names))
+    if unknown_truth:
+        raise PipelineError(f"Subtipo protegido ausente do espaço de classes: {unknown_truth}")
+
+    confusion = {
+        truth: {predicted: 0 for predicted in truth_classes + ["UNDETERMINED"]}
+        for truth in truth_classes
+    }
+    correct = top2_correct = determined = failures = 0
+    eligible = 0
+    per_class_total = {name: 0 for name in truth_classes}
+    per_class_correct = {name: 0 for name in truth_classes}
+    for row in rows:
+        case_id = str(row["case_id"])
+        truth = subtype_by_id.get(case_id)
+        if truth is None:
+            continue
+        eligible += 1
+        per_class_total[truth] += 1
+        class_mass = row.get("class_probabilities")
+        if row.get("technical_failure") is True or not isinstance(class_mass, dict):
+            failures += 1
+            confusion[truth]["UNDETERMINED"] += 1
+            continue
+        if set(class_mass) != set(class_names):
+            raise PipelineError("Probabilidades OOF de subtipo têm classes divergentes.")
+        values = {name: float(value) for name, value in class_mass.items()}
+        if any(not math.isfinite(value) or value < 0 for value in values.values()):
+            raise PipelineError("Probabilidade OOF de subtipo inválida.")
+        if not math.isclose(sum(values.values()), 1.0, rel_tol=0, abs_tol=1e-6):
+            raise PipelineError("Probabilidades OOF de subtipo não somam 1.")
+        ranked = sorted(values, key=lambda name: (-values[name], name))
+        predicted = str(row.get("predicted_class") or ranked[0])
+        if predicted not in class_names or predicted != ranked[0]:
+            raise PipelineError("Classe OOF prevista diverge das probabilidades congeladas.")
+        determined += 1
+        confusion[truth][predicted if predicted in truth_classes else "UNDETERMINED"] += 1
+        if predicted == truth:
+            correct += 1
+            per_class_correct[truth] += 1
+        if truth in ranked[:2]:
+            top2_correct += 1
+
+    recalls = {
+        name: (per_class_correct[name] / per_class_total[name] if per_class_total[name] else 0.0)
+        for name in truth_classes
+    }
+    balanced = float(np.mean(list(recalls.values())))
+    return {
+        "eligible_case_count": eligible,
+        "class_names": truth_classes,
+        "top1_correct": correct,
+        "top1_accuracy": correct / eligible if eligible else None,
+        "top2_correct": top2_correct,
+        "top2_accuracy": top2_correct / eligible if eligible else None,
+        "determined_case_count": determined,
+        "determination_rate": determined / eligible if eligible else None,
+        "technical_failures_count_as_errors": failures,
+        "recall_by_subtype": recalls,
+        "balanced_accuracy": balanced,
+        "confusion_matrix": confusion,
+        "passed_75_balanced_accuracy": balanced >= 0.75,
+    }
 
 
 def evaluate_oof_predictions(
@@ -751,6 +1056,13 @@ def evaluate_oof_predictions(
     subtype_by_id = clinical_subtype_map(
         load_protected_label_rows(training_protocol_config_path, workspace_root)
     )
+    subtype_metrics = None
+    if freeze.get("label_blind_class_probabilities_persisted") is True:
+        subtype_metrics = _subtype_classification_metrics(
+            predictions,
+            subtype_by_id,
+            [str(value) for value in freeze["class_names"]],
+        )
 
     def metrics_for(rows: list[dict[str, Any]]) -> dict[str, Any]:
         tp = tn = fp = fn = failures = 0
@@ -818,6 +1130,7 @@ def evaluate_oof_predictions(
         "overall": overall,
         "by_dataset": by_dataset,
         "by_clinical_subtype": by_clinical_subtype,
+        **({"subtype_metrics": subtype_metrics} if subtype_metrics is not None else {}),
         "methodology": {
             "patient_grouped_nested_cv": True,
             "outer_predictions_only": True,
@@ -859,6 +1172,9 @@ def _cross_validated_case_scores(
     aggregation: str,
     seed: int,
     max_iter: int,
+    instance_selection: dict[str, Any] | None = None,
+    dataset_by_case: dict[str, str] | None = None,
+    case_weighting: str = "class_balanced_panels",
 ) -> dict[str, float]:
     """One OOF score per case for a FIXED (c_value, aggregation), using the frozen
     outer folds. Each case is scored by a model that did not train on it, so this
@@ -874,6 +1190,9 @@ def _cross_validated_case_scores(
         model = _fit_model(
             train_ids, embedding_map, class_index, class_by_case, positive_indices,
             c_value=c_value, seed=seed + int(outer["outer_fold"]), max_iter=max_iter,
+            instance_selection=instance_selection,
+            dataset_by_case=dataset_by_case,
+            case_weighting=case_weighting,
         )
         fold_scores = _case_scores(model, test_ids, embedding_map, positive_indices, aggregation)
         overlap = set(scores) & set(fold_scores)
@@ -951,6 +1270,9 @@ def train_production_bundle(
     aggregations = list(config["panel_probability_aggregations"])
     seed = int(config.get("seed", 20260724))
     max_iter = int(config.get("max_iter", 3000))
+    instance_selection = config.get("training_instance_selection")
+    dataset_by_case = {case.case_id: case.dataset_id for case in protected_cases}
+    case_weighting = str(config.get("training_case_weighting", "class_balanced_panels"))
 
     # Select (C, aggregation, threshold) by cross-validation over all cases.
     selection_candidates: list[dict[str, Any]] = []
@@ -960,6 +1282,9 @@ def train_production_bundle(
                 splits=splits, embedding_map=embedding_map, class_index=class_index,
                 class_by_case=class_by_case, positive_indices=positive_indices,
                 c_value=c_value, aggregation=aggregation, seed=seed, max_iter=max_iter,
+                instance_selection=instance_selection,
+                dataset_by_case=dataset_by_case,
+                case_weighting=case_weighting,
             )
             evaluated_ids = sorted(cv_scores)
             threshold, metrics = _best_threshold(evaluated_ids, cv_scores, binary_by_case)
@@ -981,6 +1306,9 @@ def train_production_bundle(
     final_model = _fit_model(
         all_case_ids, embedding_map, class_index, class_by_case, positive_indices,
         c_value=selected["c_value"], seed=seed, max_iter=max_iter,
+        instance_selection=instance_selection,
+        dataset_by_case=dataset_by_case,
+        case_weighting=case_weighting,
     )
     model_path = output_root / "production_model.joblib"
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{model_path.name}.", suffix=".tmp", dir=output_root)
@@ -994,6 +1322,7 @@ def train_production_bundle(
 
     training_case_ids = sorted(all_case_ids)
     training_group_ids = sorted({case.patient_group_id for case in protected_cases})
+    deployment = config.get("deployment")
     body = {
         "schema": BUNDLE_SCHEMA,
         "candidate_id": str(config["candidate_id"]),
@@ -1007,9 +1336,19 @@ def train_production_bundle(
         "cross_validated_selection_metrics": selected["cv_metrics"],
         "seed": seed,
         "max_iter": max_iter,
+        "training_instance_selection": instance_selection,
+        "training_case_weighting": case_weighting,
         "image_size": 448,
-        "expected_panels_per_case": 3,
-        "panel_image_mode": "multiphase_rgb_fusion",
+        "expected_panels_per_case": (
+            list(deployment["expected_panel_counts"])
+            if deployment is not None
+            else 3
+        ),
+        "panel_image_mode": (
+            str(deployment["panel_image_mode"])
+            if deployment is not None
+            else "multiphase_rgb_fusion"
+        ),
         "model_sha256": sha256_file(model_path),
         "training_protocol_signature": protocol["protocol_signature"],
         "embedding_signature": embedding_manifest["embedding_signature"],
@@ -1021,7 +1360,27 @@ def train_production_bundle(
         "training_case_ids": training_case_ids,
         "training_patient_group_ids": training_group_ids,
         "training_case_set_sha256": canonical_sha256(training_case_ids),
-        "generalization_estimate_source": "nested_oof_etapa_c",
+        "generalization_estimate_source": (
+            str(deployment["generalization_estimate_source"])
+            if deployment is not None
+            else "nested_oof_etapa_c"
+        ),
+        **(
+            {
+                "analysis_scenario": str(deployment["analysis_scenario"]),
+                "source_phase_contract": str(deployment["source_phase_contract"]),
+                "dynamic_enhancement_information_present": bool(
+                    deployment["dynamic_enhancement_information_present"]
+                ),
+                **(
+                    {"source_phase_key": str(deployment["source_phase_key"])}
+                    if str(deployment.get("source_phase_key") or "").strip()
+                    else {}
+                ),
+            }
+            if deployment is not None
+            else {}
+        ),
         "in_sample_performance_is_not_a_generalization_estimate": True,
         "individual_ground_truth_persisted": False,
         "lesion_masks_read": 0,

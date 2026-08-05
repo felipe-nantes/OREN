@@ -109,6 +109,63 @@ def class_probabilities(
     }
 
 
+def instance_probability_evidence(
+    bundle: ProductionBundle, panel_embeddings: np.ndarray
+) -> dict[str, Any]:
+    """Expose auditable per-panel evidence without changing the frozen decision.
+
+    This is the inference-side foundation for multiple-instance learning.  It
+    records which real panel carried each class signal and provides deterministic
+    mean/max/top-2 summaries.  No ground truth, lesion mask or post-hoc class
+    selection participates in this computation.
+    """
+
+    matrix = np.asarray(panel_embeddings, dtype=np.float64)
+    if matrix.ndim != 2 or matrix.shape[0] == 0:
+        raise PipelineError("Embeddings de painel inválidos para evidência multi-instância.")
+    probabilities = np.asarray(bundle.model.predict_proba(matrix), dtype=np.float64)
+    classes = list(bundle.model.named_steps["classifier"].classes_)
+    names = list(bundle.manifest["class_names"])
+    if probabilities.shape != (matrix.shape[0], len(classes)):
+        raise PipelineError("Matriz de probabilidades por instância inválida.")
+
+    by_instance: list[dict[str, Any]] = []
+    for row_index, row in enumerate(probabilities):
+        class_mass = {
+            names[int(label)]: float(row[column])
+            for column, label in enumerate(classes)
+        }
+        by_instance.append(
+            {
+                "instance_index": row_index,
+                "class_probabilities": class_mass,
+                "positive_probability": float(
+                    sum(row[column] for column, label in enumerate(classes) if label in bundle.positive_indices)
+                ),
+            }
+        )
+
+    by_class: dict[str, dict[str, Any]] = {}
+    for class_name in names:
+        values = [entry["class_probabilities"].get(class_name, 0.0) for entry in by_instance]
+        top_indices = sorted(range(len(values)), key=lambda index: (-values[index], index))
+        by_class[class_name] = {
+            "mean": float(np.mean(values)),
+            "max": float(max(values)),
+            "top2_mean": float(np.mean(sorted(values, reverse=True)[:2])),
+            "top_instance_indices": top_indices[:2],
+        }
+    return {
+        "schema": "oren-visual-instance-evidence-v1",
+        "instance_count": int(matrix.shape[0]),
+        "instances": by_instance,
+        "class_aggregations": by_class,
+        "ground_truth_used": False,
+        "lesion_mask_used": False,
+        "changes_frozen_decision": False,
+    }
+
+
 def resolve_subtype(class_mass: Mapping[str, float]) -> dict[str, Any]:
     """Name the lesion subtype, or refuse to when the evidence is not there.
 
@@ -165,6 +222,7 @@ def classify_embeddings(bundle: ProductionBundle, panel_embeddings: np.ndarray) 
     prediction = "POSITIVE" if score >= bundle.threshold else "NEGATIVE"
     mass = class_probabilities(bundle, matrix)
     subtype = resolve_subtype(mass)
+    instance_evidence = instance_probability_evidence(bundle, matrix)
     return {
         "score": float(score),
         "threshold": bundle.threshold,
@@ -174,6 +232,7 @@ def classify_embeddings(bundle: ProductionBundle, panel_embeddings: np.ndarray) 
         # O subtipo só descreve QUAL alteração, e só faz sentido quando a triagem
         # deu positiva. Num negativo ele fica registrado mas não é a resposta.
         "subtype": subtype,
+        "instance_evidence": instance_evidence,
     }
 
 

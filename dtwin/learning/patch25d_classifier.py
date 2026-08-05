@@ -12,6 +12,7 @@ import joblib
 import numpy as np
 import yaml
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -53,14 +54,12 @@ def _load_config(path: Path) -> dict[str, Any]:
 
 def _load_inputs(
     embedding_root: Path, target_root: Path
-) -> tuple[dict[str, list[np.ndarray]], dict[tuple[str, str], int], dict[str, str]]:
-    embeddings: dict[str, list[np.ndarray]] = {}
-    keys_by_case: dict[str, list[str]] = {}
+) -> tuple[dict[str, list[tuple[str, np.ndarray]]], dict[tuple[str, str], int], dict[str, str]]:
+    embeddings: dict[str, list[tuple[str, np.ndarray]]] = {}
     for row in _jsonl(Path(embedding_root) / "embedding_records.jsonl"):
         case_id, candidate_id = str(row["case_id"]), str(row["candidate_id"])
         vector = np.load(Path(embedding_root) / row["embedding_path"], allow_pickle=False).astype(np.float64)
-        embeddings.setdefault(case_id, []).append(vector)
-        keys_by_case.setdefault(case_id, []).append(candidate_id)
+        embeddings.setdefault(case_id, []).append((candidate_id, vector))
     target_manifest = _json(Path(target_root) / "target_manifest.json")
     targets_path = Path(target_root) / "protected_candidate_targets.jsonl"
     if target_manifest.get("targets_sha256") != sha256_file(targets_path):
@@ -72,48 +71,63 @@ def _load_inputs(
         case_labels[case_id] = str(row["case_label"])
         if row.get("candidate_target") is not None:
             targets[(case_id, candidate_id)] = int(row["candidate_target"])
-    ordered_embeddings: dict[str, list[np.ndarray]] = {}
-    for case_id, vectors in embeddings.items():
-        paired = sorted(zip(keys_by_case[case_id], vectors), key=lambda item: item[0])
-        ordered_embeddings[case_id] = [vector for _, vector in paired]
+    ordered_embeddings = {
+        case_id: sorted(vectors, key=lambda item: item[0])
+        for case_id, vectors in embeddings.items()
+    }
     return ordered_embeddings, targets, case_labels
 
 
 def _fit(
     case_ids: list[str],
-    embeddings: dict[str, list[np.ndarray]],
+    embeddings: dict[str, list[tuple[str, np.ndarray]]],
     targets: dict[tuple[str, str], int],
     *,
     c_value: float,
     seed: int,
     max_iter: int,
-) -> Pipeline:
+    model_family: str = "logistic",
+) -> Any:
     values: list[np.ndarray] = []
     labels: list[int] = []
     for case_id in case_ids:
-        for index, vector in enumerate(embeddings.get(case_id, []), 1):
-            key = (case_id, f"candidate-{index:03d}")
+        for candidate_id, vector in embeddings.get(case_id, []):
+            key = (case_id, candidate_id)
             if key in targets:
                 values.append(vector)
                 labels.append(targets[key])
     if not values or set(labels) != {0, 1}:
         raise PipelineError("Treino 2.5D requer candidatos supervisionados nas duas classes.")
-    model = Pipeline(
-        [
-            ("scaler", StandardScaler()),
-            (
-                "classifier",
-                LogisticRegression(
-                    C=float(c_value),
-                    class_weight="balanced",
-                    dual=True,
-                    max_iter=int(max_iter),
-                    random_state=int(seed),
-                    solver="liblinear",
+    if model_family == "logistic":
+        model: Any = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    LogisticRegression(
+                        C=float(c_value),
+                        class_weight="balanced",
+                        dual=True,
+                        max_iter=int(max_iter),
+                        random_state=int(seed),
+                        solver="liblinear",
+                    ),
                 ),
-            ),
-        ]
-    )
+            ]
+        )
+    elif model_family == "hist_gradient_boosting":
+        model = HistGradientBoostingClassifier(
+            learning_rate=0.05,
+            max_iter=min(int(max_iter), 300),
+            max_leaf_nodes=7,
+            min_samples_leaf=12,
+            l2_regularization=float(c_value),
+            class_weight="balanced",
+            early_stopping=False,
+            random_state=int(seed),
+        )
+    else:
+        raise PipelineError(f"Familia de classificador candidata invalida: {model_family}.")
     model.fit(np.stack(values), np.asarray(labels))
     return model
 
@@ -132,14 +146,16 @@ def _aggregate(values: list[float], method: str) -> float:
 def _scores(
     model: Pipeline,
     case_ids: list[str],
-    embeddings: dict[str, list[np.ndarray]],
+    embeddings: dict[str, list[tuple[str, np.ndarray]]],
     aggregation: str,
 ) -> dict[str, float]:
     result: dict[str, float] = {}
     for case_id in case_ids:
-        vectors = embeddings.get(case_id, [])
-        if vectors:
-            probabilities = model.predict_proba(np.stack(vectors))[:, 1].tolist()
+        pairs = embeddings.get(case_id, [])
+        if pairs:
+            probabilities = model.predict_proba(
+                np.stack([vector for _, vector in pairs])
+            )[:, 1].tolist()
             result[case_id] = _aggregate(probabilities, aggregation)
     return result
 
@@ -249,21 +265,25 @@ def generate_oof(
     c_grid = [float(item) for item in config["regularization_c_grid"]]
     aggregations = list(config["aggregations"])
     seed, max_iter = int(config["seed"]), int(config["max_iter"])
+    model_family = str(config.get("model_family", "logistic"))
     predictions: list[dict[str, Any]] = []
     selections: list[dict[str, Any]] = []
     for outer in folds:
         options = []
         for c_value in c_grid:
+            fitted_inner: list[tuple[Any, list[str]]] = []
+            for inner in outer["inner_folds"]:
+                model = _fit(
+                    inner["train_case_ids"], embeddings, targets,
+                    c_value=c_value,
+                    seed=seed + outer["outer_fold"] * 100 + inner["inner_fold"],
+                    max_iter=max_iter, model_family=model_family,
+                )
+                fitted_inner.append((model, inner["validation_case_ids"]))
             for aggregation in aggregations:
                 inner_scores: dict[str, float] = {}
                 validation_ids: list[str] = []
-                for inner in outer["inner_folds"]:
-                    model = _fit(
-                        inner["train_case_ids"], embeddings, targets,
-                        c_value=c_value, seed=seed + outer["outer_fold"] * 100 + inner["inner_fold"],
-                        max_iter=max_iter,
-                    )
-                    ids = inner["validation_case_ids"]
+                for model, ids in fitted_inner:
                     inner_scores.update(_scores(model, ids, embeddings, aggregation))
                     validation_ids.extend(ids)
                 threshold, metrics = _best_threshold(validation_ids, inner_scores, labels)
@@ -282,6 +302,7 @@ def generate_oof(
         model = _fit(
             outer["train_case_ids"], embeddings, targets,
             c_value=selected["c_value"], seed=seed + outer["outer_fold"], max_iter=max_iter,
+            model_family=model_family,
         )
         test_scores = _scores(model, outer["test_case_ids"], embeddings, selected["aggregation"])
         model_path = output_root / f"outer_fold_{outer['outer_fold']}.joblib"

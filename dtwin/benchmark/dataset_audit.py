@@ -401,6 +401,103 @@ def select_best_mr_series(
     return files, accumulator.frames, metadata
 
 
+def select_monophase_evidence_series(
+    root: Path, *, min_slices: int = 3
+) -> tuple[dict[str, list[str]], dict[str, Any] | None]:
+    """Select at most one real MR series per recognized sequence class.
+
+    A study may be monophase with respect to dynamic contrast while still
+    containing T2, DWI and ADC.  This selector preserves those complementary
+    real sequences for later registered fusion instead of silently discarding
+    them.  Paths are returned only to the local caller; metadata remains PHI-
+    safe and contains neither paths nor raw UIDs.
+    """
+
+    groups, unreadable = _discover_series(Path(root))
+    minimum_score = 60 if int(min_slices) >= 16 else 40
+    candidates: list[tuple[_SeriesAccumulator, dict[str, Any]]] = []
+    for accumulator in groups:
+        payload = _series_payload(accumulator)
+        if (
+            accumulator.modality == "MR"
+            and accumulator.frames >= int(min_slices)
+            and payload["quality_score"] >= minimum_score
+        ):
+            candidates.append((accumulator, payload))
+    if not candidates:
+        return {}, None
+
+    best_by_class: dict[str, tuple[_SeriesAccumulator, dict[str, Any]]] = {}
+    for accumulator, payload in candidates:
+        sequence_class = str(payload["sequence_class"])
+        previous = best_by_class.get(sequence_class)
+        rank = (payload["quality_score"], accumulator.frames, payload["series_key"])
+        previous_rank = (
+            (previous[1]["quality_score"], previous[0].frames, previous[1]["series_key"])
+            if previous else None
+        )
+        if previous_rank is None or rank > previous_rank:
+            best_by_class[sequence_class] = (accumulator, payload)
+
+    primary_priority = {
+        "T1_ARTERIAL": 100,
+        "T1_PORTAL": 95,
+        "T1_DELAYED": 90,
+        "T1_POST_CONTRAST": 85,
+        "DWI": 80,
+        "ADC": 75,
+        "T2": 70,
+        "T1_IN_PHASE": 60,
+        "T1_OUT_PHASE": 55,
+        "T1_UNSPECIFIED": 40,
+        "UNKNOWN": 0,
+    }
+    primary_class, (primary_accumulator, primary_payload) = max(
+        best_by_class.items(),
+        key=lambda item: (
+            primary_priority.get(item[0], 0),
+            item[1][1]["quality_score"],
+            item[1][0].frames,
+            item[1][1]["series_key"],
+        ),
+    )
+    paths_by_class = {
+        sequence_class: sorted(str(path) for path in accumulator.paths)
+        for sequence_class, (accumulator, _payload) in sorted(best_by_class.items())
+    }
+    selected_payloads = {
+        sequence_class: payload
+        for sequence_class, (_accumulator, payload) in sorted(best_by_class.items())
+    }
+    complementary = [
+        value for value in ("T2", "DWI", "ADC")
+        if value in selected_payloads and value != primary_class
+    ]
+    metadata = {
+        "schema": "oren-monophase-evidence-selection-v1",
+        "strategy": "one_best_real_series_per_sequence_class",
+        "primary_sequence_class": primary_class,
+        "selected_primary": primary_payload,
+        "selected_by_sequence": selected_payloads,
+        "selected_sequence_classes": sorted(selected_payloads),
+        "complementary_sequence_classes": complementary,
+        "candidate_count": len(candidates),
+        "selected_series_count": len(selected_payloads),
+        "unreadable_file_count": unreadable,
+        "dynamic_phase_count": sum(
+            value in {"T1_ARTERIAL", "T1_PORTAL", "T1_DELAYED", "T1_POST_CONTRAST"}
+            for value in selected_payloads
+        ),
+        "synthetic_phases_created": False,
+        "raw_paths_persisted": False,
+        "raw_uids_persisted": False,
+        "contains_phi": False,
+    }
+    if primary_accumulator is not best_by_class[primary_class][0]:
+        raise RuntimeError("Seleção primária monofásica inconsistente.")
+    return paths_by_class, metadata
+
+
 def describe_selected_series(files: Iterable[str | Path]) -> dict[str, Any]:
     """Descreve arquivos selecionados sem persistir seus caminhos ou UIDs."""
     groups, unreadable = _accumulate_series(Path(path) for path in files)

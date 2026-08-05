@@ -70,6 +70,20 @@ def test_load_fusion_config_accepts_valid_config(tmp_path):
     ]
 
 
+def test_load_fusion_config_validates_missing_signal_policy(tmp_path):
+    path = tmp_path / "fusion.yaml"
+    path.write_text(
+        yaml.safe_dump(_config(missing_signal_policy="zero_margin_with_indicator")),
+        encoding="utf-8",
+    )
+    assert load_fusion_config(path)["missing_signal_policy"] == "zero_margin_with_indicator"
+    path.write_text(
+        yaml.safe_dump(_config(missing_signal_policy="silently_drop")), encoding="utf-8"
+    )
+    with pytest.raises(PipelineError, match="missing_signal_policy"):
+        load_fusion_config(path)
+
+
 def _case(case_id, label, dataset_id="lld_mmri", patient_group_id=None):
     return ProtectedTrainingCase(
         case_id=case_id,
@@ -114,6 +128,20 @@ def test_feature_vector_is_signed_margin_and_none_on_failure():
         "b": {"c1": {"score": 0.2, "threshold": 0.5, "technical_failure": False}},
     }
     assert _feature_vector("c1", failed_scores, ["a", "b"]) is None
+
+    fallback = _feature_vector(
+        "c1", failed_scores, ["a", "b"], "zero_margin_with_indicator"
+    )
+    assert fallback is not None
+    assert list(fallback) == pytest.approx([0.0, -0.3, 1.0, 0.0])
+
+
+def test_feature_vector_rejects_case_when_every_signal_is_missing():
+    failed = {
+        "a": {"c": {"score": None, "threshold": 0.5, "technical_failure": True}},
+        "b": {"c": {"score": None, "threshold": 0.5, "technical_failure": True}},
+    }
+    assert _feature_vector("c", failed, ["a", "b"], "zero_margin_with_indicator") is None
 
 
 def test_score_correlation_perfect_positive():

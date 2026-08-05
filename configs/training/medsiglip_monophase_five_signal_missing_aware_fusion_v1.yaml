@@ -1,0 +1,28 @@
+schema: argos-hybrid-multi-signal-fusion-config-v1
+candidate_id: oren_medsiglip_monophase_five_signal_missing_aware_fusion_v1
+method: nested_logistic_regression_on_signed_margins_and_missing_indicators
+signals:
+  - name: delayed_global
+    prediction_schema: argos-hybrid-medsiglip-multiclass-oof-prediction-v1
+    freeze_schema: argos-hybrid-medsiglip-multiclass-oof-freeze-v1
+  - name: delayed_axial
+    prediction_schema: argos-hybrid-medsiglip-multiclass-oof-prediction-v1
+    freeze_schema: argos-hybrid-medsiglip-multiclass-oof-freeze-v1
+  - name: adc
+    prediction_schema: argos-hybrid-medsiglip-multiclass-oof-prediction-v1
+    freeze_schema: argos-hybrid-medsiglip-multiclass-oof-freeze-v1
+  - name: dwi
+    prediction_schema: argos-hybrid-medsiglip-multiclass-oof-prediction-v1
+    freeze_schema: argos-hybrid-medsiglip-multiclass-oof-freeze-v1
+  - name: t2
+    prediction_schema: argos-hybrid-medsiglip-multiclass-oof-prediction-v1
+    freeze_schema: argos-hybrid-medsiglip-multiclass-oof-freeze-v1
+regularization_c_grid: [0.001, 0.01, 0.1, 1.0]
+weight_selection: inner_oof_only
+threshold_selection: inner_oof_only
+missing_signal_policy: zero_margin_with_indicator
+seed: 20260724
+max_iter: 2000
+technical_failures_count_as_errors: true
+research_only: true
+clinical_use_allowed: false

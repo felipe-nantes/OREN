@@ -1,0 +1,13 @@
+schema: oren-medsiglip-monophase-representation-config-v1
+representation_id: medsiglip_monophase_arterial_grayscale_v1
+source_rgb_channel: red
+expected_source_phase_key: art
+resolve_source_phase_by_manifest: true
+missing_expected_phase_policy: technical_failure
+output_phase_name: single_phase_arterial_grayscale
+replicate_source_across_rgb: true
+dynamic_enhancement_information_present: false
+ground_truth_allowed_during_derivation: false
+lesion_mask_allowed_during_derivation: false
+research_only: true
+clinical_use_allowed: false

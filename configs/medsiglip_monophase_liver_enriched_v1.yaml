@@ -1,0 +1,14 @@
+# Renderer-only configuration for the dedicated single-phase MedSigLIP path.
+# One real volume is copied to R/G/B; no arterial/venous/delayed differences are
+# created. The liver mask selects the axial territory but is never rendered.
+extends: medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml
+medgemma_screening:
+  panel:
+    fusion:
+      channel_map:
+        red: mono
+        green: mono
+        blue: mono
+      partial_fov_fallback_phase: mono
+  rag:
+    enabled: false

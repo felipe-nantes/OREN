@@ -1,0 +1,19 @@
+schema: argos-hybrid-medsiglip-pairwise-subtype-config-v1
+candidate_id: oren_medsiglip_monophase_delayed_pairwise_subtype_v1
+restrict_to_dataset_ids: [lld_mmri]
+class_names: [fnh, hcc, hemangioma, hepatic_cyst]
+model: six_class_balanced_pairwise_logistic_regressions
+regularization_c_grid: [0.01, 0.1, 1.0]
+panel_probability_aggregations: [mean, max, top2_mean]
+selection_objective: inner_macro_recall_only
+binary_decision_unchanged: true
+technical_failures_count_as_errors: true
+prespecified_baseline_balanced_accuracy: 0.4888009873765622
+prespecified_minimum_absolute_gain: 0.05
+prespecified_minimum_top1_accuracy: 0.60
+seed: 20260803
+max_iter: 3000
+source_phase: t1_delayed_real_single_series
+lesion_masks_allowed: false
+research_only: true
+clinical_use_allowed: false

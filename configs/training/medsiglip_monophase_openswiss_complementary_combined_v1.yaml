@@ -1,0 +1,24 @@
+schema: argos-hybrid-medsiglip-multiclass-config-v1
+candidate_id: oren_medsiglip_monophase_openswiss_t2_dwi_adc_combined_v1
+model: class_balanced_multinomial_logistic_regression
+solver: lbfgs
+label_granularity: binary
+restrict_to_dataset_ids: [openswisshcc_development]
+positive_classes: [positive_unspecified]
+regularization_c_grid: [0.01, 0.1, 1.0]
+panel_probability_aggregations: [mean, max, top2_mean]
+standardization: inner_or_outer_training_instances_only
+threshold_selection: inner_oof_only
+seed: 20260804
+max_iter: 3000
+technical_failures_count_as_errors: true
+representation_contract:
+  dynamic_phase_count: 1
+  complementary_real_sequences: [t2_haste, dwi_trace_run_03, dwi_adc]
+  synthetic_sequences_created: false
+  lesion_mask_allowed: false
+  automatic_liver_mask_use: crop_and_coverage_only
+  exact_coverage_required_for_materialized_sequence: true
+  rigid_registration_enabled_in_full_cohort: false
+research_only: true
+clinical_use_allowed: false

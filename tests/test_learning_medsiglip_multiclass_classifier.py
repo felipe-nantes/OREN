@@ -15,7 +15,9 @@ from dtwin.learning.medsiglip_multiclass_classifier import (
     _confusion,
     _cross_validated_case_scores,
     _fit_model,
+    _case_class_probability_mass,
     _positive_probability,
+    _subtype_classification_metrics,
     build_multiclass_labels,
     load_multiclass_config,
     resolve_positive_classes,
@@ -55,6 +57,47 @@ def test_config_requires_positive_classes(tmp_path):
     path = tmp_path / "c.yaml"
     path.write_text(yaml.safe_dump(_config(positive_classes=[])), encoding="utf-8")
     with pytest.raises(PipelineError, match="positive_classes"):
+        load_multiclass_config(path)
+
+
+def test_config_validates_iterative_topk_mil(tmp_path):
+    selection = {
+        "mode": "iterative_topk_mil",
+        "positive_top_k": 2,
+        "negative_hard_top_k": 3,
+        "negative_easy_anchors_per_case": 1,
+        "iterations": 2,
+    }
+    path = tmp_path / "c.yaml"
+    path.write_text(
+        yaml.safe_dump(_config(training_instance_selection=selection)), encoding="utf-8"
+    )
+    assert load_multiclass_config(path)["training_instance_selection"] == selection
+
+
+def test_config_validates_domain_balanced_case_weighting(tmp_path):
+    path = tmp_path / "c.yaml"
+    path.write_text(yaml.safe_dump(_config(training_case_weighting="equal_dataset_class_case")), encoding="utf-8")
+    assert load_multiclass_config(path)["training_case_weighting"] == "equal_dataset_class_case"
+    path.write_text(yaml.safe_dump(_config(training_case_weighting="unknown")), encoding="utf-8")
+    with pytest.raises(PipelineError, match="training_case_weighting"):
+        load_multiclass_config(path)
+
+
+@pytest.mark.parametrize(
+    "selection,match",
+    [
+        ({"mode": "unknown", "positive_top_k": 1, "negative_hard_top_k": 1, "iterations": 1}, "Modo"),
+        ({"mode": "iterative_topk_mil", "positive_top_k": 0, "negative_hard_top_k": 1, "iterations": 1}, "positive_top_k"),
+        ({"mode": "iterative_topk_mil", "positive_top_k": 1, "negative_hard_top_k": 1, "iterations": 11}, "limite"),
+    ],
+)
+def test_config_rejects_unsafe_mil_selection(tmp_path, selection, match):
+    path = tmp_path / "c.yaml"
+    path.write_text(
+        yaml.safe_dump(_config(training_instance_selection=selection)), encoding="utf-8"
+    )
+    with pytest.raises(PipelineError, match=match):
         load_multiclass_config(path)
 
 
@@ -158,6 +201,60 @@ def test_positive_probability_sums_mass_over_positive_classes():
     assert everything == pytest.approx(1.0)
 
 
+def test_domain_balanced_case_weighting_trains_with_unequal_domains():
+    embedding_map, class_by_case, class_index = _separable_setup()
+    dataset_by_case = {
+        case_id: ("large" if index < 14 else "small")
+        for index, case_id in enumerate(sorted(class_by_case))
+    }
+    model = _fit_model(
+        list(class_by_case), embedding_map, class_index, class_by_case, {0},
+        c_value=1.0, seed=1, max_iter=500,
+        dataset_by_case=dataset_by_case,
+        case_weighting="equal_dataset_class_case",
+    )
+    assert np.isfinite(_positive_probability(model, np.stack(embedding_map["h0"]), {0})).all()
+
+
+def test_iterative_topk_mil_learns_from_sparse_positive_instances():
+    embedding_map = {}
+    class_by_case = {}
+    for index in range(8):
+        embedding_map[f"p{index}"] = [
+            np.array([4.0, index / 100]),
+            np.array([-2.0, 0.0]),
+            np.array([-1.5, 0.1]),
+        ]
+        class_by_case[f"p{index}"] = "positive"
+        embedding_map[f"n{index}"] = [
+            np.array([-4.0, index / 100]),
+            np.array([1.0, 0.0]),
+            np.array([-2.0, -0.1]),
+        ]
+        class_by_case[f"n{index}"] = "negative"
+    model = _fit_model(
+        sorted(class_by_case),
+        embedding_map,
+        {"negative": 0, "positive": 1},
+        class_by_case,
+        {1},
+        c_value=0.1,
+        seed=7,
+        max_iter=500,
+        instance_selection={
+            "mode": "iterative_topk_mil",
+            "positive_top_k": 1,
+            "negative_hard_top_k": 1,
+            "negative_easy_anchors_per_case": 1,
+            "iterations": 2,
+        },
+    )
+    positive = _positive_probability(model, np.array([[4.0, 0.0]]), {1})[0]
+    negative = _positive_probability(model, np.array([[-4.0, 0.0]]), {1})[0]
+    assert np.isfinite([positive, negative]).all()
+    assert positive > negative
+
+
 def test_aggregate_methods():
     assert _aggregate([0.1, 0.9], "max") == 0.9
     assert _aggregate([0.2, 0.4], "mean") == pytest.approx(0.3)
@@ -201,6 +298,22 @@ def test_config_rejects_unknown_granularity_and_empty_restriction(tmp_path):
         load_multiclass_config(path)
 
 
+def test_config_validates_label_blind_subtype_probability_options(tmp_path):
+    path = tmp_path / "c.yaml"
+    path.write_text(
+        yaml.safe_dump(_config(persist_label_blind_class_probabilities="yes")),
+        encoding="utf-8",
+    )
+    with pytest.raises(PipelineError, match="deve ser booleano"):
+        load_multiclass_config(path)
+    path.write_text(
+        yaml.safe_dump(_config(subtype_probability_aggregation="median")),
+        encoding="utf-8",
+    )
+    with pytest.raises(PipelineError, match="subtype_probability_aggregation"):
+        load_multiclass_config(path)
+
+
 def test_config_defaults_preserve_unrestricted_clinical_behaviour(tmp_path):
     # Etapa C's committed run must keep working unchanged when the new options
     # are absent from the config.
@@ -209,6 +322,24 @@ def test_config_defaults_preserve_unrestricted_clinical_behaviour(tmp_path):
     loaded = load_multiclass_config(path)
     assert loaded.get("label_granularity", CLINICAL_GRANULARITY) == CLINICAL_GRANULARITY
     assert loaded.get("restrict_to_dataset_ids") is None
+
+
+def test_config_validates_monophase_deployment_contract(tmp_path):
+    deployment = {
+        "analysis_scenario": "monophase_medsiglip",
+        "panel_image_mode": "single_phase_portal_venous_grayscale_liver_enriched",
+        "expected_panel_counts": [2, 3],
+        "source_phase_contract": "exactly_one_real_series",
+        "dynamic_enhancement_information_present": False,
+        "generalization_estimate_source": "nested_oof_lld_monophase_ablation",
+    }
+    path = tmp_path / "c.yaml"
+    path.write_text(yaml.safe_dump(_config(deployment=deployment)), encoding="utf-8")
+    assert load_multiclass_config(path)["deployment"] == deployment
+    deployment["expected_panel_counts"] = []
+    path.write_text(yaml.safe_dump(_config(deployment=deployment)), encoding="utf-8")
+    with pytest.raises(PipelineError, match="expected_panel_counts"):
+        load_multiclass_config(path)
 
 
 def test_restrict_splits_keeps_original_fold_membership():
@@ -273,3 +404,41 @@ def test_cross_validated_scores_cover_each_case_exactly_once():
     assert set(scores) == set(class_by_case)  # every case scored exactly once
     # separable synthetic -> hcc scored above cysts
     assert min(scores[f"h{i}"] for i in range(4)) > max(scores[f"c{i}"] for i in range(4))
+
+
+def test_case_class_probability_mass_is_label_blind_and_normalized():
+    embedding_map, class_by_case, class_index = _separable_setup()
+    model = _fit_model(
+        list(class_by_case), embedding_map, class_index, class_by_case, {0},
+        c_value=1.0, seed=1, max_iter=500,
+    )
+    mass = _case_class_probability_mass(
+        model, ["h0", "c0"], embedding_map,
+        ["hcc", "hemangioma", "hepatic_cyst"], "max",
+    )
+    assert set(mass) == {"h0", "c0"}
+    assert sum(mass["h0"].values()) == pytest.approx(1.0)
+    assert max(mass["h0"], key=mass["h0"].get) == "hcc"
+    assert "label" not in mass["h0"]
+
+
+def test_subtype_metrics_count_failure_as_error_and_report_macro_recall():
+    rows = [
+        {
+            "case_id": "a", "technical_failure": False, "predicted_class": "hcc",
+            "class_probabilities": {"hcc": 0.8, "fnh": 0.2},
+        },
+        {
+            "case_id": "b", "technical_failure": False, "predicted_class": "hcc",
+            "class_probabilities": {"hcc": 0.7, "fnh": 0.3},
+        },
+        {"case_id": "c", "technical_failure": True},
+    ]
+    metrics = _subtype_classification_metrics(
+        rows, {"a": "hcc", "b": "fnh", "c": "fnh"}, ["fnh", "hcc"]
+    )
+    assert metrics["top1_accuracy"] == pytest.approx(1 / 3)
+    assert metrics["recall_by_subtype"] == {"fnh": 0.0, "hcc": 1.0}
+    assert metrics["balanced_accuracy"] == pytest.approx(0.5)
+    assert metrics["technical_failures_count_as_errors"] == 1
+    assert metrics["confusion_matrix"]["fnh"]["UNDETERMINED"] == 1

@@ -82,6 +82,14 @@ def test_classify_embeddings_uses_positive_mass_aggregation_and_threshold(tmp_pa
     assert result["prediction"] == "POSITIVE"
     assert result["panel_count"] == 2
     assert result["score"] > 0.5
+    evidence = result["instance_evidence"]
+    assert evidence["instance_count"] == 2
+    assert evidence["changes_frozen_decision"] is False
+    assert evidence["ground_truth_used"] is False
+    assert evidence["lesion_mask_used"] is False
+    assert evidence["class_aggregations"]["b"]["top_instance_indices"] == [0, 1]
+    assert evidence["instances"][0]["positive_probability"] > 0.9
+    assert evidence["instances"][1]["positive_probability"] < 0.1
     # mean aggregation of the same panels sits near 0.5 -> flips with threshold
     root2 = _write_bundle(tmp_path / "b2", {"c1"}, {"c1"}, threshold=0.9, aggregation="mean")
     bundle2 = visual_inference.load_production_bundle(root2)

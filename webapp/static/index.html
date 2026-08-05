@@ -143,7 +143,8 @@ let polling=null;
 // mais fracas convidaria o usuário a escolher a pior sem ter como saber disso.
 const SCENARIO_LABELS={
   hybrid_supervised:'Classificador visual trifásico',
-  monophase_rag:'Monofásico + RAG (amostragem rápida)'
+  monophase_rag:'Monofásico + RAG (amostragem rápida)',
+  monophase_medsiglip_delayed:'Monofásico tardio + MedSigLIP'
 };
 async function startAnalysis(items){
   const dicoms = items.filter(x=>x.file.size>0);
@@ -268,7 +269,7 @@ function renderVisualResult(result){
 function renderResult(result){
   show($('#progCard'),false); show($('#againBtns'),true); show($('#resultCard'),true);
   if(!result || result.status!=='concluido') return renderGraceful(result||{});
-  if(result.analysis_scenario==='hybrid_supervised') return renderVisualResult(result);
+  if(result.analysis_scenario==='hybrid_supervised'||result.analysis_scenario==='monophase_medsiglip_delayed') return renderVisualResult(result);
   const rep = result.report||{};
   const verdict = (rep.resultado_hipotese||'INCONCLUSIVA').toUpperCase();
   const c = $('#resultCard'); c.innerHTML='';
@@ -295,6 +296,27 @@ function renderResult(result){
       +'nenhuma fase foi sintetizada. Este resultado não usa nem comprova as métricas do protocolo trifásico.';
     c.appendChild(aviso);
     c.appendChild(field('Limitações específicas da entrada', list(result.input_assessment.limitations)));
+    const second=result.secondary_reader;
+    if(second && second.status==='completed'){
+      const advisory=el('div','note');
+      advisory.style.borderLeft=second.agreement_with_primary===true
+        ? '3px solid var(--green)' : '3px solid #d98324';
+      advisory.style.paddingLeft='10px';
+      const agreement=second.agreement_with_primary===true
+        ? 'concorda com o leitor principal'
+        : 'discorda do leitor principal ou o principal foi inconclusivo';
+      advisory.innerHTML='<b>Segundo leitor MedSigLIP: '+escapeHtml(second.prediction||'—')+'.</b> '
+        +escapeHtml(agreement)+'. Esta leitura é apenas consultiva: não altera o relatório do MedGemma, '
+        +'não passou o gate externo e exige revisão humana.';
+      c.appendChild(advisory);
+      c.appendChild(field('Score do segundo leitor',
+        escapeHtml(Number(second.score).toFixed(4))
+        +' <span style="color:var(--mut)">(limiar '+escapeHtml(Number(second.threshold).toFixed(4))+')</span>'));
+    }else if(second && second.status==='not_eligible'){
+      c.appendChild(el('div','note','O segundo leitor MedSigLIP não foi aplicado: o classificador disponível exige uma série T1 tardia explicitamente identificada. O relatório principal do MedGemma permanece válido dentro das limitações monofásicas.'));
+    }else if(second && (second.status==='unavailable'||second.status==='disabled')){
+      c.appendChild(el('div','note','O segundo leitor MedSigLIP ficou indisponível nesta execução. Isso não alterou o relatório principal do MedGemma.'));
+    }
   }
   if(rep.alvo_da_triagem){
     c.appendChild(field('Alvo da triagem', 'Lesão focal hepática suspeita'));

@@ -1,0 +1,17 @@
+schema: argos-hybrid-medsiglip-multiclass-config-v1
+candidate_id: oren_medsiglip_monophase_openswiss_t2_v1
+model: class_balanced_multinomial_logistic_regression
+solver: lbfgs
+label_granularity: binary
+restrict_to_dataset_ids: [openswisshcc_development]
+positive_classes: [positive_unspecified]
+regularization_c_grid: [0.01, 0.1, 1.0]
+panel_probability_aggregations: [mean, max, top2_mean]
+standardization: inner_or_outer_training_instances_only
+threshold_selection: inner_oof_only
+seed: 20260804
+max_iter: 3000
+technical_failures_count_as_errors: true
+representation_contract: {sequence: t2_haste, synthetic: false, lesion_mask_allowed: false}
+research_only: true
+clinical_use_allowed: false

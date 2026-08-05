@@ -1,0 +1,26 @@
+schema: argos-hybrid-medsiglip-multiclass-config-v1
+candidate_id: oren_medsiglip_monophase_delayed_binary_v1
+model: class_balanced_multinomial_logistic_regression
+solver: lbfgs
+label_granularity: binary
+restrict_to_dataset_ids:
+  - lld_mmri
+positive_classes:
+  - positive_unspecified
+regularization_c_grid: [0.01, 0.1, 1.0]
+panel_probability_aggregations: [mean, max, top2_mean]
+standardization: inner_or_outer_training_panels_only
+threshold_selection: inner_oof_only
+seed: 20260803
+max_iter: 3000
+technical_failures_count_as_errors: true
+deployment:
+  analysis_scenario: monophase_medsiglip
+  panel_image_mode: single_phase_delayed_grayscale_liver_enriched
+  expected_panel_counts: [2, 3]
+  source_phase_contract: exactly_one_real_series
+  source_phase_key: t1_delayed
+  dynamic_enhancement_information_present: false
+  generalization_estimate_source: nested_oof_lld_monophase_delayed_ablation
+research_only: true
+clinical_use_allowed: false
