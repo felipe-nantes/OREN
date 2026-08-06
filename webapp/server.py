@@ -589,6 +589,39 @@ def _segmentar_figado_com_gate(venous_dir: Path, destino: Path, rotulo: str) -> 
 VOLUME_HEPATICO_TIPICO_ML = (900.0, 2400.0)
 
 
+def _aviso_fragmentacao_figado(qualidade: dict | None) -> dict | None:
+    """Avisa quando a segmentação saiu em pedaços e o modelo mostra só o maior.
+
+    Sem isto o usuário vê um fígado limpo e não sabe que fragmentos foram
+    retirados da cena. O gate anatômico já recusa o caso quando o componente
+    principal fica abaixo de 90% do volume; entre 90% e 100% o exame passa, o
+    visualizador isola o corpo principal (docs/188) e essa remoção precisa ser
+    dita, não silenciada.
+    """
+    if not qualidade:
+        return None
+    componentes = qualidade.get("component_count")
+    fracao = qualidade.get("largest_component_fraction")
+    if not isinstance(componentes, int) or componentes <= 1:
+        return None
+    if not isinstance(fracao, (int, float)):
+        return None
+    descartado = max(0.0, (1.0 - float(fracao)) * 100.0)
+    return {
+        "nivel": "informacao" if descartado < 1.0 else "atencao",
+        "componentes": int(componentes),
+        "fracao_componente_principal": round(float(fracao), 4),
+        "percentual_descartado": round(descartado, 2),
+        "texto": (
+            f"A segmentação saiu em {componentes} partes. O modelo 3D mostra o "
+            f"corpo principal, que concentra {100 * float(fracao):.1f}% do volume; "
+            f"os fragmentos restantes ({descartado:.1f}%) foram retirados da cena "
+            "por serem quase sempre ruído de segmentação. Se o fígado deveria "
+            "aparecer dividido neste exame, confira as imagens de referência."
+        ),
+    }
+
+
 def _aviso_volume_figado(qualidade: dict | None) -> dict | None:
     """Avisa quando o volume segmentado sai da faixa típica de fígado adulto."""
     if not qualidade:
@@ -948,6 +981,7 @@ def process_monophase_medsiglip_job(
             "durations_seconds": durations,
             "liver_mask_quality": mask_quality,
             "liver_volume_warning": _aviso_volume_figado(mask_quality),
+            "liver_fragmentation_warning": _aviso_fragmentacao_figado(mask_quality),
             "candidate_localization": candidate_localization,
             "viewer_ready": bool(viewer_ready),
             "viewer_url": (
@@ -1191,6 +1225,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             "durations_seconds": duracoes,
             "liver_mask_quality": qualidade_mascara,
             "liver_volume_warning": _aviso_volume_figado(qualidade_mascara),
+            "liver_fragmentation_warning": _aviso_fragmentacao_figado(qualidade_mascara),
             "candidate_localization": candidate_localization,
             "viewer_ready": bool(viewer_ready),
             "viewer_url": (

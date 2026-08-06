@@ -264,6 +264,16 @@ function renderVisualResult(result){
     const v=result.liver_mask_quality.largest_component_volume_ml;
     if(Number.isFinite(v)) c.appendChild(field('Volume hepático segmentado', v.toFixed(0)+' mL'));
   }
+  // Fragmentação: o visualizador isola o corpo principal, e a remoção dos
+  // fragmentos precisa ser dita. Caso contrário o usuário vê um fígado limpo
+  // sem saber que pedaços foram tirados da cena.
+  if(result.liver_fragmentation_warning){
+    const fr=el('div','note');
+    const cor = result.liver_fragmentation_warning.nivel==='atencao' ? '#d98324' : '#7a8b99';
+    fr.style.borderLeft='3px solid '+cor; fr.style.paddingLeft='10px';
+    fr.innerHTML='<b>Segmentação fragmentada.</b> '+escapeHtml(result.liver_fragmentation_warning.texto);
+    c.appendChild(fr);
+  }
   c.appendChild(el('div','note', escapeHtml(result.disclaimer||'')));
   if(result.viewer_ready && result.viewer_url){
     const actions=el('div','btns');

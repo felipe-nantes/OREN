@@ -272,3 +272,58 @@ contador somava máscaras de componente único — onde não havia nada a isolar
 guarda nem chegou a agir — com fígados de fato partidos. O número correto de
 fígados partidos na amostra é **1/30**, não 18. O auditor foi corrigido para
 separar as três situações.
+
+---
+
+## 8. A1 + A2 + A5 implementados e verificados
+
+**Código:** `dtwin/stages.py` (`_isolar_orgao_para_visualizacao`),
+`webapp/server.py` (`_aviso_fragmentacao_figado`), `webapp/static/index.html`
+
+### Resultado medido na malha final, 30 casos
+
+| | Antes | **Depois** |
+|---|---:|---:|
+| Malhas com corpo único | 57% | **97%** |
+| Volume removido (mediana) | — | **0,00 mL** |
+| Volume removido (máximo) | — | 32,4 mL |
+
+| Situação | Casos |
+|---|---:|
+| Já era componente único | 17/30 |
+| Guarda permitiu isolar | 12/30 |
+| Guarda bloqueou (fígado partido) | 1/30 |
+
+Os 3% que sobram são exatamente o caso que a guarda protegeu — e ele **deve**
+continuar fragmentado na tela, porque ali a fragmentação é o achado.
+
+### Decisões de implementação que valem registro
+
+**Aplicado somente ao órgão.** Lesões múltiplas e árvores vasculares são
+legitimamente multi-componente; isolar o maior ali apagaria achado real. O
+refino de lesão, anatomia e candidato ficou intocado.
+
+**Cavidades são preenchidas sempre, o isolamento é condicional.** A primeira
+versão só preenchia buracos quando havia isolamento, e um teste pegou a falha:
+máscara de componente único com cavidade interna passava sem correção. O
+preenchimento é feito por último, e há teste garantindo que ele **não funde** os
+dois pedaços no caso partido — o que desfaria a guarda em silêncio.
+
+**O aviso na interface diz o que foi retirado.** `_aviso_fragmentacao_figado`
+declara quantas partes existiam, qual fração ficou e quanto saiu da cena.
+Abaixo de 1% descartado o aviso é informativo; acima, é atenção. Sem isso o
+usuário veria um fígado limpo sem saber que pedaços foram removidos.
+
+### Testes
+
+Sete testes novos (1465 → **1472**), cobrindo: remoção de ilha quando o corpo
+principal domina; preservação integral quando o fígado está partido;
+preenchimento de cavidade; e a garantia de que o preenchimento não desfaz a
+guarda.
+
+### O que continua valendo
+
+Nada disto melhora a **fidelidade ao paciente** — segue valendo §4. Um fígado de
+480 mL continua sendo meio fígado, agora exibido como uma peça só e com aviso.
+O ganho real de fidelidade depende da Trilha B, que exige a decisão de
+rastreabilidade ainda em aberto (§5, B1).

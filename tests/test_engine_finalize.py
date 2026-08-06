@@ -102,3 +102,58 @@ def test_finalize_exports_internal_anatomy_when_available(synthetic_case):
     assert roles["couinaud_i"]["material"] == "segment"
     assert roles["orgao"]["default_visible"] is False
     assert (case.outputs / roles["couinaud_i"]["stl"]).is_file()
+
+
+def test_isolar_orgao_remove_ilha_quando_o_corpo_principal_domina():
+    """Ilhas soltas viram objetos flutuando no visualizador (docs/188)."""
+    import numpy as np
+    from dtwin.stages import _isolar_orgao_para_visualizacao
+
+    volume = np.zeros((20, 20, 20), dtype=bool)
+    volume[5:15, 5:15, 5:15] = True          # corpo principal
+    volume[1, 1, 1] = True                    # ilha de 1 voxel
+    limpo, diagnostico = _isolar_orgao_para_visualizacao(volume)
+    assert diagnostico["isolado"] is True
+    assert diagnostico["componentes"] == 2
+    assert limpo[1, 1, 1] == 0
+    assert int(limpo.sum()) == 1000
+
+
+def test_isolar_orgao_preserva_tudo_quando_o_figado_esta_partido():
+    """A guarda existe para não apagar anatomia: dois pedaços grandes ficam."""
+    import numpy as np
+    from dtwin.stages import _isolar_orgao_para_visualizacao
+
+    volume = np.zeros((30, 30, 30), dtype=bool)
+    volume[2:12, 2:12, 2:12] = True           # 1000 voxels
+    volume[18:28, 18:28, 18:28] = True        # 1000 voxels — fração 0,5
+    limpo, diagnostico = _isolar_orgao_para_visualizacao(volume)
+    assert diagnostico["isolado"] is False
+    assert diagnostico["motivo"] == "orgao_partido_isolar_apagaria_anatomia"
+    assert int(limpo.sum()) == 2000, "não pode apagar metade do órgão"
+
+
+def test_isolar_orgao_preenche_cavidade_interna():
+    import numpy as np
+    from dtwin.stages import _isolar_orgao_para_visualizacao
+
+    volume = np.zeros((20, 20, 20), dtype=bool)
+    volume[5:15, 5:15, 5:15] = True
+    volume[9:11, 9:11, 9:11] = False          # cavidade interna
+    limpo, _ = _isolar_orgao_para_visualizacao(volume)
+    assert int(limpo.sum()) == 1000, "cavidade deveria ser preenchida"
+
+
+def test_preencher_cavidade_nao_desfaz_a_guarda_do_figado_partido():
+    """Preencher buracos não pode fundir dois pedaços grandes num só."""
+    import numpy as np
+    from dtwin.stages import _isolar_orgao_para_visualizacao
+
+    volume = np.zeros((30, 30, 30), dtype=bool)
+    volume[2:12, 2:12, 2:12] = True
+    volume[18:28, 18:28, 18:28] = True
+    limpo, diagnostico = _isolar_orgao_para_visualizacao(volume)
+    assert diagnostico["isolado"] is False
+    assert int(limpo.sum()) == 2000
+    from scipy import ndimage
+    assert ndimage.label(limpo)[1] == 2, "os dois pedaços devem continuar separados"

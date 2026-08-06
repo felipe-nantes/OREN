@@ -25,6 +25,7 @@ import numpy as np
 import pydicom
 import pyvista as pv
 import SimpleITK as sitk
+from scipy import ndimage
 from skimage import measure, morphology
 
 from .core import (
@@ -131,6 +132,60 @@ def _refine_mask(mask_zyx, opening: bool, radius: int, min_voxels: int) -> np.nd
     if min_voxels and int(min_voxels) > 0:
         m = morphology.remove_small_objects(m, min_size=int(min_voxels))
     return m.astype(np.uint8)
+
+
+FRACAO_MINIMA_COMPONENTE_ORGAO = 0.90
+
+
+def _isolar_orgao_para_visualizacao(
+    mask_zyx, fracao_minima: float = FRACAO_MINIMA_COMPONENTE_ORGAO
+) -> tuple[np.ndarray, dict]:
+    """Deixa só o corpo principal do órgão, quando isso for seguro.
+
+    Motivo (docs/188): o refino remove apenas objetos menores que 300 voxels
+    (0,55 mL), então ilhas maiores sobrevivem e aparecem flutuando ao lado do
+    fígado no visualizador. Medido em 30 casos, isolar o componente principal
+    levou de 0% a 100% de corpo único nas malhas em que havia o que isolar, com
+    custo mediano de volume de 0,0% -- as ilhas quase sempre são detritos.
+
+    A GUARDA é o ponto central. Quando o componente principal não domina a
+    máscara, o órgão não está "com ilhas": está partido em pedaços grandes, e
+    isolar apagaria anatomia de verdade -- num caso da coorte, 47%. Nesse regime
+    a fragmentação é sintoma de segmentação ruim, e esconder seria pior que
+    mostrar. Então devolve-se a máscara intacta e o diagnóstico registra por quê.
+
+    Aplica-se SOMENTE ao órgão. Lesões múltiplas e árvores vasculares são
+    legitimamente multi-componente; isolar o maior ali apagaria achado real.
+    """
+    mask = np.asarray(mask_zyx).astype(bool)
+    rotulos, n_componentes = ndimage.label(mask)
+
+    if n_componentes <= 1:
+        fracao, isolado, motivo = 1.0, False, "componente_unico_nada_a_isolar"
+        corpo = mask
+    else:
+        tamanhos = np.bincount(rotulos.ravel())[1:]
+        fracao = float(tamanhos.max() / tamanhos.sum())
+        if fracao < float(fracao_minima):
+            isolado, motivo = False, "orgao_partido_isolar_apagaria_anatomia"
+            corpo = mask
+        else:
+            isolado, motivo = True, "componente_principal_domina"
+            corpo = rotulos == (int(np.argmax(tamanhos)) + 1)
+
+    # Cavidades internas viram transparências na malha e são preenchidas SEMPRE,
+    # inclusive quando não houve isolamento -- uma máscara de componente único
+    # também pode ter buraco dentro. É feito por último para que, no caso
+    # partido, o preenchimento não funda os pedaços num só e desfaça a guarda.
+    antes = int(corpo.sum())
+    corpo = ndimage.binary_fill_holes(corpo)
+    return corpo.astype(np.uint8), {
+        "componentes": int(n_componentes),
+        "fracao_componente_principal": round(float(fracao), 4),
+        "isolado": bool(isolado),
+        "motivo": motivo,
+        "voxels_de_cavidade_preenchidos": int(corpo.sum()) - antes,
+    }
 
 
 def _campo_continuo(img, isotropic_mm: float, sigma_mm: float):
@@ -595,11 +650,26 @@ def stage5_refine(case: Case, profile: dict) -> None:
         raise PipelineError(
             "Refino zerou a máscara do órgão — parâmetros mal calibrados (refino.orgao)."
         )
+    antes_isolar = int(organ_clean.sum())
+    organ_clean, diagnostico_componentes = _isolar_orgao_para_visualizacao(
+        organ_clean, float(oc.get("fracao_minima_componente", FRACAO_MINIMA_COMPONENTE_ORGAO))
+    )
+    if organ_clean.sum() == 0:
+        raise PipelineError("Isolamento do órgão zerou a máscara.")
     save_image(array_to_image(organ_clean, organ_img, np.uint8), case.mask_organ_clean)
     log.info(
-        "Estágio 5: órgão refinado (%d -> %d voxels).",
+        "Estágio 5: órgão refinado (%d -> %d voxels); componentes %d, "
+        "fração do principal %.4f, isolado=%s (%s).",
         int(organ.sum()), int(organ_clean.sum()),
+        diagnostico_componentes["componentes"],
+        diagnostico_componentes["fracao_componente_principal"],
+        diagnostico_componentes["isolado"], diagnostico_componentes["motivo"],
     )
+    if diagnostico_componentes["isolado"]:
+        log.info(
+            "Estágio 5: %d voxels de fragmento removidos da visualização.",
+            antes_isolar - int(organ_clean.sum()),
+        )
 
     # Lesão (gentil: não apagar lesões pequenas)
     lesion_img = read_image(case.mask_lesion)

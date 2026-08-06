@@ -1462,3 +1462,29 @@ def test_config_de_embedding_mps_so_difere_em_execucao():
     for chave in ("schema", "model_id", "revision", "image_size", "pooling",
                   "l2_normalize", "output_dtype", "local_files_only"):
         assert mps[chave] == cuda[chave], f"{chave} divergiu entre CUDA e MPS"
+
+
+def test_aviso_de_fragmentacao_so_aparece_quando_ha_fragmento():
+    """Máscara íntegra não deve gerar aviso — ruído treina o revisor a ignorar."""
+    assert server._aviso_fragmentacao_figado(None) is None
+    assert server._aviso_fragmentacao_figado(
+        {"component_count": 1, "largest_component_fraction": 1.0}
+    ) is None
+
+
+def test_aviso_de_fragmentacao_declara_quanto_saiu_da_cena():
+    aviso = server._aviso_fragmentacao_figado(
+        {"component_count": 4, "largest_component_fraction": 0.93}
+    )
+    assert aviso is not None
+    assert aviso["componentes"] == 4
+    assert aviso["percentual_descartado"] == 7.0
+    assert aviso["nivel"] == "atencao"
+    assert "4 partes" in aviso["texto"]
+
+
+def test_aviso_de_fragmentacao_e_informativo_quando_o_descarte_e_irrelevante():
+    aviso = server._aviso_fragmentacao_figado(
+        {"component_count": 2, "largest_component_fraction": 0.9995}
+    )
+    assert aviso is not None and aviso["nivel"] == "informacao"
