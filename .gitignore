@@ -89,3 +89,5 @@ experiments/sinal_no_sintetico_v1/
 # Artefatos locais de execucao (nunca versionados)
 .codex-temp/
 experiments/
+experiments/phase_union_validation_v1/
+experiments/precontrast_segmentation_v1/
