@@ -165,17 +165,11 @@ projeto: `MINIMUM_LARGEST_COMPONENT_FRACTION` em
 **A2. Preencher buracos em 3-D** (`ndimage.binary_fill_holes`). Ganho pequeno
 mas gratuito, e elimina cavidades internas que aparecem como transparências.
 
-**A3. Medir a topologia da malha final, não da máscara.**
-Lacuna da minha medição: eu medi Euler na máscara **binária**, mas a malha vem do
-campo contínuo suavizado (σ 2,0 mm), que provavelmente já fecha túneis pequenos.
-`compute_mesh_metrics` já reporta `watertight_and_manifold` e
-`boundary_or_non_manifold_edges` — falta agregar isso sobre um lote e ver quanto
-da topologia quebrada sobrevive até a tela. **Isto deve ser feito antes de A4**,
-porque pode mostrar que o problema já está resolvido.
+**A3. Medir a topologia da malha final, não da máscara. — EXECUTADO, ver §7.**
 
-**A4. Só se A3 mostrar que persiste:** reparo topológico explícito, ou aumento
-calibrado de σ. Aumentar σ tem custo — borra detalhe real —, então exige medir
-contra a fidelidade de volume, que já é gate em `compute_mesh_metrics`.
+**A4. Reparo topológico — CANCELADO por medição.** A3 mostrou que a patologia
+topológica não chega à tela: 100% das malhas saem estanques e manifold. O campo
+contínuo já resolve. Ver §7.
 
 **A5. Expor o aviso na interface.** O aviso de volume já existe. Acrescentar
 fragmentação e topologia à mesma faixa: quem olha o modelo precisa saber que
@@ -224,3 +218,57 @@ Nada da Trilha A toca classificação. A Trilha B exige decisão explícita sobr
 rastreabilidade antes de qualquer linha de código.
 
 `research_only: true` · `clinical_use_allowed: false`
+
+---
+
+## 7. Passo 1 executado — o que chega de fato à tela
+
+**Ferramenta:** `tools/audit_mesh_topology_quality.py`
+**Artefatos:** `experiments/mesh_topology_quality_v1/`
+**Amostra:** 30 casos LLD, reconstrução idêntica à de produção (isotrópico
+0,8 mm, σ 2,0 mm, Taubin 30×, decimação para 160k triângulos)
+
+| | Máscara binária (§2) | **Malha final** |
+|---|---:|---:|
+| Estanque e manifold | Euler ≠ 1 em 84% | **100%** |
+| Rugosidade | 1,85 | **1,36** |
+| Corpo único | 60% | 57% |
+
+### O que isso decide
+
+**A patologia topológica não sobrevive à reconstrução.** Todas as 30 malhas saem
+estanques e manifold — o campo contínuo com σ 2,0 mm fecha os túneis e alças que
+existiam na máscara binária. A rugosidade cai de 1,85 para 1,36, dentro da faixa
+observada nas máscaras boas do CHAOS (1,23–1,62).
+
+> **A4 (reparo topológico) está cancelado por medição.** Teria sido esforço
+> gasto num problema que a reconstrução atual já resolve. Foi exatamente para
+> isso que A3 veio antes de A4.
+
+**A fragmentação, ao contrário, sobrevive inteira** — e é o que aparece como
+ilhas flutuando ao lado do órgão.
+
+### Efeito da limpeza proposta (A1 + A2)
+
+Medido só nos casos onde a limpeza tem o que fazer, para não diluir o resultado
+com máscaras que já eram limpas:
+
+| Situação | Casos | Corpo único antes | Corpo único depois |
+|---|---:|---:|---:|
+| Já era componente único | 17/30 | — | — |
+| **Guarda permitiu isolar** | **12/30** | **0%** | **100%** |
+| Guarda bloqueou (fígado partido) | 1/30 | 0% | 0% (correto) |
+
+**Nos 12 casos em que agiu, a limpeza resolveu 12.** No caso bloqueado
+(`anon-lld-d64c9d7fc09e19c4`, fração 0,805) nada mudou — que é o comportamento
+desejado: ali o fígado está partido em dois pedaços grandes e isolar apagaria
+cerca de 20% do órgão em silêncio.
+
+### Correção de um erro de relatório
+
+A primeira versão deste auditor imprimiu *"a guarda impediu isolar em 18/30
+casos (fígado partido)"*. **Estava errado** e teria alarmado sem razão: o
+contador somava máscaras de componente único — onde não havia nada a isolar e a
+guarda nem chegou a agir — com fígados de fato partidos. O número correto de
+fígados partidos na amostra é **1/30**, não 18. O auditor foi corrigido para
+separar as três situações.
