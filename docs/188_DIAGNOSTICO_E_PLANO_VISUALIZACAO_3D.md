@@ -327,3 +327,52 @@ Nada disto melhora a **fidelidade ao paciente** — segue valendo §4. Um fígad
 480 mL continua sendo meio fígado, agora exibido como uma peça só e com aviso.
 O ganho real de fidelidade depende da Trilha B, que exige a decisão de
 rastreabilidade ainda em aberto (§5, B1).
+
+---
+
+## 9. Trilha B tentada pela pré-contraste — REPROVADO, e corrige o §2
+
+**Ferramenta:** `tools/pilot_precontrast_liver_segmentation.py`
+**Artefatos:** `experiments/precontrast_segmentation_v1/`
+
+### A hipótese
+
+§2 concluiu que a causa da má segmentação era a **fase com contraste**, apoiada
+em docs/176 (Dice 0,908 contra referência humana em T1 sem contraste) e docs/165
+(variação de 5× entre fases no mesmo exame). O LLD traz `t1_native`
+(pré-contraste) em 321/321 casos — a condição em que o modelo é validado, nunca
+usada pelo pipeline. Se a hipótese estivesse certa, segmentar ali recuperaria
+substancialmente mais órgão.
+
+### O resultado
+
+| | Venosa (produção) | Pré-contraste |
+|---|---:|---:|
+| Volume mediano | 568 mL | **523 mL** |
+| Dentro da faixa adulta | 3/14 | **3/14** |
+| Componentes (mediana) | 2 | **6** |
+| Razão mediana pré/venosa | — | **0,92×** |
+
+A pré-contraste recupera **menos** órgão e sai **três vezes mais fragmentada**.
+Num caso houve colapso: 367 mL → 13 mL (0,04×). Grades idênticas em 14/14, então
+não é problema de registro.
+
+### O que isso corrige
+
+**A leitura de docs/176 estava errada em um ponto.** O Dice 0,908 do CHAOS não
+demonstra que "o segmentador vai bem sem contraste" — demonstra que ele vai bem
+**no CHAOS**. A propriedade não transferiu para a pré-contraste do LLD.
+
+É a mesma lição de heterogeneidade de domínio que o projeto já encontrou por
+quatro caminhos independentes (docs/121, 131, 161, 182+184), agora aparecendo
+pela quinta vez, na segmentação em vez da classificação.
+
+A dependência de fase medida em docs/165 continua real e não é contestada — o que
+cai é a inferência de que *trocar para a pré-contraste* seria a correção.
+
+### Consequência para o plano
+
+**B2 (segmentar em série sem contraste) está reprovado por medição.** B1 (união
+de fases) permanece aberto, mas com expectativa rebaixada: se a pré-contraste
+sozinha piora, a união pode não somar tanto quanto docs/165 sugeria. Deve ser
+medido antes de qualquer implementação, não assumido.
