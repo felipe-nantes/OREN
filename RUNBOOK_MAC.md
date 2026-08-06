@@ -18,15 +18,57 @@ plano — use uma aba de terminal para cada. Rode **sempre a partir da raiz do r
 ## Modo rápido (um comando)
 
 O script `run_mac.sh` sobe tudo na ordem certa, com verificações de saúde entre
-cada etapa, e encerra o gateway/webapp no Ctrl+C:
+cada etapa, e encerra o que ele iniciou no Ctrl+C:
 
 ```bash
 cd /Users/sander_gurgel/Documents/projetos_sander/argos-main
-bash run_mac.sh          # ou ./run_mac.sh
+./run_mac.sh                 # 27B e 4B; escolha do modelo na própria página
+./run_mac.sh --model 27b     # só o 27B (mais leve para subir)
+./run_mac.sh --model 4b      # só o 4B
+./run_mac.sh --skip-verify   # pula a verificação de dispositivo
 ```
 
 Abra `http://127.0.0.1:8080` quando ele indicar. Os passos manuais abaixo
 continuam válidos para diagnóstico ou se preferir controlar cada serviço.
+
+### Escolha do modelo MedGemma
+
+Com `--model both` (padrão), sobem dois gateways — 27B em `:8001` e 4B em
+`:8002` — e a página mostra um seletor. O seletor **só aparece quando os dois
+respondem**: oferecer um modelo desligado produziria falha no meio da análise,
+depois da segmentação já ter rodado.
+
+**O que essa escolha afeta, e o que não afeta.** O exame trifásico roda o
+classificador visual congelado (MedSigLIP) e **não passa pelo MedGemma** — a
+escolha não muda o resultado dele. Ela vale para o **fallback monofásico** (o
+caminho de quando o exame não traz as três fases dinâmicas) e para o
+**benchmark**.
+
+### Apple Silicon — leia antes de confiar nos números
+
+O classificador visual é fixado em CUDA no config padrão e **falha num Mac**. O
+`run_mac.sh` aponta para `configs/training/medsiglip_frozen_mps_v1.yaml`, que só
+difere em `device` (mps) e `dtype` (float32) — a representação, o modelo e a
+revisão são os mesmos.
+
+Isso não é equivalência provada. O bundle de produção foi treinado sobre
+embeddings de float16/CUDA, e um vetor levemente diferente pode atravessar o
+limiar de decisão (0,4749). Na primeira execução o script roda automaticamente:
+
+```bash
+.venv/bin/python tools/verify_medsiglip_device_agreement.py
+```
+
+Ela reextrai painéis conhecidos no dispositivo atual, classifica com o **mesmo
+bundle congelado** e compara decisão a decisão. O critério de aprovação é
+concordância de decisão, não similaridade de vetor. Se reprovar, os números
+medidos em CUDA **não valem** para este caminho sem remedição própria.
+
+### Segmentação no Mac
+
+O TotalSegmentator é chamado com `gpu` e cai para `cpu` quando não há CUDA — ou
+seja, no Mac ele roda em CPU. Funciona, mas é sensivelmente mais lento que no
+Windows com GPU. Isso afeta o tempo por exame, não o resultado.
 
 ---
 

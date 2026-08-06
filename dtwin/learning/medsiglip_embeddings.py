@@ -92,7 +92,27 @@ class HuggingFaceMedSigLIPBackend:
         self.revision = str(config["revision"])
         self.device = str(config.get("device", "cuda"))
         if self.device == "cuda" and not torch.cuda.is_available():
+            # A mensagem nomeia a saída porque este erro é o primeiro que
+            # aparece ao rodar o caminho de produção num Mac, e sem a dica ele
+            # parece uma instalação quebrada em vez de um config trocado.
+            if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+                raise PipelineError(
+                    "CUDA indisponível para MedSigLIP, mas há MPS (Apple Silicon) "
+                    "disponível. Use configs/training/medsiglip_frozen_mps_v1.yaml "
+                    "-- por exemplo, exportando "
+                    "WEBAPP_VISUAL_EMBEDDING_CONFIG=configs/training/medsiglip_frozen_mps_v1.yaml "
+                    "(run_mac.sh já faz isso). Verifique a concordância numérica "
+                    "com tools/verify_medsiglip_device_agreement.py antes de "
+                    "confiar nos números."
+                )
             raise PipelineError("CUDA indisponível para MedSigLIP.")
+        if self.device == "mps":
+            backend = getattr(torch.backends, "mps", None)
+            if backend is None or not backend.is_available():
+                raise PipelineError(
+                    "MPS indisponível para MedSigLIP. Exige macOS em Apple "
+                    "Silicon com PyTorch compilado com suporte a MPS."
+                )
         self._snapshot = Path(
             snapshot_download(
                 self.model_id,

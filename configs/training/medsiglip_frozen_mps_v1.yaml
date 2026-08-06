@@ -1,0 +1,36 @@
+# Extrator MedSigLIP congelado para Apple Silicon (MPS).
+#
+# Idêntico a medsiglip_frozen_v1.yaml em TUDO que afeta a representação --
+# mesmo modelo, mesma revisão fixada, mesmo tamanho de entrada, mesmo pooling,
+# mesma normalização L2, mesma dimensão de saída. As duas únicas diferenças são
+# de execução, não de método:
+#
+#   device: mps      em vez de cuda
+#   dtype:  float32  em vez de float16
+#
+# Por que float32 e não float16: o bundle de produção foi treinado sobre
+# embeddings extraídos em float16/CUDA. Em MPS, a aritmética float16 tem
+# histórico de divergência maior que em CUDA, e um embedding levemente diferente
+# pode virar uma decisão diferente em casos próximos do limiar (0,4749).
+# float32 é mais lento, porém numericamente mais próximo da referência.
+#
+# ISSO NÃO É EQUIVALÊNCIA PROVADA. Rode a verificação antes de confiar em
+# qualquer número produzido neste caminho:
+#
+#   .venv/bin/python tools/verify_medsiglip_device_agreement.py
+#
+# Ela mede a concordância dos embeddings deste config contra o cache congelado
+# de referência e falha se a divergência puder mudar decisões.
+schema: argos-medsiglip-frozen-embedding-config-v1
+model_id: google/medsiglip-448
+revision: 9cea28a1a1195f665105faa6e8544c112fd960a4
+image_size: 448
+device: mps
+dtype: float32
+batch_size: 4
+pooling: vision_pooler_output
+l2_normalize: true
+output_dtype: float32
+local_files_only: true
+research_only: true
+clinical_use_allowed: false

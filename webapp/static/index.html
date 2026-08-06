@@ -67,6 +67,11 @@
           </div>
           <input id="folderInput" type="file" webkitdirectory directory multiple class="hidden" />
           <input id="fileInput" type="file" multiple class="hidden" />
+          <div class="note hidden" id="backendPicker">
+            <label for="backendSelect"><b>Modelo MedGemma</b></label>
+            <select id="backendSelect"></select>
+            <div class="small" id="backendHint"></div>
+          </div>
           <div class="note">O envio é processado localmente. O exame é des-identificado automaticamente e nenhum dado sai desta máquina.</div>
         </div>
 
@@ -156,6 +161,10 @@ async function startAnalysis(items){
   for(const {file,rel} of dicoms){ fd.append('files', file, file.name); rels.push(rel); }
   fd.append('relpaths', JSON.stringify(rels));
   fd.append('scenario', 'hybrid_supervised');
+  // Só acompanha o envio quando há mais de um backend pronto; caso contrário o
+  // servidor usa o seu padrão e não há escolha a comunicar.
+  const escolhido = $('#backendSelect') && $('#backendSelect').value;
+  if(escolhido){ fd.append('medgemma_backend', escolhido); }
   let job;
   try{
     job = await (await fetch('/api/analyze',{method:'POST',body:fd})).json();
@@ -350,6 +359,25 @@ function renderGraceful(r){
 
 // ---- eventos ----
 const drop=$('#drop');
+// Só mostra o seletor quando existe escolha real: dois ou mais gateways
+// respondendo. Um seletor com uma opção só é ruído, e um seletor listando um
+// modelo desligado produz falha no meio da análise.
+async function carregarBackends(){
+  let dados;
+  try{ dados = await (await fetch('/api/medgemma-backends')).json(); }catch{ return; }
+  const prontos = (dados.backends||[]).filter(b=>b.estado==='pronto');
+  if(prontos.length < 2){ return; }
+  const sel = $('#backendSelect');
+  sel.innerHTML = '';
+  for(const b of prontos){
+    const opt = document.createElement('option');
+    opt.value = b.id; opt.textContent = b.label;
+    sel.appendChild(opt);
+  }
+  $('#backendHint').textContent = 'Afeta ' + (dados.afeta||'') + '.';
+  show($('#backendPicker'), true);
+}
+carregarBackends();
 drop.addEventListener('click',()=>$('#folderInput').click());
 $('#pickFolder').addEventListener('click',()=>$('#folderInput').click());
 $('#pickFiles').addEventListener('click',()=>$('#fileInput').click());

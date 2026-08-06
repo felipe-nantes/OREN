@@ -1396,3 +1396,69 @@ def test_os_dois_caminhos_usam_o_mesmo_gate():
         assert "_segment(" not in fonte, (
             f"{fluxo.__name__} chama _segment direto e escapa do gate anatômico"
         )
+
+
+def test_registro_de_backends_ignora_entrada_invalida_sem_derrubar():
+    """Uma linha malformada não pode criar backend fantasma nem quebrar o boot."""
+    spec = (
+        "27b=MedGemma 27B=configs/medgemma_ollama_27b.yaml;"
+        "quebrado=sem_config;"
+        "inexistente=X=configs/nao_existe_mesmo.yaml;"
+        "   ;"
+        "4b=MedGemma 1.5 4B=configs/medgemma_local_4b_mps.yaml"
+    )
+    backends = server._parse_medgemma_backends(spec)
+    assert set(backends) == {"27b", "4b"}
+    assert backends["27b"]["label"] == "MedGemma 27B"
+    # O healthcheck sai do próprio config quando não é declarado no spec.
+    assert backends["27b"]["health"].endswith("/health")
+
+
+def test_backend_nao_registrado_e_recusado_em_vez_de_rebaixado(monkeypatch):
+    """Rebaixar em silêncio faria o relatório nomear o modelo errado."""
+    monkeypatch.setattr(server, "MEDGEMMA_BACKENDS", {
+        "27b": {"id": "27b", "label": "27B", "config": "configs/medgemma_ollama_27b.yaml", "health": "h"},
+    })
+    assert server._medgemma_backend_config(None, "padrao.yaml") == "padrao.yaml"
+    assert server._medgemma_backend_config("27b", "padrao.yaml") == "configs/medgemma_ollama_27b.yaml"
+    with pytest.raises(PipelineError, match="não autorizado"):
+        server._medgemma_backend_config("4b", "padrao.yaml")
+
+
+def test_endpoint_de_backends_so_reporta_o_que_respondeu(monkeypatch):
+    monkeypatch.setattr(server, "MEDGEMMA_BACKENDS", {
+        "27b": {"id": "27b", "label": "MedGemma 27B", "config": "c27.yaml", "health": "http://x/27"},
+        "4b": {"id": "4b", "label": "MedGemma 1.5 4B", "config": "c4.yaml", "health": "http://x/4"},
+    })
+    monkeypatch.setattr(server, "_probe_backend",
+                        lambda url: "pronto" if url.endswith("/27") else "desligado")
+    payload = server.medgemma_backends()
+    assert payload["prontos"] == ["27b"]
+    estados = {row["id"]: row["estado"] for row in payload["backends"]}
+    assert estados == {"27b": "pronto", "4b": "desligado"}
+
+
+def test_analyze_recusa_backend_desconhecido(monkeypatch, tmp_path):
+    """A recusa vem ANTES de gastar segmentação, não no meio da análise."""
+    monkeypatch.setattr(server, "process_visual_job", lambda *a, **k: None)
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(server, "MEDGEMMA_BACKENDS", {})
+    client = TestClient(server.app)
+    response = client.post(
+        "/api/analyze",
+        files=[("files", ("IMG-0001.dcm", b"fake", "application/dicom"))],
+        data={"relpaths": '["estudo/IMG-0001.dcm"]', "medgemma_backend": "27b"},
+    )
+    assert response.status_code == 400
+    assert "não autorizado" in response.json()["detail"]
+
+
+def test_config_de_embedding_mps_so_difere_em_execucao():
+    """Trocar device/dtype é aceitável; trocar a representação invalidaria o bundle."""
+    import yaml as _yaml
+    cuda = _yaml.safe_load(Path("configs/training/medsiglip_frozen_v1.yaml").read_text(encoding="utf-8"))
+    mps = _yaml.safe_load(Path("configs/training/medsiglip_frozen_mps_v1.yaml").read_text(encoding="utf-8"))
+    assert mps["device"] == "mps"
+    for chave in ("schema", "model_id", "revision", "image_size", "pooling",
+                  "l2_normalize", "output_dtype", "local_files_only"):
+        assert mps[chave] == cuda[chave], f"{chave} divergiu entre CUDA e MPS"

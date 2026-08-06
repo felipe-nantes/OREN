@@ -173,6 +173,84 @@ INDIVIDUAL_SCREENING_SCENARIOS = {
     "pathology_target": PATHOLOGY_TARGET_MEDGEMMA_CONFIG,
 }
 HEALTH_URL = os.environ.get("WEBAPP_MEDGEMMA_HEALTH", "http://127.0.0.1:8001/health")
+
+# ---------------------------------------------------------------------------
+# Backends MedGemma selecionáveis (27B / 4B).
+#
+# Um gateway carrega UM modelo. Para trocar sem reiniciar, sobe-se um gateway
+# por modelo em portas distintas; cada config já carrega o próprio
+# `endpoint_url`/`healthcheck_url`, então a troca é só escolher qual config o
+# job usa.
+#
+# Isto NÃO muda o método de análise, e é importante não confundir com a seleção
+# de cenário que foi deliberadamente removida da interface: o exame trifásico
+# roda o classificador visual congelado e NÃO usa MedGemma. Este seletor afeta
+# apenas onde o MedGemma é de fato usado -- fallback monofásico e benchmark.
+#
+# Formato: id=rótulo=config[=health_url], separados por ';'.
+MEDGEMMA_BACKENDS_SPEC = os.environ.get("WEBAPP_MEDGEMMA_BACKENDS", "").strip()
+
+
+def _parse_medgemma_backends(spec: str) -> dict[str, dict[str, str]]:
+    """Lê o registro de backends declarado pelo launcher.
+
+    Falha fechado por entrada: uma linha malformada é ignorada com aviso, em vez
+    de derrubar o servidor ou -- pior -- criar um backend fantasma que a
+    interface oferece e que não existe.
+    """
+    backends: dict[str, dict[str, str]] = {}
+    for entry in spec.split(";"):
+        entry = entry.strip()
+        if not entry:
+            continue
+        parts = [piece.strip() for piece in entry.split("=")]
+        if len(parts) < 3 or not all(parts[:3]):
+            log.warning("Backend MedGemma ignorado (formato inválido): %r", entry)
+            continue
+        identifier, label, config_path = parts[0], parts[1], parts[2]
+        health = parts[3] if len(parts) > 3 and parts[3] else ""
+        if not (REPO / config_path).is_file():
+            log.warning("Backend MedGemma %r ignorado: config ausente (%s)", identifier, config_path)
+            continue
+        if not health:
+            health = _health_url_from_config(config_path)
+        backends[identifier] = {"id": identifier, "label": label, "config": config_path, "health": health}
+    return backends
+
+
+def _health_url_from_config(config_path: str) -> str:
+    """Extrai o healthcheck declarado pelo próprio config do backend."""
+    try:
+        data = yaml.safe_load((REPO / config_path).read_text(encoding="utf-8")) or {}
+        value = (
+            ((data.get("medgemma_screening") or {}).get("medgemma") or {}).get("healthcheck_url")
+        )
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    except (OSError, yaml.YAMLError) as exc:
+        log.warning("Não foi possível ler healthcheck de %s: %s", config_path, exc)
+    return HEALTH_URL
+
+
+MEDGEMMA_BACKENDS = _parse_medgemma_backends(MEDGEMMA_BACKENDS_SPEC)
+
+
+def _medgemma_backend_config(backend_id: str | None, fallback: str) -> str:
+    """Resolve o config do backend pedido, recusando id não registrado.
+
+    Recusar em vez de cair no padrão é deliberado: se a interface pediu 27B e o
+    servidor silenciosamente usasse 4B, o relatório sairia com o nome do modelo
+    errado -- e o nome do modelo é parte do registro de proveniência.
+    """
+    if not backend_id:
+        return fallback
+    backend = MEDGEMMA_BACKENDS.get(str(backend_id))
+    if backend is None:
+        raise PipelineError(
+            f"Backend MedGemma não autorizado: {backend_id!r}. "
+            f"Disponíveis: {sorted(MEDGEMMA_BACKENDS) or 'nenhum'}."
+        )
+    return backend["config"]
 MIN_SLICES = 3
 PREP_TIMEOUT_GPU = int(os.environ.get("WEBAPP_PREP_TIMEOUT_GPU", "900"))
 PREP_TIMEOUT_CPU = int(os.environ.get("WEBAPP_PREP_TIMEOUT_CPU", "2400"))
@@ -1022,10 +1100,12 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
                     input_assessment=assessment,
                 )
                 return
+            with _lock:
+                escolhido = (_jobs.get(job_id) or {}).get("monophase_medgemma_config")
             process_job(
                 job_id,
                 raw_dir,
-                medgemma_config=MONOPHASE_MEDGEMMA_CONFIG,
+                medgemma_config=escolhido or MONOPHASE_MEDGEMMA_CONFIG,
                 analysis_scenario=scenario,
                 input_assessment=assessment,
             )
@@ -2329,6 +2409,44 @@ def health() -> dict:
     return {"backend": backend}
 
 
+def _probe_backend(health_url: str) -> str:
+    try:
+        with urlopen(health_url, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return "desligado"
+    return "pronto" if data.get("status") == "ready" else "carregando"
+
+
+@app.get("/api/medgemma-backends")
+def medgemma_backends() -> dict:
+    """Backends MedGemma registrados, com o estado REAL de cada gateway.
+
+    A interface só oferece o que respondeu no healthcheck. Oferecer um modelo
+    que não está no ar produziria uma falha no meio da análise, depois do
+    usuário já ter esperado a segmentação -- e a mensagem de erro não diria que
+    a causa foi um gateway ausente.
+    """
+    itens = [
+        {
+            "id": backend["id"],
+            "label": backend["label"],
+            "config": backend["config"],
+            "estado": _probe_backend(backend["health"]),
+        }
+        for backend in MEDGEMMA_BACKENDS.values()
+    ]
+    itens.sort(key=lambda row: row["label"])
+    return {
+        "backends": itens,
+        "prontos": [row["id"] for row in itens if row["estado"] == "pronto"],
+        # Dito de forma explícita para a interface não sugerir que a escolha
+        # muda a acertividade do exame trifásico: ela não muda.
+        "afeta": "fallback monofásico e benchmark; o exame trifásico usa o "
+                 "classificador visual congelado e não passa pelo MedGemma",
+    }
+
+
 @app.post("/api/analyze")
 async def analyze(request: Request) -> dict:
     form = await _upload_form(request)
@@ -2349,6 +2467,16 @@ async def analyze(request: Request) -> dict:
             ),
         )
     scenario = INDIVIDUAL_SCREENING_MODE
+    # A escolha de backend MedGemma NÃO é escolha de cenário: ela só tem efeito
+    # se o exame cair no fallback monofásico. Um id não registrado é recusado
+    # aqui, antes de gastar segmentação, em vez de rebaixado em silêncio.
+    backend_pedido = form.get("medgemma_backend")
+    try:
+        monophase_config = _medgemma_backend_config(
+            str(backend_pedido) if backend_pedido else None, MONOPHASE_MEDGEMMA_CONFIG
+        )
+    except PipelineError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     relpaths = form.get("relpaths")
     job_id = uuid.uuid4().hex[:12]
     raw_dir = WORKSPACE / job_id / "_upload"
@@ -2369,6 +2497,7 @@ async def analyze(request: Request) -> dict:
         _jobs[job_id] = {
             "state": "queued", "step": "recebendo", "progress": 5, "result": None,
             "analysis_scenario": scenario,
+            "monophase_medgemma_config": monophase_config,
         }
     threading.Thread(
         target=process_visual_job, args=(job_id, raw_dir), daemon=True
