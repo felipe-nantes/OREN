@@ -264,6 +264,19 @@ function renderVisualResult(result){
     const v=result.liver_mask_quality.largest_component_volume_ml;
     if(Number.isFinite(v)) c.appendChild(field('Volume hepático segmentado', v.toFixed(0)+' mL'));
   }
+  // O modelo 3D mostra a UNIÃO das três fases (docs/188 §9, docs/189), não só
+  // a venosa que classificou -- validado a recuperar 23% de volume a mais na
+  // mediana. Mostrar os dois números evita a leitura de que o volume exibido
+  // é o mesmo que decidiu a triagem.
+  if(result.liver_mask_union && result.liver_mask_union.status==='union_built'){
+    const u=result.liver_mask_union;
+    const info=el('div','note');
+    info.style.borderLeft='3px solid #4a90a4'; info.style.paddingLeft='10px';
+    info.innerHTML='<b>Modelo 3D pela união de fases.</b> Volume classificado (venosa): '
+      +u.venous_volume_ml.toFixed(0)+' mL. Volume exibido no modelo 3D (união arterial+venosa+tardia): '
+      +u.union_volume_ml.toFixed(0)+' mL.';
+    c.appendChild(info);
+  }
   // Fragmentação: o visualizador isola o corpo principal, e a remoção dos
   // fragmentos precisa ser dita. Caso contrário o usuário vê um fígado limpo
   // sem saber que pedaços foram tirados da cena.

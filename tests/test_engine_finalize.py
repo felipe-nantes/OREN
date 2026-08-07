@@ -157,3 +157,53 @@ def test_preencher_cavidade_nao_desfaz_a_guarda_do_figado_partido():
     assert int(limpo.sum()) == 2000
     from scipy import ndimage
     assert ndimage.label(limpo)[1] == 2, "os dois pedaços devem continuar separados"
+
+
+def test_fonte_da_malha_prefere_uniao_quando_disponivel(tmp_path):
+    """docs/188 §9, docs/189: a visualização prefere a união; a classificação
+    nunca chama esta função e nunca lê mask_organ_union.nii.gz."""
+    import SimpleITK as sitk
+
+    from dtwin.core import Case
+    from dtwin.stages import _fonte_da_malha_do_orgao
+
+    case = Case(root=tmp_path)
+    imagem = sitk.GetImageFromArray(make_sphere_mask((20, 20, 20), (10, 10, 10), 5).astype(np.uint8))
+    sitk.WriteImage(imagem, str(case.mask_organ))
+    assert _fonte_da_malha_do_orgao(case) == case.mask_organ, "sem união, cai para a venosa"
+
+    sitk.WriteImage(imagem, str(case.mask_organ_union))
+    assert _fonte_da_malha_do_orgao(case) == case.mask_organ_union, "com união, prefere a união"
+
+
+def test_estagio5_descarta_uniao_com_geometria_divergente(tmp_path):
+    """Um arquivo de união corrompido/deslocado não pode deformar a malha em
+    silêncio -- o estágio volta para a venosa (referência garantida)."""
+    import SimpleITK as sitk
+
+    from dtwin.core import Case
+    from dtwin.stages import stage5_refine
+
+    case = Case(root=tmp_path)
+    venosa = make_sphere_mask((20, 20, 20), (10, 10, 10), 6).astype(np.uint8)
+    img_venosa = sitk.GetImageFromArray(venosa)
+    img_venosa.SetSpacing((1.0, 1.0, 1.0))
+    sitk.WriteImage(img_venosa, str(case.mask_organ))
+
+    # União com espaçamento diferente -- geometria divergente de propósito.
+    uniao_divergente = sitk.GetImageFromArray(venosa)
+    uniao_divergente.SetSpacing((2.0, 2.0, 2.0))
+    sitk.WriteImage(uniao_divergente, str(case.mask_organ_union))
+
+    lesao_vazia = sitk.GetImageFromArray(np.zeros((20, 20, 20), dtype=np.uint8))
+    lesao_vazia.CopyInformation(img_venosa)
+    sitk.WriteImage(lesao_vazia, str(case.mask_lesion))
+
+    stage5_refine(case, {"refino": {}})
+
+    resultado = sitk.GetArrayFromImage(sitk.ReadImage(str(case.mask_organ_clean))) > 0
+    volume_venosa = int(venosa.sum())
+    # Descartou a união (que tinha o dobro do espaçamento -> volume físico 8x
+    # maior) e refinou a partir da venosa -- o volume em voxels bate com ela,
+    # não com uma malha distorcida.
+    assert abs(int(resultado.sum()) - volume_venosa) < volume_venosa * 0.2

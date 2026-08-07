@@ -134,6 +134,21 @@ def _refine_mask(mask_zyx, opening: bool, radius: int, min_voxels: int) -> np.nd
     return m.astype(np.uint8)
 
 
+def _fonte_da_malha_do_orgao(case: Case) -> Path:
+    """Fonte da máscara do órgão para VISUALIZAÇÃO (a malha 3D), não para
+    classificação -- que nunca chama esta função e sempre lê case.mask_organ
+    diretamente, antes de qualquer coisa aqui existir.
+
+    Prefere a união de fases (docs/188 §9, docs/189) quando o webapp já a
+    escreveu: validado contra referência humana que ela recupera fígado real
+    (82% de precisão no que acrescenta) e mede 23% de volume a mais que a
+    venosa sozinha na mediana, nas três fases de produção
+    (experiments/three_phase_union_v1). Cai para a venosa quando a união não
+    existe -- por exemplo no benchmark em lote, que não a constrói.
+    """
+    return case.mask_organ_union if case.mask_organ_union.is_file() else case.mask_organ
+
+
 FRACAO_MINIMA_COMPONENTE_ORGAO = 0.90
 
 
@@ -638,8 +653,26 @@ def stage4b_import_lesion(case: Case, profile: dict, no_lesion: bool) -> None:
 def stage5_refine(case: Case, profile: dict) -> None:
     refino = profile.get("refino", {})
 
-    # Órgão
-    organ_img = read_image(case.mask_organ)
+    # Órgão -- a fonte é a VISUALIZAÇÃO (união de fases se disponível), nunca a
+    # classificação, que já rodou sobre case.mask_organ antes deste estágio.
+    organ_source = _fonte_da_malha_do_orgao(case)
+    if organ_source != case.mask_organ:
+        # Defesa contra um arquivo de união corrompido/deslocado: se a
+        # geometria não bate com a venosa (a referência garantida), volta para
+        # ela em vez de deformar a malha silenciosamente.
+        referencia = read_image(case.mask_organ)
+        candidata = read_image(organ_source)
+        if (
+            candidata.GetSize() != referencia.GetSize()
+            or candidata.GetSpacing() != referencia.GetSpacing()
+            or candidata.GetOrigin() != referencia.GetOrigin()
+        ):
+            log.warning(
+                "Estágio 5: %s tem geometria divergente da venosa; "
+                "descartando e usando a venosa.", organ_source.name,
+            )
+            organ_source = case.mask_organ
+    organ_img = read_image(organ_source)
     organ = array_from(organ_img)
     oc = refino.get("orgao", {})
     organ_clean = _refine_mask(
@@ -658,9 +691,9 @@ def stage5_refine(case: Case, profile: dict) -> None:
         raise PipelineError("Isolamento do órgão zerou a máscara.")
     save_image(array_to_image(organ_clean, organ_img, np.uint8), case.mask_organ_clean)
     log.info(
-        "Estágio 5: órgão refinado (%d -> %d voxels); componentes %d, "
-        "fração do principal %.4f, isolado=%s (%s).",
-        int(organ.sum()), int(organ_clean.sum()),
+        "Estágio 5: órgão refinado a partir de %s (%d -> %d voxels); "
+        "componentes %d, fração do principal %.4f, isolado=%s (%s).",
+        organ_source.name, int(organ.sum()), int(organ_clean.sum()),
         diagnostico_componentes["componentes"],
         diagnostico_componentes["fracao_componente_principal"],
         diagnostico_componentes["isolado"], diagnostico_componentes["motivo"],

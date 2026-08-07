@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.request import urlopen
 
+import numpy as np
 import pydicom
 import SimpleITK as sitk
 import yaml
@@ -257,6 +258,11 @@ PREP_TIMEOUT_CPU = int(os.environ.get("WEBAPP_PREP_TIMEOUT_CPU", "2400"))
 SCREEN_TIMEOUT = int(os.environ.get("WEBAPP_SCREEN_TIMEOUT", "600"))
 MODEL_TIMEOUT = int(os.environ.get("WEBAPP_MODEL_TIMEOUT", "300"))
 CANDIDATE_TIMEOUT = int(os.environ.get("WEBAPP_CANDIDATE_TIMEOUT", "95"))
+# Tempo por fase extra (arterial, tardia) ao construir a máscara de
+# visualização (docs/188 §9, docs/189). Roda depois da decisão congelada; uma
+# fase que estoura o tempo é só excluída da união, nunca falha o exame.
+UNION_PHASE_TIMEOUT = int(os.environ.get("WEBAPP_UNION_PHASE_TIMEOUT", "240"))
+UNION_MASK_ENABLED = os.environ.get("WEBAPP_UNION_MASK_ENABLED", "1") == "1"
 # O Starlette limita uploads multipart a 1000 arquivos por padrão (proteção
 # genérica contra DoS). Um dataset de benchmark real (muitos exames, cada um com
 # centenas/milhares de fatias DICOM) estoura isso com facilidade. O servidor só
@@ -622,11 +628,28 @@ def _aviso_fragmentacao_figado(qualidade: dict | None) -> dict | None:
     }
 
 
-def _aviso_volume_figado(qualidade: dict | None) -> dict | None:
-    """Avisa quando o volume segmentado sai da faixa típica de fígado adulto."""
-    if not qualidade:
-        return None
-    volume = qualidade.get("largest_component_volume_ml")
+def _aviso_volume_figado(
+    qualidade: dict | None, volume_uniao_ml: float | None = None
+) -> dict | None:
+    """Avisa quando o volume MOSTRADO NO MODELO 3D sai da faixa típica.
+
+    Quando a máscara de união está disponível (docs/188 §9, docs/189), é ela
+    que o modelo 3D de fato exibe -- então é o volume dela que precisa ser
+    avaliado contra a faixa, não o da venosa isolada, que só alimentou a
+    classificação. `volume_uniao_ml` é opcional e None em todo caller que não
+    constrói união (por exemplo o benchmark em lote), preservando o
+    comportamento anterior nesses casos.
+    """
+    if volume_uniao_ml is not None:
+        volume = volume_uniao_ml
+        origem = "a união das fases arterial, venosa e tardia"
+    elif qualidade:
+        candidato = qualidade.get("largest_component_volume_ml")
+        volume = candidato if isinstance(candidato, (int, float)) else None
+        origem = "a fase venosa"
+    else:
+        volume = None
+        origem = "a fase venosa"
     if not isinstance(volume, (int, float)):
         return None
     baixo, alto = VOLUME_HEPATICO_TIPICO_ML
@@ -636,11 +659,12 @@ def _aviso_volume_figado(qualidade: dict | None) -> dict | None:
             "volume_ml": float(volume),
             "faixa_tipica_ml": [baixo, alto],
             "texto": (
-                f"O fígado segmentado mede {volume:.0f} mL, abaixo da faixa típica "
-                f"de um adulto ({baixo:.0f} a {alto:.0f} mL). A segmentação "
-                "provavelmente perdeu parte do órgão, e o modelo 3D descreve só o "
-                "que foi segmentado. Fígado pequeno também ocorre de verdade "
-                "(cirrose avançada, hepatectomia prévia), então confira as imagens."
+                f"O fígado segmentado ({origem}) mede {volume:.0f} mL, abaixo da "
+                f"faixa típica de um adulto ({baixo:.0f} a {alto:.0f} mL). A "
+                "segmentação provavelmente perdeu parte do órgão, e o modelo 3D "
+                "descreve só o que foi segmentado. Fígado pequeno também ocorre de "
+                "verdade (cirrose avançada, hepatectomia prévia), então confira as "
+                "imagens."
             ),
         }
     if volume > alto:
@@ -649,8 +673,8 @@ def _aviso_volume_figado(qualidade: dict | None) -> dict | None:
             "volume_ml": float(volume),
             "faixa_tipica_ml": [baixo, alto],
             "texto": (
-                f"O fígado segmentado mede {volume:.0f} mL, acima da faixa típica "
-                f"de um adulto ({baixo:.0f} a {alto:.0f} mL). Pode ser "
+                f"O fígado segmentado ({origem}) mede {volume:.0f} mL, acima da "
+                f"faixa típica de um adulto ({baixo:.0f} a {alto:.0f} mL). Pode ser "
                 "hepatomegalia real ou a máscara ter incorporado tecido vizinho."
             ),
         }
@@ -785,6 +809,101 @@ def _build_model(case_dir: Path) -> tuple[bool, str]:
     if _model_done(case_dir):
         return True, ""
     return False, _cli_reason(proc)
+
+
+def _mesma_geometria_sitk(a: sitk.Image, b: sitk.Image) -> bool:
+    return a.GetSize() == b.GetSize() and a.GetSpacing() == b.GetSpacing() and a.GetOrigin() == b.GetOrigin()
+
+
+def _build_union_liver_mask(case_dir: Path, phase_paths: dict[str, Path]) -> dict[str, Any]:
+    """Segmenta arterial e tardia e funde com a venosa para o MODELO 3D.
+
+    Roda só DEPOIS da decisão de triagem congelada: os painéis de classificação
+    já foram construídos a partir de mask_organ.nii.gz (venosa) antes deste
+    ponto, e permanecem exatamente como estavam -- esta função nunca escreve
+    nele. O resultado vai para mask_organ_union.nii.gz, um arquivo NOVO que o
+    estágio de malha (dtwin.stages._fonte_da_malha_do_orgao) prefere quando
+    presente.
+
+    Uma falha aqui NUNCA falha o exame: o pior caso é o modelo 3D continuar
+    vindo só da venosa, como sempre foi. Cada fase extra tem seu próprio
+    timeout e é simplesmente excluída da união se estourar, travar ou sair com
+    geometria divergente.
+
+    Por que isto é seguro fazer: validado contra referência humana (docs/189,
+    CHAOS, n=20) que 82% dos voxels que a união ACRESCENTA sobre uma fase
+    isolada são confirmados como fígado -- ela recupera órgão real, não invade
+    tecido vizinho. E medido com as três fases de produção no LLD (n=19,
+    experiments/three_phase_union_v1): recupera 23% de volume a mais que a
+    venosa sozinha, na mediana.
+    """
+    from dtwin.benchmark.lld_mmri_v23_preparation import isolated_total_mr_liver_segmenter
+
+    venous_mask_path = case_dir / "mask_organ.nii.gz"
+    if not venous_mask_path.is_file():
+        return {"status": "venous_mask_missing", "phases_included": [], "phase_failures": {}}
+    venous_image = sitk.ReadImage(str(venous_mask_path))
+    venous = sitk.GetArrayFromImage(venous_image) > 0
+
+    uniao = venous.copy()
+    fases_incluidas = ["venous"]
+    fases_falhas: dict[str, str] = {}
+    for fase in ("arterial", "delayed"):
+        fonte = phase_paths.get(fase)
+        if fonte is None or not Path(fonte).is_file():
+            fases_falhas[fase] = "fase_ausente"
+            continue
+        destino = case_dir / f"mask_organ_{fase}.nii.gz"
+        try:
+            isolated_total_mr_liver_segmenter(
+                Path(fonte), destino, device="gpu", fast=False,
+                timeout_seconds=UNION_PHASE_TIMEOUT, python_executable=PY,
+            )
+        except Exception as exc:  # noqa: BLE001
+            fases_falhas[fase] = type(exc).__name__
+            continue
+        try:
+            imagem_fase = sitk.ReadImage(str(destino))
+        except Exception:  # noqa: BLE001
+            fases_falhas[fase] = "leitura_falhou"
+            continue
+        if not _mesma_geometria_sitk(imagem_fase, venous_image):
+            fases_falhas[fase] = "geometria_divergente"
+            continue
+        uniao = uniao | (sitk.GetArrayFromImage(imagem_fase) > 0)
+        fases_incluidas.append(fase)
+
+    if len(fases_incluidas) == 1:
+        # Nenhuma fase extra contribuiu -- não escreve um arquivo idêntico ao
+        # venoso. dtwin.stages já cai para mask_organ.nii.gz sozinho.
+        return {
+            "status": "union_unavailable_venous_only",
+            "phases_included": fases_incluidas,
+            "phase_failures": fases_falhas,
+        }
+
+    saida = sitk.GetImageFromArray(uniao.astype(np.uint8))
+    saida.CopyInformation(venous_image)
+    destino_uniao = case_dir / "mask_organ_union.nii.gz"
+    # O nome precisa terminar em ".nii.gz": o SimpleITK escolhe o formato de
+    # escrita pela extensão, e ".tmp" sozinho não é reconhecido.
+    temporario = case_dir / f".{destino_uniao.stem.removesuffix('.nii')}.partial.nii.gz"
+    sitk.WriteImage(saida, str(temporario))
+    temporario.replace(destino_uniao)
+
+    espacamento = venous_image.GetSpacing()
+    volume_venosa_ml = float(int(venous.sum()) * float(np.prod(espacamento)) / 1000.0)
+    volume_uniao_ml = float(int(uniao.sum()) * float(np.prod(espacamento)) / 1000.0)
+    return {
+        "status": "union_built",
+        "phases_included": fases_incluidas,
+        "phase_failures": fases_falhas,
+        "venous_volume_ml": round(volume_venosa_ml, 1),
+        "union_volume_ml": round(volume_uniao_ml, 1),
+        "classification_region_fraction_of_union": (
+            round(volume_venosa_ml / volume_uniao_ml, 4) if volume_uniao_ml > 0 else None
+        ),
+    }
 
 
 def _localize_candidate(case_dir: Path, decision: dict[str, Any]) -> dict[str, Any]:
@@ -1196,6 +1315,25 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             time.monotonic() - t0, 4
         )
 
+        # Máscara de visualização pela união das três fases (docs/188 §9,
+        # docs/189). A decisão já está congelada e os painéis já vieram só da
+        # venosa -- isto só melhora o que o modelo 3D mostra, nunca o que foi
+        # classificado. Roda antes de _build_model para que o estágio de malha
+        # já encontre mask_organ_union.nii.gz, se ela existir.
+        uniao_mascara: dict[str, Any] = {"status": "union_disabled"}
+        if UNION_MASK_ENABLED:
+            _set(job_id, state="processing", step="mascara_uniao", progress=91)
+            t0 = time.monotonic()
+            try:
+                uniao_mascara = _build_union_liver_mask(case_dir, multiphase.phase_paths)
+            except Exception as exc:  # noqa: BLE001
+                uniao_mascara = {
+                    "status": "union_failed", "reason": type(exc).__name__,
+                    "phases_included": ["venous"], "phase_failures": {},
+                }
+                log.warning("Job visual %s: união de fases falhou (%s)", job_id, exc)
+            duracoes["mascara_uniao"] = round(time.monotonic() - t0, 4)
+
         # Modelo 3D do fígado para revisão. É acessório à decisão: se falhar, o
         # resultado sai do mesmo jeito, apenas sem o visualizador.
         _set(job_id, state="processing", step="modelo_3d", progress=94)
@@ -1224,7 +1362,12 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             "in_sample_verdict": status["verdict"],
             "durations_seconds": duracoes,
             "liver_mask_quality": qualidade_mascara,
-            "liver_volume_warning": _aviso_volume_figado(qualidade_mascara),
+            "liver_mask_union": uniao_mascara,
+            "liver_volume_warning": _aviso_volume_figado(
+                qualidade_mascara,
+                uniao_mascara.get("union_volume_ml")
+                if uniao_mascara.get("status") == "union_built" else None,
+            ),
             "liver_fragmentation_warning": _aviso_fragmentacao_figado(qualidade_mascara),
             "candidate_localization": candidate_localization,
             "viewer_ready": bool(viewer_ready),

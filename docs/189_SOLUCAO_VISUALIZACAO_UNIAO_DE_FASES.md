@@ -142,18 +142,66 @@ nem o resultado.
 
 ---
 
-## 6. Ordem de execução proposta
+## 6. Execução
 
-1. **Medir a união das três fases dinâmicas no LLD** (hoje só medi venosa +
-   pré-contraste, que não são as três de produção). Confirma o ganho real com a
-   combinação que de fato será usada.
-2. **Implementar a máscara de visualização** como artefato separado, gerado após
-   a decisão, com a região de classificação marcada dentro.
-3. **Regerar a galeria** e comparar lado a lado com a atual, mesma câmera.
-4. **Atualizar o aviso** para reportar os dois volumes.
+### 6.1 Passo 1 — gate: a união das TRÊS fases de produção, medida
 
-O passo 1 é o gate: se a união das três não recuperar substancialmente mais que
-a venosa no LLD, o resto não se justifica.
+`tools/measure_three_phase_union_gain.py`, 19 casos LLD, arterial+venosa+tardia
+já harmonizadas (verificado: mesma grade, união é OR direto, sem registro):
+
+| | Venosa | União |
+|---|---:|---:|
+| Volume mediano | 590 mL | **758 mL** |
+| Dentro da faixa adulta | 1/19 | **6/19** |
+
+Razão mediana **1,23×** (min 1,03, máx 17,47 — um caso em que venosa e tardia
+quase falharam sozinhas e a arterial resgatou o órgão). **Gate passa.**
+
+### 6.2 Passo 2 — implementado
+
+- `dtwin/core.py`: `Case.mask_organ_union`, arquivo novo, nunca escrito por
+  classificação.
+- `dtwin/stages.py`: `_fonte_da_malha_do_orgao(case)` — o estágio de malha
+  prefere a união quando o arquivo existe, com verificação de geometria contra
+  a venosa (referência garantida) antes de aceitar; geometria divergente
+  descarta a união e cai para a venosa, com aviso no log.
+- `webapp/server.py`: `_build_union_liver_mask(case_dir, phase_paths)` — roda
+  **depois** de `classify_embeddings` (garantido por teste estrutural que lê o
+  código-fonte). Cada fase extra tem timeout próprio
+  (`WEBAPP_UNION_PHASE_TIMEOUT`, padrão 240 s) e uma falha nela só a exclui da
+  união, nunca falha o exame. Atrás de um interruptor
+  (`WEBAPP_UNION_MASK_ENABLED`, ligado por padrão).
+- `_aviso_volume_figado` passou a receber o volume da união quando disponível,
+  e a mensagem nomeia a origem ("a união das fases..." vs. "a fase venosa").
+- Interface: quando a união é construída, mostra os dois volumes lado a lado —
+  o classificado (venosa) e o exibido no modelo 3D (união).
+
+**O que ficou de fora desta implementação, registrado para não ser esquecido:**
+a marcação visual da região de classificação *dentro* da malha da união (§5.2,
+"destacada, a parte que o classificador olhou") não foi construída — hoje só o
+**dado** (`classification_region_fraction_of_union`) é exposto, não um overlay
+renderizado no visualizador 3D. A infraestrutura para isso já existe (o mesmo
+mecanismo que desenha `mesh_candidate.vtp` sobre o órgão), mas construir o
+segundo mesh e o suporte no `viewer/app.js` é trabalho novo, não feito aqui.
+
+### 6.3 Verificação
+
+- 8 testes novos (1472 → **1480**): a garantia central — hash byte-a-byte de
+  `mask_organ.nii.gz` antes e depois de construir a união — está travada por
+  teste e **passou**; também: geometria divergente é descartada, degradação
+  quando todas as fases falham, fonte da malha prefere a união quando presente,
+  estágio 5 descarta união com geometria errada, aviso de volume com/sem união,
+  ordem estrutural (união depois de classificar).
+- **Smoke de ponta a ponta com dado real** (`anon-lld-00878b6b34f0cdb4`, fora da
+  suíte automatizada): venosa 816,0 mL → união 1220,3 mL, três fases
+  contribuíram sem falha, `mask_organ.nii.gz` confirmado **idêntico voxel a
+  voxel** ao original depois da chamada, malha final saiu de
+  `mask_organ_union.nii.gz` (log do estágio 5), componente único, 160 000
+  triângulos.
+- Suíte completa: **1480/1480**.
+
+Passos 3 (regerar a galeria) e a marcação visual do §6.2 continuam como
+trabalho seguinte, não feito nesta rodada.
 
 ---
 

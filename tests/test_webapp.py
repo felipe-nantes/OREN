@@ -1,3 +1,5 @@
+import hashlib
+import shutil
 from pathlib import Path
 import time
 from types import SimpleNamespace
@@ -1488,3 +1490,129 @@ def test_aviso_de_fragmentacao_e_informativo_quando_o_descarte_e_irrelevante():
         {"component_count": 2, "largest_component_fraction": 0.9995}
     )
     assert aviso is not None and aviso["nivel"] == "informacao"
+
+
+def test_uniao_de_fases_nunca_toca_a_mascara_de_classificacao(tmp_path, monkeypatch):
+    """A garantia central de docs/188/189: mask_organ.nii.gz (o que os painéis
+    de classificação já leram) precisa sair intacto -- byte a byte."""
+    import numpy as np
+    import SimpleITK as sitk
+
+    case_dir = tmp_path
+    venosa = np.zeros((10, 10, 10), dtype=np.uint8)
+    venosa[3:7, 3:7, 3:7] = 1
+    img = sitk.GetImageFromArray(venosa)
+    caminho_venosa = case_dir / "mask_organ.nii.gz"
+    sitk.WriteImage(img, str(caminho_venosa))
+    hash_antes = hashlib.sha256(caminho_venosa.read_bytes()).hexdigest()
+
+    arterial = case_dir / "arterial.nii.gz"
+    delayed = case_dir / "delayed.nii.gz"
+    ampliada = np.zeros((10, 10, 10), dtype=np.uint8)
+    ampliada[2:8, 2:8, 2:8] = 1
+    for caminho in (arterial, delayed):
+        extra = sitk.GetImageFromArray(ampliada)
+        extra.CopyInformation(img)
+        sitk.WriteImage(extra, str(caminho))
+
+    def fake_segmenter(source, output, **kwargs):
+        # simula a segmentação: copia a imagem "ampliada" correspondente
+        shutil.copyfile(source, output)
+        return {}
+
+    monkeypatch.setattr(
+        "dtwin.benchmark.lld_mmri_v23_preparation.isolated_total_mr_liver_segmenter",
+        fake_segmenter,
+    )
+    resultado = server._build_union_liver_mask(
+        case_dir, {"arterial": arterial, "delayed": delayed}
+    )
+
+    assert hashlib.sha256(caminho_venosa.read_bytes()).hexdigest() == hash_antes, (
+        "a máscara de classificação foi alterada -- isso não pode acontecer"
+    )
+    assert resultado["status"] == "union_built"
+    assert set(resultado["phases_included"]) == {"venous", "arterial", "delayed"}
+    assert resultado["union_volume_ml"] > resultado["venous_volume_ml"]
+    assert (case_dir / "mask_organ_union.nii.gz").is_file()
+
+
+def test_uniao_de_fases_degrada_para_venosa_quando_tudo_falha(tmp_path, monkeypatch):
+    """Nenhuma fase extra disponível -> nenhum arquivo novo, exame não falha."""
+    import numpy as np
+    import SimpleITK as sitk
+
+    case_dir = tmp_path
+    venosa = np.zeros((6, 6, 6), dtype=np.uint8)
+    venosa[1:4, 1:4, 1:4] = 1
+    sitk.WriteImage(sitk.GetImageFromArray(venosa), str(case_dir / "mask_organ.nii.gz"))
+
+    def falha(source, output, **kwargs):
+        raise RuntimeError("segmentação indisponível nesta simulação")
+
+    monkeypatch.setattr(
+        "dtwin.benchmark.lld_mmri_v23_preparation.isolated_total_mr_liver_segmenter", falha
+    )
+    resultado = server._build_union_liver_mask(case_dir, {"arterial": Path("nao-existe.nii.gz")})
+
+    assert resultado["status"] == "union_unavailable_venous_only"
+    assert not (case_dir / "mask_organ_union.nii.gz").is_file()
+
+
+def test_uniao_de_fases_descarta_fase_com_geometria_divergente(tmp_path, monkeypatch):
+    import numpy as np
+    import SimpleITK as sitk
+
+    case_dir = tmp_path
+    venosa_arr = np.zeros((8, 8, 8), dtype=np.uint8)
+    venosa_arr[2:6, 2:6, 2:6] = 1
+    img_venosa = sitk.GetImageFromArray(venosa_arr)
+    sitk.WriteImage(img_venosa, str(case_dir / "mask_organ.nii.gz"))
+
+    arterial = case_dir / "arterial.nii.gz"
+    sitk.WriteImage(sitk.GetImageFromArray(venosa_arr), str(arterial))  # fonte só precisa existir
+
+    def segmenta_com_geometria_errada(source, output, **kwargs):
+        imagem = sitk.GetImageFromArray(venosa_arr)
+        imagem.SetSpacing((5.0, 5.0, 5.0))  # geometria deliberadamente diferente
+        sitk.WriteImage(imagem, str(output))
+        return {}
+
+    monkeypatch.setattr(
+        "dtwin.benchmark.lld_mmri_v23_preparation.isolated_total_mr_liver_segmenter",
+        segmenta_com_geometria_errada,
+    )
+    resultado = server._build_union_liver_mask(case_dir, {"arterial": arterial})
+
+    assert resultado["status"] == "union_unavailable_venous_only"
+    assert resultado["phase_failures"]["arterial"] == "geometria_divergente"
+
+
+def test_aviso_de_volume_usa_a_uniao_quando_disponivel():
+    aviso = server._aviso_volume_figado(
+        {"largest_component_volume_ml": 480.0}, volume_uniao_ml=200.0
+    )
+    assert aviso is not None
+    assert aviso["volume_ml"] == 200.0
+    assert "união" in aviso["texto"]
+
+
+def test_aviso_de_volume_sem_uniao_mantem_comportamento_anterior():
+    """Chamada de 1 argumento (o caminho do benchmark) continua igual."""
+    aviso = server._aviso_volume_figado({"largest_component_volume_ml": 200.0})
+    assert aviso is not None
+    assert aviso["volume_ml"] == 200.0
+    assert "venosa" in aviso["texto"]
+
+
+def test_mascara_uniao_e_construida_depois_da_classificacao_no_codigo():
+    """Regressão estrutural: garante, no texto-fonte, que a chamada de união
+    vem DEPOIS de classify_embeddings -- nunca antes."""
+    import inspect
+
+    fonte = inspect.getsource(server.process_visual_job)
+    pos_classificacao = fonte.index("classify_embeddings(")
+    pos_uniao = fonte.index("_build_union_liver_mask(")
+    assert pos_uniao > pos_classificacao, (
+        "a união de fases precisa ser construída depois da decisão congelada"
+    )
