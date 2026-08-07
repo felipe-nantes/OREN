@@ -176,13 +176,26 @@ quase falharam sozinhas e a arterial resgatou o órgão). **Gate passa.**
 - Interface: quando a união é construída, mostra os dois volumes lado a lado —
   o classificado (venosa) e o exibido no modelo 3D (união).
 
-**O que ficou de fora desta implementação, registrado para não ser esquecido:**
-a marcação visual da região de classificação *dentro* da malha da união (§5.2,
-"destacada, a parte que o classificador olhou") não foi construída — hoje só o
-**dado** (`classification_region_fraction_of_union`) é exposto, não um overlay
-renderizado no visualizador 3D. A infraestrutura para isso já existe (o mesmo
-mecanismo que desenha `mesh_candidate.vtp` sobre o órgão), mas construir o
-segundo mesh e o suporte no `viewer/app.js` é trabalho novo, não feito aqui.
+**Atualização — o overlay que ficara pendente foi construído.** A marcação
+visual da região de classificação *dentro* da malha da união (§5.2, "destacada,
+a parte que o classificador olhou") existe agora como um segundo mesh:
+`Case.mask_organ_classified_region_clean` / `mesh_organ_classified_region`,
+gerado no estágio 5 a partir da venosa crua com o mesmo refino/isolamento do
+órgão, **só quando a união está de fato em uso** (sem união, seria idêntico ao
+órgão inteiro — ruído). Publicado no manifesto como papel
+`regiao_classificada`, cor ciano (`#4FC3E8`), material `classified_region` no
+`viewer/app.js` — wireframe, baixa opacidade, `depthTest:false`, mesmo truque
+de profundidade do `mesh_candidate.vtp` para não ser ocultado pelo órgão que o
+contém.
+
+Verificado: contenção geométrica testada com esferas de raios diferentes (a
+região classificada nunca vaza para fora do órgão exibido); ausência de dado
+fantasma quando uma execução deixa de ter união; fidelidade da malha nova por
+`compute_mesh_metrics` (erro de volume 0,09%, gate passou); e **no navegador
+real**, recarregando o visualizador do caso já processado — a camada aparece
+nos controles com o rótulo certo, e a rede confirma
+`GET .../figado_regiao_classificada.stl → 200 OK` ao lado de `figado_orgao.stl`
+e `figado_candidato.stl`.
 
 ### 6.3 Verificação
 
