@@ -226,3 +226,46 @@ do fígado não é encontrada por nenhuma das fases, e recuperá-la exige um
 segmentador adaptado ao domínio — não outra combinação das mesmas máscaras.
 
 `research_only: true` · `clinical_use_allowed: false`
+
+---
+
+## 8. Quarta fase (pré-contraste) na união — testada e REPROVADA
+
+**Ferramenta:** `tools/measure_four_phase_union_gain.py`
+**Artefatos:** `experiments/four_phase_union_v1/`
+
+Depois de fechar o overlay do visualizador, testei se somar a pré-contraste
+como uma **quarta** fase na união (além de arterial+venosa+tardia) recuperaria
+volume suficiente para justificar o custo extra de GPU — reaproveitando as
+máscaras arterial/tardia já segmentadas em `experiments/three_phase_union_v1`
+(19 casos), segmentando só a pré-contraste que faltava.
+
+**Gate pré-especificado, escrito antes de rodar:** ganho mediano ≥ 5% sobre a
+união de três fases.
+
+| | União-3 | União-4 |
+|---|---:|---:|
+| Volume mediano | 758 mL | 846 mL |
+| Dentro da faixa adulta | 6/19 | 7/19 |
+
+Ganho relativo: **mediana 4,5%** (min 0,0%, máx 183,1%). Excluindo os dois
+outliers mais extremos, a mediana dos 17 restantes fica em 4,2% — o resultado
+não é inflado por casos raros; a distribuição central é mesmo modesta.
+
+> **GATE FALHA por meio ponto percentual (4,5% contra 5% exigidos).** Pela
+> mesma disciplina aplicada o dia inteiro: não se afrouxa gate depois de ver o
+> número. **A união de produção continua em três fases** — o custo de mais uma
+> segmentação por exame (mais ~35-70s) não se paga no caso típico.
+
+### O que fica registrado, sem contradizer a decisão
+
+Dois casos tiveram ganho extremo (+183,1% e +62,2%) — exatamente os casos em
+que a união de três fases já era severamente deficiente (96 mL e 542 mL,
+respectivamente, muito abaixo mesmo da mediana de 758 mL). Isso sugere que a
+pré-contraste pode ajudar especificamente nos piores casos, não no caso médio
+— mas confirmar isso exigiria uma amostra maior e um gate desenhado para essa
+pergunta (ganho condicional a um caso já ruim), não o gate que foi
+pré-especificado aqui. Fica como hipótese para outra rodada, não como razão
+para reabrir esta.
+
+`research_only: true` · `clinical_use_allowed: false`
