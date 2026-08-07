@@ -262,6 +262,19 @@ function tissueMaterial(item) {
       polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
       depthTest: false, depthWrite: false,
     });
+  } else if (materialType === "classified_region") {
+    // Vive DENTRO da malha do órgão (a união ⊇ a região classificada, por
+    // construção -- docs/189 §5.2), então precisa do mesmo truque de
+    // profundidade do candidato para não ser ocultada pelo próprio órgão.
+    // Wireframe + baixa opacidade lê como camada de auditoria, não como
+    // tecido -- é fronteira a marcar, não massa a mostrar.
+    material = new THREE.MeshPhysicalMaterial({
+      color, transparent: true, opacity, roughness: 0.15, metalness: 0,
+      wireframe: true,
+      emissive: color, emissiveIntensity: 0.5,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      depthTest: false, depthWrite: false,
+    });
   } else if (materialType === "segment") {
     material = new THREE.MeshPhysicalMaterial({
       color, transparent: true, opacity, roughness: 0.5, metalness: 0,
@@ -300,6 +313,7 @@ function addMesh(item, geometry) {
   mesh.userData.label = item.label || item.role;
   mesh.userData.targetOpacity = mesh.material.opacity;
   if (item.material === "candidate") mesh.renderOrder = 12;
+  if (item.material === "classified_region") mesh.renderOrder = 8;
   meshes[item.role] = mesh;
   meshItems[item.role] = item;
   group.add(mesh);

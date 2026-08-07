@@ -704,6 +704,40 @@ def stage5_refine(case: Case, profile: dict) -> None:
             antes_isolar - int(organ_clean.sum()),
         )
 
+    # Região classificada -- só existe quando a malha do órgão veio da união
+    # (docs/188 §9, docs/189 §5.2): sem união, ela seria idêntica ao órgão
+    # inteiro, um overlay sobre si mesmo, ruído puro. Mesmo refino/isolamento
+    # da venosa crua (case.mask_organ), para ficar geometricamente comparável
+    # ao órgão que o estágio 7 vai publicar ao lado dela.
+    if organ_source != case.mask_organ:
+        venosa_img = read_image(case.mask_organ)
+        venosa = array_from(venosa_img)
+        classificada_clean = _refine_mask(
+            venosa, oc.get("opening", True), oc.get("opening_radius", 2),
+            oc.get("min_volume_voxels", 300),
+        )
+        classificada_clean, diagnostico_classificada = _isolar_orgao_para_visualizacao(
+            classificada_clean,
+            float(oc.get("fracao_minima_componente", FRACAO_MINIMA_COMPONENTE_ORGAO)),
+        )
+        if classificada_clean.sum() > 0:
+            save_image(
+                array_to_image(classificada_clean, venosa_img, np.uint8),
+                case.mask_organ_classified_region_clean,
+            )
+            log.info(
+                "Estágio 5: região classificada (venosa) publicada como overlay "
+                "(%d voxels; fração do fígado exibido: %.3f).",
+                int(classificada_clean.sum()),
+                float(classificada_clean.sum()) / float(max(organ_clean.sum(), 1)),
+            )
+        else:
+            case.mask_organ_classified_region_clean.unlink(missing_ok=True)
+    else:
+        # Sem união nesta execução: remove overlay de uma execução anterior
+        # para não publicar um dado fantasma (finalize precisa ser idempotente).
+        case.mask_organ_classified_region_clean.unlink(missing_ok=True)
+
     # Lesão (gentil: não apagar lesões pequenas)
     lesion_img = read_image(case.mask_lesion)
     lesion = array_from(lesion_img)
@@ -858,6 +892,20 @@ def stage6_mesh(case: Case, profile: dict) -> None:
     else:
         case.mesh_candidate.unlink(missing_ok=True)
 
+    classified_region_mesh = (
+        _mesh_from_mask(case.mask_organ_classified_region_clean, level, sm, fa, pass_band=pb, **extra)
+        if case.mask_organ_classified_region_clean.is_file()
+        else None
+    )
+    if classified_region_mesh is not None:
+        classified_region_mesh.save(str(case.mesh_organ_classified_region))
+        log.info(
+            "Estágio 6: malha da região classificada (%d vértices, %d faces).",
+            classified_region_mesh.n_points, classified_region_mesh.n_cells,
+        )
+    else:
+        case.mesh_organ_classified_region.unlink(missing_ok=True)
+
     for _, entry in _anatomy_structures(profile):
         role = str(entry["papel"])
         clean_path = case.anatomy_mask(role, clean=True)
@@ -921,6 +969,20 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
             "color": mesh_cfg.get("cor_candidato", "#FF8400"),
             "label": "Região candidata automática — não confirmada",
             "material": "candidate", "opacity": 0.78,
+            "default_visible": True,
+        },
+        {
+            # Só existe quando o órgão vem da união de fases (docs/188 §9,
+            # docs/189 §5.2): marca, dentro do modelo anatômico maior, qual
+            # parte é a fase venosa que de fato alimentou a classificação. A
+            # cor precisa contrastar com órgão (âmbar), lesão (vermelho) e
+            # candidato (laranja) -- um ciano frio lê como "camada de
+            # auditoria", não como tecido.
+            "role": "regiao_classificada", "vtp": case.mesh_organ_classified_region,
+            "mask": case.mask_organ_classified_region_clean,
+            "color": mesh_cfg.get("cor_regiao_classificada", "#4FC3E8"),
+            "label": "Região que alimentou a classificação (fase venosa)",
+            "material": "classified_region", "opacity": 0.45,
             "default_visible": True,
         },
     ]

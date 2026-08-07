@@ -207,3 +207,79 @@ def test_estagio5_descarta_uniao_com_geometria_divergente(tmp_path):
     # maior) e refinou a partir da venosa -- o volume em voxels bate com ela,
     # não com uma malha distorcida.
     assert abs(int(resultado.sum()) - volume_venosa) < volume_venosa * 0.2
+
+
+def test_regiao_classificada_so_existe_quando_ha_uniao(tmp_path):
+    """Sem união, a região classificada seria idêntica ao órgão inteiro --
+    overlay sobre si mesmo, ruído puro (docs/189 §5.2)."""
+    import SimpleITK as sitk
+
+    from dtwin.core import Case
+    from dtwin.stages import stage5_refine
+
+    case = Case(root=tmp_path)
+    esfera = make_sphere_mask((20, 20, 20), (10, 10, 10), 6).astype(np.uint8)
+    img = sitk.GetImageFromArray(esfera)
+    sitk.WriteImage(img, str(case.mask_organ))
+    lesao_vazia = sitk.GetImageFromArray(np.zeros((20, 20, 20), dtype=np.uint8))
+    lesao_vazia.CopyInformation(img)
+    sitk.WriteImage(lesao_vazia, str(case.mask_lesion))
+
+    stage5_refine(case, {"refino": {}})
+
+    assert not case.mask_organ_classified_region_clean.is_file(), (
+        "sem união, não deveria existir overlay -- seria idêntico ao órgão"
+    )
+
+
+def test_regiao_classificada_fica_contida_no_orgao_da_uniao(tmp_path):
+    """A garantia central do overlay: união ⊇ venosa por construção, e o
+    overlay tem que respeitar isso geometricamente, não só em teoria."""
+    import SimpleITK as sitk
+
+    from dtwin.core import Case
+    from dtwin.stages import stage5_refine
+
+    case = Case(root=tmp_path)
+    venosa = make_sphere_mask((30, 30, 30), (15, 15, 15), 6).astype(np.uint8)
+    uniao = make_sphere_mask((30, 30, 30), (15, 15, 15), 9).astype(np.uint8)  # maior, contém a venosa
+    img_venosa = sitk.GetImageFromArray(venosa)
+    sitk.WriteImage(img_venosa, str(case.mask_organ))
+    img_uniao = sitk.GetImageFromArray(uniao)
+    img_uniao.CopyInformation(img_venosa)
+    sitk.WriteImage(img_uniao, str(case.mask_organ_union))
+    lesao_vazia = sitk.GetImageFromArray(np.zeros((30, 30, 30), dtype=np.uint8))
+    lesao_vazia.CopyInformation(img_venosa)
+    sitk.WriteImage(lesao_vazia, str(case.mask_lesion))
+
+    stage5_refine(case, {"refino": {}})
+
+    assert case.mask_organ_classified_region_clean.is_file()
+    regiao = sitk.GetArrayFromImage(sitk.ReadImage(str(case.mask_organ_classified_region_clean))) > 0
+    orgao = sitk.GetArrayFromImage(sitk.ReadImage(str(case.mask_organ_clean))) > 0
+    assert not (regiao & ~orgao).any(), "a região classificada vazou para fora do órgão exibido"
+    assert regiao.sum() < orgao.sum(), "a região classificada deveria ser um subconjunto próprio"
+
+
+def test_regiao_classificada_e_removida_quando_a_execucao_deixa_de_ter_uniao(tmp_path):
+    """finalize precisa ser idempotente: uma execução sem união não pode
+    republicar o overlay de uma execução anterior que teve união."""
+    import SimpleITK as sitk
+
+    from dtwin.core import Case
+    from dtwin.stages import stage5_refine
+
+    case = Case(root=tmp_path)
+    venosa = make_sphere_mask((20, 20, 20), (10, 10, 10), 6).astype(np.uint8)
+    img = sitk.GetImageFromArray(venosa)
+    sitk.WriteImage(img, str(case.mask_organ))
+    lesao_vazia = sitk.GetImageFromArray(np.zeros((20, 20, 20), dtype=np.uint8))
+    lesao_vazia.CopyInformation(img)
+    sitk.WriteImage(lesao_vazia, str(case.mask_lesion))
+    # Simula um overlay fantasma deixado por uma execução anterior.
+    case.mask_organ_classified_region_clean.parent.mkdir(parents=True, exist_ok=True)
+    sitk.WriteImage(img, str(case.mask_organ_classified_region_clean))
+
+    stage5_refine(case, {"refino": {}})
+
+    assert not case.mask_organ_classified_region_clean.is_file()

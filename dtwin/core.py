@@ -169,6 +169,12 @@ class Case:
     @property
     def mask_organ_union(self) -> Path: return self.root / "mask_organ_union.nii.gz"
     @property
+    def mask_organ_classified_region_clean(self) -> Path:
+        return self.root / "mask_organ_classified_region_clean.nii.gz"
+    @property
+    def mesh_organ_classified_region(self) -> Path:
+        return self.root / "mesh_organ_classified_region.vtp"
+    @property
     def mask_lesion_clean(self) -> Path: return self.root / "mask_lesion_clean.nii.gz"
     @property
     def mask_candidate(self) -> Path: return self.root / "mask_candidate.nii.gz"
