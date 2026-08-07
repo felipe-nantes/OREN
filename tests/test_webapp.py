@@ -1525,7 +1525,7 @@ def test_uniao_de_fases_nunca_toca_a_mascara_de_classificacao(tmp_path, monkeypa
         fake_segmenter,
     )
     resultado = server._build_union_liver_mask(
-        case_dir, {"arterial": arterial, "delayed": delayed}
+        case_dir, {"t1_arterial": arterial, "t1_delayed": delayed}
     )
 
     assert hashlib.sha256(caminho_venosa.read_bytes()).hexdigest() == hash_antes, (
@@ -1553,7 +1553,7 @@ def test_uniao_de_fases_degrada_para_venosa_quando_tudo_falha(tmp_path, monkeypa
     monkeypatch.setattr(
         "dtwin.benchmark.lld_mmri_v23_preparation.isolated_total_mr_liver_segmenter", falha
     )
-    resultado = server._build_union_liver_mask(case_dir, {"arterial": Path("nao-existe.nii.gz")})
+    resultado = server._build_union_liver_mask(case_dir, {"t1_arterial": Path("nao-existe.nii.gz")})
 
     assert resultado["status"] == "union_unavailable_venous_only"
     assert not (case_dir / "mask_organ_union.nii.gz").is_file()
@@ -1582,7 +1582,7 @@ def test_uniao_de_fases_descarta_fase_com_geometria_divergente(tmp_path, monkeyp
         "dtwin.benchmark.lld_mmri_v23_preparation.isolated_total_mr_liver_segmenter",
         segmenta_com_geometria_errada,
     )
-    resultado = server._build_union_liver_mask(case_dir, {"arterial": arterial})
+    resultado = server._build_union_liver_mask(case_dir, {"t1_arterial": arterial})
 
     assert resultado["status"] == "union_unavailable_venous_only"
     assert resultado["phase_failures"]["arterial"] == "geometria_divergente"
@@ -1616,3 +1616,43 @@ def test_mascara_uniao_e_construida_depois_da_classificacao_no_codigo():
     assert pos_uniao > pos_classificacao, (
         "a união de fases precisa ser construída depois da decisão congelada"
     )
+
+
+def test_uniao_de_fases_usa_as_chaves_reais_do_multiphase_ingest(tmp_path, monkeypatch):
+    """Regressão: a primeira versão buscava phase_paths["arterial"], mas as
+    chaves reais de multiphase.phase_paths são as constantes de
+    dtwin.learning.multiphase_ingest ("t1_arterial"/"t1_delayed"). Um teste
+    cego a esse detalhe passaria mesmo com a busca errada -- pego só num
+    exame real pelo front. Este teste usa as constantes importadas, não uma
+    string reescrita à mão, para nunca mais divergir em silêncio."""
+    import numpy as np
+    import SimpleITK as sitk
+    from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED, VENOUS
+
+    venosa = np.zeros((6, 6, 6), dtype=np.uint8)
+    venosa[1:4, 1:4, 1:4] = 1
+    img = sitk.GetImageFromArray(venosa)
+    sitk.WriteImage(img, str(tmp_path / "mask_organ.nii.gz"))
+
+    fonte_arterial = tmp_path / f"{ARTERIAL}.nii.gz"
+    fonte_delayed = tmp_path / f"{DELAYED}.nii.gz"
+    sitk.WriteImage(img, str(fonte_arterial))
+    sitk.WriteImage(img, str(fonte_delayed))
+
+    def fake_segmenter(source, output, **kwargs):
+        shutil.copyfile(source, output)
+        return {}
+
+    monkeypatch.setattr(
+        "dtwin.benchmark.lld_mmri_v23_preparation.isolated_total_mr_liver_segmenter",
+        fake_segmenter,
+    )
+    # phase_paths no formato REAL que build_multiphase_case produz.
+    phase_paths_real = {VENOUS: tmp_path / "mask_organ.nii.gz",
+                        ARTERIAL: fonte_arterial, DELAYED: fonte_delayed}
+    resultado = server._build_union_liver_mask(tmp_path, phase_paths_real)
+
+    assert resultado["status"] == "union_built", (
+        f"as fases não foram encontradas com as chaves reais: {resultado}"
+    )
+    assert resultado["phase_failures"] == {}

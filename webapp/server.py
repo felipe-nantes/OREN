@@ -838,6 +838,7 @@ def _build_union_liver_mask(case_dir: Path, phase_paths: dict[str, Path]) -> dic
     venosa sozinha, na mediana.
     """
     from dtwin.benchmark.lld_mmri_v23_preparation import isolated_total_mr_liver_segmenter
+    from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED
 
     venous_mask_path = case_dir / "mask_organ.nii.gz"
     if not venous_mask_path.is_file():
@@ -848,8 +849,12 @@ def _build_union_liver_mask(case_dir: Path, phase_paths: dict[str, Path]) -> dic
     uniao = venous.copy()
     fases_incluidas = ["venous"]
     fases_falhas: dict[str, str] = {}
-    for fase in ("arterial", "delayed"):
-        fonte = phase_paths.get(fase)
+    # phase_paths vem de multiphase.phase_paths, cujas chaves são as constantes
+    # de dtwin.learning.multiphase_ingest ("t1_arterial"/"t1_delayed"), não os
+    # nomes curtos que este módulo usa para relatar fases -- importar em vez de
+    # supor a string evita a mesma divergência silenciosa se o nome mudar lá.
+    for fase, chave_real in (("arterial", ARTERIAL), ("delayed", DELAYED)):
+        fonte = phase_paths.get(chave_real)
         if fonte is None or not Path(fonte).is_file():
             fases_falhas[fase] = "fase_ausente"
             continue
