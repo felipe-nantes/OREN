@@ -91,3 +91,4 @@ experiments/sinal_no_sintetico_v1/
 experiments/
 experiments/phase_union_validation_v1/
 experiments/precontrast_segmentation_v1/
+.venv-mrseg/
