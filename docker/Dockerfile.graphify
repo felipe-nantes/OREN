@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1.7
+FROM python:3.13-slim
+
+ARG GRAPHIFY_VERSION=0.9.42
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN python -m pip install --no-cache-dir "graphifyy[neo4j]==${GRAPHIFY_VERSION}" \
+    && graphify --version
+
+WORKDIR /workspace
+ENTRYPOINT ["graphify"]
+CMD ["--help"]

@@ -1,0 +1,194 @@
+name: argos
+
+x-argos-environment: &argos-environment
+  ARGOS_CONTAINER: "1"
+  WEBAPP_MEDGEMMA_CONFIG: configs/medgemma_local_4b.yaml
+  WEBAPP_VOLUMETRIC_MEDGEMMA_CONFIG: configs/medgemma_local_4b_volumetric.yaml
+  WEBAPP_RAG_MEDGEMMA_CONFIG: configs/medgemma_local_4b_rag.yaml
+  WEBAPP_VOLUMETRIC_RAG_MEDGEMMA_CONFIG: configs/medgemma_local_4b_volumetric_rag.yaml
+  WEBAPP_MONOPHASE_MEDGEMMA_CONFIG: configs/medgemma_local_4b_monophase_rag.yaml
+  WEBAPP_PATHOLOGY_TARGET_MEDGEMMA_CONFIG: configs/medgemma_local_4b_volumetric_pathology_target.yaml
+  WEBAPP_FAST_PATHOLOGY_MEDGEMMA_CONFIG: configs/medgemma_local_4b_fast_pathology.yaml
+  WEBAPP_MEDGEMMA_HEALTH: ${MEDGEMMA_BASE_URL:-http://host.docker.internal:8001}/health
+  MEDGEMMA_ENDPOINT_URL: ${MEDGEMMA_BASE_URL:-http://host.docker.internal:8001}/generate
+  WEBAPP_MEDGEMMA_BACKENDS: 4b=MedGemma 1.5 4B=configs/medgemma_local_4b.yaml=${MEDGEMMA_BASE_URL:-http://host.docker.internal:8001}/health
+  WEBAPP_MRSEGMENTATOR_EXE: /opt/conda/bin/mrsegmentator
+  WEBAPP_PREP_TIMEOUT_GPU: "900"
+  WEBAPP_PREP_TIMEOUT_CPU: "2400"
+  WEBAPP_SCREEN_TIMEOUT: "600"
+  WEBAPP_MODEL_TIMEOUT: "300"
+  OREN_QUEST_PORT: "8443"
+  NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env.docker}
+  TOTALSEG_WEIGHTS_PATH: /home/argos/.totalsegmentator/nnunet/results
+  ARGOS_TOTALSEG_RUNTIME_DIR: /tmp/argos_totalsegmentator_runtime
+  HF_HOME: /home/argos/.cache/huggingface
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+x-argos-volumes: &argos-volumes
+  - type: bind
+    source: ${ARGOS_CASES_DIR:?Set ARGOS_CASES_DIR in .env.docker}
+    target: /opt/argos/casos
+  - type: bind
+    source: ${TOTALSEG_HOME_DIR:?Set TOTALSEG_HOME_DIR in .env.docker}
+    target: /home/argos/.totalsegmentator
+    read_only: true
+  - type: bind
+    source: ${MRSEGMENTATOR_HOME_DIR:?Set MRSEGMENTATOR_HOME_DIR in .env.docker}
+    target: /home/argos/.mrsegmentator
+    read_only: true
+  - type: bind
+    source: ${HF_HUB_DIR:?Set HF_HUB_DIR in .env.docker}
+    target: /home/argos/.cache/huggingface/hub
+    read_only: true
+
+services:
+  argos:
+    image: argos-runtime:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.argos
+    restart: unless-stopped
+    init: true
+    gpus: all
+    environment: *argos-environment
+    volumes: *argos-volumes
+    expose:
+      - "8000"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)
+      interval: 15s
+      timeout: 8s
+      retries: 20
+      start_period: 90s
+    networks:
+      - argos_internal
+
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      argos:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "8443:8443"
+    volumes:
+      - type: bind
+        source: ./docker/nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+      - type: bind
+        source: ${QUEST_CERT_DIR:?Set QUEST_CERT_DIR in .env.docker}
+        target: /certs
+        read_only: true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/api/health"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+    networks:
+      - argos_internal
+
+  neo4j:
+    image: neo4j:5.26-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env.docker}
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    volumes:
+      - type: bind
+        source: ${ARGOS_DOCKER_STATE_DIR:?Set ARGOS_DOCKER_STATE_DIR in .env.docker}/neo4j/data
+        target: /data
+      - type: bind
+        source: ${ARGOS_DOCKER_STATE_DIR:?Set ARGOS_DOCKER_STATE_DIR in .env.docker}/neo4j/logs
+        target: /logs
+    healthcheck:
+      test: ["CMD-SHELL", "password=$${NEO4J_AUTH#*/}; cypher-shell -a bolt://127.0.0.1:7687 -u neo4j -p \"$$password\" 'RETURN 1;' >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 8s
+      retries: 20
+      start_period: 45s
+    networks:
+      - argos_internal
+
+  medgemma:
+    profiles: ["medgemma-container"]
+    image: argos-runtime:local
+    restart: unless-stopped
+    init: true
+    gpus: all
+    command:
+      - python
+      - tools/medgemma_server.py
+      - --config
+      - configs/medgemma_local_4b.yaml
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8001"
+    environment:
+      ARGOS_CONTAINER: "1"
+      HF_HOME: /home/argos/.cache/huggingface
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    volumes:
+      - type: bind
+        source: ${HF_HUB_DIR:?Set HF_HUB_DIR in .env.docker}
+        target: /home/argos/.cache/huggingface/hub
+        read_only: true
+    expose:
+      - "8001"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=5)
+      interval: 20s
+      timeout: 8s
+      retries: 30
+      start_period: 600s
+    networks:
+      - argos_internal
+
+  graphify:
+    profiles: ["tools"]
+    image: argos-graphify:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.graphify
+      args:
+        GRAPHIFY_VERSION: "0.9.42"
+    network_mode: none
+    working_dir: /workspace
+    volumes:
+      - ./dtwin:/workspace/dtwin:ro
+      - ./webapp:/workspace/webapp:ro
+      - ./viewer:/workspace/viewer:ro
+      - ./tools:/workspace/tools:ro
+      - ./configs:/workspace/configs:ro
+      - ./profiles:/workspace/profiles:ro
+      - ./digital_twin.py:/workspace/digital_twin.py:ro
+      - ./pyproject.toml:/workspace/pyproject.toml:ro
+      - ./.graphifyignore:/workspace/.graphifyignore:ro
+      - ./.gitignore:/workspace/.gitignore:ro
+      - ./graphify-out:/workspace/graphify-out
+
+networks:
+  argos_internal:
+    driver: bridge

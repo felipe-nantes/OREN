@@ -1,0 +1,54 @@
+# syntax=docker/dockerfile:1.7
+ARG PYTORCH_IMAGE=pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
+FROM ${PYTORCH_IMAGE}
+
+ARG ARGOS_UID=10001
+ARG ARGOS_GID=10001
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HOME=/home/argos \
+    ARGOS_CONTAINER=1 \
+    WEBAPP_MRSEGMENTATOR_EXE=/opt/conda/bin/mrsegmentator \
+    ARGOS_TOTALSEG_RUNTIME_DIR=/tmp/argos_totalsegmentator_runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates curl libgl1 libglib2.0-0 libgomp1 libsm6 libxext6 libxrender1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid ${ARGOS_GID} argos \
+    && useradd --uid ${ARGOS_UID} --gid ${ARGOS_GID} --create-home --shell /bin/bash argos
+
+WORKDIR /opt/argos
+
+COPY pyproject.toml README.md digital_twin.py ./
+COPY dtwin ./dtwin
+COPY webapp ./webapp
+COPY viewer ./viewer
+COPY configs ./configs
+COPY profiles ./profiles
+COPY tools ./tools
+
+# torch 2.6/CUDA 12.4 comes from the base image.  Installing all operational
+# extras in one immutable image preserves the current local subprocess flow,
+# including TotalSegmentator, MRSegmentator, MedSigLIP and the optional 4B
+# gateway target.
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir \
+       ".[webapp,seg,graphrag,quest,medgemma,training]" \
+       "mrsegmentator==2.0.0" \
+    && python -m pip check \
+    && mkdir -p /opt/argos/casos /home/argos/.cache/huggingface \
+       /home/argos/.totalsegmentator /home/argos/.mrsegmentator \
+    && chown -R argos:argos /opt/argos /home/argos
+
+COPY --chown=argos:argos docker/entrypoint.sh /usr/local/bin/argos-entrypoint
+RUN chmod 0755 /usr/local/bin/argos-entrypoint
+
+USER argos
+
+EXPOSE 8000 8001
+ENTRYPOINT ["/usr/local/bin/argos-entrypoint"]
+CMD ["python", "-m", "uvicorn", "webapp.server:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

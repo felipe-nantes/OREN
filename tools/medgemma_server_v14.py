@@ -12,6 +12,7 @@ import argparse
 import base64
 import io
 import math
+import os
 import time
 from pathlib import Path
 from typing import Literal
@@ -316,7 +317,13 @@ def main(argv=None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8001)
     args = parser.parse_args(argv)
-    if args.host not in {"127.0.0.1", "localhost", "::1"}:
+    allowed_hosts = {"127.0.0.1", "localhost", "::1"}
+    # A interface continua inacessivel pela LAN: em Docker ela pode escutar em
+    # todas as interfaces DO CONTAINER somente quando a flag interna e explicita
+    # esta ativa; o Compose apenas a expoe na rede privada argos_internal.
+    if os.environ.get("ARGOS_CONTAINER") == "1":
+        allowed_hosts.add("0.0.0.0")
+    if args.host not in allowed_hosts:
         print("[ABORTADO] O backend local só pode escutar em loopback.")
         return 1
     try:

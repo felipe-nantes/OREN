@@ -1,0 +1,12 @@
+schema: argos-graphrag-neo4j-config-v1
+neo4j:
+  uri: bolt://neo4j:7687
+  user: neo4j
+  password_env: NEO4J_PASSWORD
+  database: neo4j
+safety:
+  research_only: true
+  clinical_use_allowed: false
+  privacy:
+    remove_png_metadata: true
+    require_visible_phi_confirmation: true
