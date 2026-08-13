@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { STLLoader } from "./vendor/STLLoader.js";
 import { OrbitControls } from "./vendor/OrbitControls.js";
+import { initializeOrenXR } from "./xr.js?v=oren-20260812-xr-legibility-1";
 
 const $ = (id) => document.getElementById(id);
 const holder = $("canvas-holder");
@@ -19,12 +20,29 @@ const referenceBody = $("reference-body");
 const referenceImage = $("reference-image");
 const referenceSlider = $("reference-slider");
 const referenceMeta = $("reference-meta");
+const referenceSync = $("reference-sync");
+const referenceSyncStatus = $("reference-sync-status");
 const clipSection = $("clip-section");
 const clipEnabled = $("clip-enabled");
 const clipAxis = $("clip-axis");
 const clipInvert = $("clip-invert");
 const clipPosition = $("clip-position");
 const clipValue = $("clip-value");
+const selectionSection = $("selection-section");
+const selectionName = $("selection-name");
+const selectionCategory = $("selection-category");
+const selectionMetrics = $("selection-metrics");
+const selectionWarning = $("selection-warning");
+const selectionActionStatus = $("selection-action-status");
+const selectionDimensionsResult = $("selection-dimensions-result");
+const selectionDimensionsMetrics = $("selection-dimensions-metrics");
+const anatomicalViewsSection = $("anatomical-views-section");
+const anatomicalViewStatus = $("anatomical-view-status");
+const savedViewsDiv = $("saved-views");
+const savedViewStatus = $("saved-view-status");
+const savedViewComparison = $("saved-view-comparison");
+const savedViewComparisonGrid = $("saved-view-comparison-grid");
+const savedViewComparisonStatus = $("saved-view-comparison-status");
 
 function makeStudioEnvironment(renderer) {
   const canvas = document.createElement("canvas");
@@ -72,27 +90,102 @@ orbit.enableDamping = true;
 orbit.dampingFactor = 0.08;
 const group = new THREE.Group();
 scene.add(group);
+const measurementGroup = new THREE.Group();
+measurementGroup.name = "oren-measurements";
+scene.add(measurementGroup);
 const loader = new STLLoader();
 const meshes = {};
 const meshItems = {};
 const clippingPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 let sceneBounds = new THREE.Box3();
+let sourceBounds = new THREE.Box3();
 let sceneRadius = 1;
 let currentManifest = null;
 let currentView = "padrao";
+let currentPreset = "custom";
 let wireframeEnabled = false;
 let measurementEnabled = false;
 let measurePendingPoint = null;
 let measurementValues = [];
 let measurementObjects = [];
+let structureMeasurements3d = [];
+let structureDimensionObjects = [];
+let selectedRole = null;
+let selectedMaterialState = null;
+let selectionContextPreset = null;
+let selectionIsolated = false;
+let currentAnatomicalView = "none";
+let currentMaterialProfile = "default";
+let savedViews = [];
+let savedViewSequence = 0;
+let comparedSavedViewIds = [];
 let referenceView = "axial";
 let referenceFiles = {};
+let referenceBaseUrl = "";
 let referenceObjectUrls = [];
+let viewerReadyForReview = false;
+let xrPresentationActive = false;
+const loadingState = {
+  phase: "idle", completed: 0, total: 0, ready: false,
+  startedAt: 0, firstOrganMs: null, readyMs: null,
+};
 let cameraTween = null;
 let sceneIntroTween = null;
 const meshVisibilityTweens = new Map();
 const objectScaleTweens = new Map();
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+const VIEWER_PRESETS = Object.freeze({
+  default: {
+    label: "Restaurar padrão",
+    description: "Fígado sólido com acabamento orgânico; estruturas internas respeitam a oclusão anatômica.",
+  },
+  anatomy: {
+    label: "Anatomia interna",
+    description: "Fígado translúcido com vasos e vesícula destacados.",
+  },
+  triage: {
+    label: "Triagem",
+    description: "Candidato e região classificada sobre o fígado translúcido.",
+  },
+  segments: {
+    label: "Segmentos",
+    description: "Couinaud I–VIII com referências vasculares, quando disponíveis.",
+    requiresSegments: true,
+  },
+});
+const DEFAULT_VISUAL_PRESET = "default";
+const REQUIRED_COUINAUD_ROLES = Object.freeze([
+  "couinaud_i", "couinaud_ii", "couinaud_iii", "couinaud_iv",
+  "couinaud_v", "couinaud_vi", "couinaud_vii", "couinaud_viii",
+]);
+const MAX_SAVED_VIEWS = 8;
+const ANATOMICAL_VIEWS = Object.freeze({
+  liver: {
+    label: "Fígado",
+    preset: "default",
+    targetCategories: ["organ"],
+    description: "Superfície hepática sólida no enquadramento completo do órgão.",
+  },
+  segments: {
+    label: "Segmentos",
+    preset: "segments",
+    targetCategories: ["segment"],
+    description: "Atlas de Couinaud sólido com referências vasculares disponíveis.",
+  },
+  vascular: {
+    label: "Vasos",
+    preset: "anatomy",
+    targetCategories: ["vessel"],
+    description: "Estruturas vasculares enquadradas com o fígado translúcido como contexto.",
+  },
+  candidate: {
+    label: "Candidato",
+    preset: "triage",
+    targetCategories: ["candidate", "lesion"],
+    description: "Região automática não confirmada enquadrada no contexto de triagem.",
+  },
+});
 
 const orenEase = (value) => 1 - ((1 - value) ** 4);
 const tweenProgress = (startedAt, duration, now) => Math.min(Math.max((now - startedAt) / duration, 0), 1);
@@ -142,6 +235,87 @@ function updateOrenAnimations(now) {
   });
 }
 
+function settleViewerTransitionsForXR() {
+  cameraTween = null;
+  orbit.enabled = false;
+  if (sceneIntroTween) {
+    group.scale.setScalar(1);
+    sceneIntroTween.meshes.forEach(({ mesh, opacity }) => {
+      mesh.material.opacity = opacity;
+      mesh.userData.targetOpacity = opacity;
+    });
+    sceneIntroTween = null;
+  }
+  meshVisibilityTweens.forEach((tween, mesh) => {
+    mesh.material.opacity = tween.toOpacity;
+    mesh.visible = !tween.hideAfter;
+  });
+  meshVisibilityTweens.clear();
+  objectScaleTweens.forEach((_tween, object) => { object.scale.setScalar(1); });
+  objectScaleTweens.clear();
+}
+
+function setXrPresentationActive(active) {
+  xrPresentationActive = Boolean(active);
+  if (xrPresentationActive) settleViewerTransitionsForXR();
+  const selectedMesh = selectedRole ? meshes[selectedRole] : null;
+  if (selectedMesh && selectedMaterialState) {
+    if (xrPresentationActive) {
+      selectedMesh.material.emissive.setHex(selectedMaterialState.emissive);
+      selectedMesh.material.emissiveIntensity = selectedMaterialState.emissiveIntensity;
+      selectedMesh.material.clearcoat = selectedMaterialState.clearcoat;
+    } else {
+      selectedMesh.material.emissive.setHex(0x2daf79);
+      selectedMesh.material.emissiveIntensity = Math.max(selectedMaterialState.emissiveIntensity + 0.24, 0.30);
+      selectedMesh.material.clearcoat = Math.max(selectedMaterialState.clearcoat, 0.30);
+    }
+    selectedMesh.material.needsUpdate = true;
+  }
+  Object.values(meshes).forEach((mesh) => {
+    if (xrPresentationActive) {
+      mesh.userData.preXrFrustumCulled = mesh.frustumCulled;
+      mesh.frustumCulled = false;
+      mesh.userData.xrExpectedVisible = Boolean(mesh.visible);
+      mesh.userData.xrExpectedMaterialVisible = mesh.material.visible !== false;
+      if (mesh.visible) {
+        const opacity = Number(mesh.userData.targetOpacity);
+        if (Number.isFinite(opacity) && opacity > 0) mesh.material.opacity = opacity;
+      }
+    } else if (typeof mesh.userData.preXrFrustumCulled === "boolean") {
+      mesh.frustumCulled = mesh.userData.preXrFrustumCulled;
+      delete mesh.userData.preXrFrustumCulled;
+      delete mesh.userData.xrExpectedVisible;
+      delete mesh.userData.xrExpectedMaterialVisible;
+    }
+  });
+  group.updateMatrixWorld(true);
+  return xrPresentationActive;
+}
+
+function stabilizeXrScene() {
+  if (!xrPresentationActive) return false;
+  group.visible = true;
+  Object.values(meshes).forEach((mesh) => {
+    mesh.frustumCulled = false;
+    const expectedVisible = mesh.userData.xrExpectedVisible;
+    if (typeof expectedVisible === "boolean" && mesh.visible !== expectedVisible) {
+      mesh.visible = expectedVisible;
+    }
+    const expectedMaterialVisible = mesh.userData.xrExpectedMaterialVisible;
+    if (typeof expectedMaterialVisible === "boolean" && mesh.material.visible !== expectedMaterialVisible) {
+      mesh.material.visible = expectedMaterialVisible;
+    }
+    if (mesh.visible) {
+      const targetOpacity = Number(mesh.userData.targetOpacity ?? 1);
+      if (!Number.isFinite(mesh.material.opacity) || mesh.material.opacity <= 0) {
+        mesh.material.opacity = Number.isFinite(targetOpacity) && targetOpacity > 0 ? targetOpacity : 1;
+      }
+    }
+  });
+  group.updateMatrixWorld(true);
+  return true;
+}
+
 const AXIS_UP = new THREE.Vector3(0, 0, 1);
 function repositionLights() {
   const direction = camera.position.clone().normalize();
@@ -166,13 +340,13 @@ function resize() {
 window.addEventListener("resize", resize);
 document.addEventListener("fullscreenchange", resize);
 resize();
-(function loop() {
-  requestAnimationFrame(loop);
+renderer.setAnimationLoop((time, xrFrame) => {
   updateOrenAnimations(performance.now());
-  orbit.update();
+  if (!renderer.xr.isPresenting) orbit.update();
+  if (window.__orenXrFrame) window.__orenXrFrame(time, xrFrame);
   repositionLights();
   renderer.render(scene, camera);
-}());
+});
 
 function disposeObject(object) {
   if (object.geometry) object.geometry.dispose();
@@ -188,16 +362,20 @@ function disposeObject(object) {
 function clearMeasurements() {
   for (const object of measurementObjects) {
     objectScaleTweens.delete(object);
-    scene.remove(object);
+    object.removeFromParent();
     disposeObject(object);
   }
   measurementObjects = [];
+  structureDimensionObjects = [];
   measurementValues = [];
+  structureMeasurements3d = [];
   measurePendingPoint = null;
+  if (selectionDimensionsResult) selectionDimensionsResult.hidden = true;
   updateMeasurementStatus();
 }
 
 function clearScene() {
+  clearStructureSelection();
   cameraTween = null;
   sceneIntroTween = null;
   meshVisibilityTweens.clear();
@@ -215,6 +393,19 @@ function clearScene() {
   for (const url of referenceObjectUrls) URL.revokeObjectURL(url);
   referenceObjectUrls = [];
   referenceFiles = {};
+  referenceBaseUrl = "";
+  viewerReadyForReview = false;
+  currentPreset = "custom";
+  currentAnatomicalView = "none";
+  currentMaterialProfile = DEFAULT_VISUAL_PRESET;
+  savedViews = [];
+  savedViewSequence = 0;
+  comparedSavedViewIds = [];
+  if (anatomicalViewsSection) anatomicalViewsSection.hidden = true;
+  if (savedViewsDiv) savedViewsDiv.innerHTML = "";
+  if (savedViewComparison) savedViewComparison.hidden = true;
+  if (savedViewStatus) savedViewStatus.textContent = "Nenhuma vista salva.";
+  renderer.toneMappingExposure = 1.35;
 }
 
 function mergeVerticesByPosition(geometry, precisionDecimals = 4) {
@@ -312,11 +503,30 @@ function addMesh(item, geometry) {
   mesh.userData.role = item.role;
   mesh.userData.label = item.label || item.role;
   mesh.userData.targetOpacity = mesh.material.opacity;
+  mesh.userData.materialBaseline = {
+    color: mesh.material.color.getHex(),
+    roughness: mesh.material.roughness,
+    metalness: mesh.material.metalness,
+    clearcoat: mesh.material.clearcoat,
+    clearcoatRoughness: mesh.material.clearcoatRoughness,
+    sheen: mesh.material.sheen,
+    sheenRoughness: mesh.material.sheenRoughness,
+    sheenColor: mesh.material.sheenColor.getHex(),
+    emissive: mesh.material.emissive.getHex(),
+    emissiveIntensity: mesh.material.emissiveIntensity,
+    envMapIntensity: mesh.material.envMapIntensity,
+    transparent: mesh.material.transparent,
+    depthTest: mesh.material.depthTest,
+    depthWrite: mesh.material.depthWrite,
+    renderOrder: mesh.renderOrder,
+  };
   if (item.material === "candidate") mesh.renderOrder = 12;
   if (item.material === "classified_region") mesh.renderOrder = 8;
+  mesh.userData.materialBaseline.renderOrder = mesh.renderOrder;
   meshes[item.role] = mesh;
   meshItems[item.role] = item;
   group.add(mesh);
+  return mesh;
 }
 
 const VIEWS = {
@@ -334,6 +544,8 @@ function fitDistance(radius, margin = 1.12) {
 
 function applyView(name = "padrao", options = {}) {
   currentView = VIEWS[name] ? name : "padrao";
+  currentAnatomicalView = "none";
+  updateAnatomicalViewButtons();
   const direction = VIEWS[currentView].clone();
   const distance = fitDistance(sceneRadius);
   const targetPosition = direction.multiplyScalar(distance);
@@ -371,8 +583,9 @@ function animateMeshVisibility(mesh, visible) {
     sceneIntroTween = null;
   }
   const targetOpacity = Number(mesh.userData.targetOpacity ?? mesh.material.opacity ?? 1);
-  if (reducedMotion.matches) {
+  if (xrPresentationActive || reducedMotion.matches) {
     meshVisibilityTweens.delete(mesh);
+    if (xrPresentationActive) mesh.userData.xrExpectedVisible = Boolean(visible);
     mesh.visible = visible;
     mesh.material.opacity = visible ? targetOpacity : 0;
     return;
@@ -418,6 +631,7 @@ function frameScene() {
   group.updateMatrixWorld(true);
   const originalBounds = new THREE.Box3().setFromObject(group);
   if (originalBounds.isEmpty()) return;
+  sourceBounds = originalBounds.clone();
   const center = originalBounds.getCenter(new THREE.Vector3());
   group.position.sub(center);
   group.updateMatrixWorld(true);
@@ -445,12 +659,350 @@ function makeButton(label, className, handler) {
   return button;
 }
 
+function meshCategory(item) {
+  const material = String(item?.material || "");
+  const role = String(item?.role || "");
+  if (material === "segment" || role.startsWith("couinaud_")) return "segment";
+  if (material === "vessel") return "vessel";
+  if (material === "gallbladder") return "gallbladder";
+  if (material === "candidate" || role === "candidato") return "candidate";
+  if (material === "classified_region") return "classified_region";
+  if (material === "lesion" || role === "lesao") return "lesion";
+  if (role === "orgao" || material === "organ" || !material) return "organ";
+  return "other";
+}
+
+function restoreMaterialAppearance(mesh) {
+  const baseline = mesh?.userData?.materialBaseline;
+  if (!baseline) return;
+  const material = mesh.material;
+  material.color.setHex(baseline.color);
+  material.roughness = baseline.roughness;
+  material.metalness = baseline.metalness;
+  material.clearcoat = baseline.clearcoat;
+  material.clearcoatRoughness = baseline.clearcoatRoughness;
+  material.sheen = baseline.sheen;
+  material.sheenRoughness = baseline.sheenRoughness;
+  material.sheenColor.setHex(baseline.sheenColor);
+  material.emissive.setHex(baseline.emissive);
+  material.emissiveIntensity = baseline.emissiveIntensity;
+  material.envMapIntensity = baseline.envMapIntensity;
+  material.transparent = baseline.transparent;
+  material.depthTest = baseline.depthTest;
+  material.depthWrite = baseline.depthWrite;
+  mesh.renderOrder = baseline.renderOrder;
+  material.vertexColors = false;
+  mesh.geometry.deleteAttribute("color");
+  material.needsUpdate = true;
+}
+
+function applyOrganicVertexTone(mesh, baseHex, lightHex, deepHex, strength = 1) {
+  const positions = mesh.geometry.getAttribute("position");
+  const colors = new Float32Array(positions.count * 3);
+  const base = new THREE.Color(baseHex);
+  const light = new THREE.Color(lightHex);
+  const deep = new THREE.Color(deepHex);
+  const tone = new THREE.Color();
+  for (let index = 0; index < positions.count; index += 1) {
+    const x = positions.getX(index);
+    const y = positions.getY(index);
+    const z = positions.getZ(index);
+    const variation = 0.5
+      + (Math.sin((x * 0.083) + (y * 0.047) + (z * 0.029)) * 0.22 * strength)
+      + (Math.sin((x * 0.023) - (y * 0.061) + (z * 0.071)) * 0.10 * strength);
+    tone.copy(base);
+    if (variation >= 0.5) tone.lerp(light, Math.min((variation - 0.5) * 0.55, 0.20));
+    else tone.lerp(deep, Math.min((0.5 - variation) * 0.48, 0.16));
+    colors[index * 3] = tone.r;
+    colors[(index * 3) + 1] = tone.g;
+    colors[(index * 3) + 2] = tone.b;
+  }
+  mesh.geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  mesh.material.color.setHex(0xffffff);
+  mesh.material.vertexColors = true;
+}
+
+function applyAnatomicalOverlayAppearance(item, mesh) {
+  const category = meshCategory(item);
+  const material = mesh.material;
+  let baseColor = 0x876b5e;
+  if (category === "vessel") {
+    if (String(item.role).includes("cava")) {
+      baseColor = 0x3d526f;
+      applyOrganicVertexTone(mesh, baseColor, 0x637999, 0x202f46, 0.72);
+    } else {
+      baseColor = 0x356b72;
+      applyOrganicVertexTone(mesh, baseColor, 0x5a8c8d, 0x1d4148, 0.72);
+    }
+  } else if (category === "gallbladder") {
+    baseColor = 0x53653d;
+    applyOrganicVertexTone(mesh, baseColor, 0x78865a, 0x2c3923, 0.82);
+  } else if (category === "candidate") {
+    baseColor = 0xa86125;
+    applyOrganicVertexTone(mesh, baseColor, 0xc98847, 0x6d3918, 0.58);
+  } else if (category === "lesion") {
+    baseColor = 0x7e3038;
+    applyOrganicVertexTone(mesh, baseColor, 0xa45155, 0x4b1c25, 0.70);
+  } else if (category === "classified_region") {
+    baseColor = 0x467e8b;
+    applyOrganicVertexTone(mesh, baseColor, 0x70a4ad, 0x284b55, 0.46);
+  }
+  const anatomicalColor = new THREE.Color(baseColor);
+  material.metalness = 0;
+  material.depthTest = true;
+  material.depthWrite = false;
+  material.envMapIntensity = 0.72;
+  if (category === "vessel") {
+    material.roughness = 0.50;
+    material.clearcoat = 0.22;
+    material.clearcoatRoughness = 0.52;
+    material.emissive.copy(anatomicalColor);
+    material.emissiveIntensity = 0.10;
+    mesh.renderOrder = 10;
+  } else if (category === "gallbladder") {
+    material.roughness = 0.55;
+    material.clearcoat = 0.18;
+    material.clearcoatRoughness = 0.58;
+    material.emissive.copy(anatomicalColor);
+    material.emissiveIntensity = 0.06;
+    mesh.renderOrder = 9;
+  } else if (["candidate", "lesion"].includes(category)) {
+    material.roughness = 0.50;
+    material.clearcoat = 0.20;
+    material.clearcoatRoughness = 0.52;
+    material.emissive.copy(anatomicalColor);
+    material.emissiveIntensity = 0.18;
+    mesh.renderOrder = 12;
+  } else if (category === "classified_region") {
+    material.roughness = 0.48;
+    material.emissive.copy(anatomicalColor);
+    material.emissiveIntensity = 0.48;
+    mesh.renderOrder = 11;
+  }
+  material.needsUpdate = true;
+}
+
+function applyHepaticTissueAppearance(mesh) {
+  const positions = mesh.geometry.getAttribute("position");
+  const colors = new Float32Array(positions.count * 3);
+  const base = new THREE.Color(0x84342e);
+  const warm = new THREE.Color(0xaa5a46);
+  const deep = new THREE.Color(0x541b1c);
+  const tone = new THREE.Color();
+  for (let index = 0; index < positions.count; index += 1) {
+    const x = positions.getX(index);
+    const y = positions.getY(index);
+    const z = positions.getZ(index);
+    const variation = 0.5
+      + (Math.sin((x * 0.071) + (y * 0.043) + (z * 0.031)) * 0.25)
+      + (Math.sin((x * 0.019) - (y * 0.057) + (z * 0.083)) * 0.12);
+    tone.copy(base);
+    if (variation >= 0.5) tone.lerp(warm, Math.min((variation - 0.5) * 0.55, 0.22));
+    else tone.lerp(deep, Math.min((0.5 - variation) * 0.45, 0.16));
+    colors[(index * 3)] = tone.r;
+    colors[(index * 3) + 1] = tone.g;
+    colors[(index * 3) + 2] = tone.b;
+  }
+  mesh.geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  const material = mesh.material;
+  material.color.setHex(0xffffff);
+  material.vertexColors = true;
+  material.roughness = 0.54;
+  material.metalness = 0;
+  material.clearcoat = 0.21;
+  material.clearcoatRoughness = 0.58;
+  material.sheen = 0.34;
+  material.sheenRoughness = 0.76;
+  material.sheenColor.setHex(0xc98270);
+  material.emissive.setHex(0x160404);
+  material.emissiveIntensity = 0.025;
+  material.envMapIntensity = 0.86;
+  material.depthTest = true;
+  material.needsUpdate = true;
+}
+
+function configureOpacityOcclusion(item, mesh, opacity) {
+  const value = THREE.MathUtils.clamp(Number(opacity), 0, 1);
+  const solidSurface = ["organ", "segment"].includes(meshCategory(item));
+  mesh.material.transparent = solidSurface ? value < 0.999 : true;
+  mesh.material.depthTest = true;
+  mesh.material.depthWrite = solidSurface && value >= 0.999;
+  mesh.material.needsUpdate = true;
+}
+
+function applySegmentAtlasAppearance(item, mesh) {
+  const source = new THREE.Color(item.color || "#8c7568");
+  const muted = source.clone().lerp(new THREE.Color(0x746961), 0.18);
+  const light = muted.clone().offsetHSL(0, -0.03, 0.10);
+  const deep = muted.clone().offsetHSL(0, 0.01, -0.15);
+  applyOrganicVertexTone(mesh, muted.getHex(), light.getHex(), deep.getHex(), 0.52);
+  const material = mesh.material;
+  material.roughness = 0.54;
+  material.metalness = 0;
+  material.clearcoat = 0.18;
+  material.clearcoatRoughness = 0.58;
+  material.sheen = 0.16;
+  material.sheenRoughness = 0.80;
+  material.sheenColor.copy(light);
+  material.emissive.copy(deep);
+  material.emissiveIntensity = 0.04;
+  material.envMapIntensity = 0.82;
+  material.depthTest = true;
+  material.depthWrite = true;
+  mesh.renderOrder = 4;
+  material.needsUpdate = true;
+}
+
+function applyMaterialProfile(presetName, item, mesh) {
+  restoreMaterialAppearance(mesh);
+  const category = meshCategory(item);
+  if (category === "organ") applyHepaticTissueAppearance(mesh);
+  else if (presetName === "segments" && category === "segment") applySegmentAtlasAppearance(item, mesh);
+  else if (["vessel", "gallbladder", "candidate", "classified_region", "lesion"].includes(category)) {
+    applyAnatomicalOverlayAppearance(item, mesh);
+  }
+}
+
+function presetMeshState(presetName, item) {
+  const category = meshCategory(item);
+  const defaults = {
+    visible: item.default_visible !== false,
+    opacity: Number.isFinite(Number(item.opacity)) ? Number(item.opacity) : 0.88,
+  };
+  if (presetName === "default") {
+    const visible = ["organ", "vessel", "gallbladder", "candidate", "lesion"].includes(category);
+    const opacity = {
+      organ: 1.0, vessel: 0.93, gallbladder: 0.88,
+      candidate: 0.84, classified_region: 0.07, lesion: 0.90,
+    }[category] ?? defaults.opacity;
+    return { visible, opacity };
+  }
+  if (presetName === "anatomy") {
+    const visible = ["organ", "vessel", "gallbladder"].includes(category);
+    const opacity = { organ: 0.30, vessel: 0.96, gallbladder: 0.92 }[category] ?? defaults.opacity;
+    return { visible, opacity };
+  }
+  if (presetName === "triage") {
+    const visible = ["organ", "candidate", "classified_region", "lesion", "vessel", "gallbladder"].includes(category);
+    const opacity = {
+      organ: 0.34, candidate: 0.88, classified_region: 0.14,
+      lesion: 0.92, vessel: 0.78, gallbladder: 0.76,
+    }[category] ?? defaults.opacity;
+    return { visible, opacity };
+  }
+  if (presetName === "segments") {
+    const visible = ["segment", "vessel"].includes(category);
+    const opacity = {
+      segment: 1.0, vessel: 0.93,
+    }[category] ?? defaults.opacity;
+    return { visible, opacity };
+  }
+  return defaults;
+}
+
+function syncStructureControl(role, visible, opacity) {
+  const checkbox = controlsDiv.querySelector(`input[type=checkbox][data-role="${role}"]`);
+  const slider = controlsDiv.querySelector(`input[type=range][data-role="${role}"]`);
+  if (checkbox) checkbox.checked = visible;
+  if (slider) slider.value = String(opacity);
+}
+
+function markPreset(name, description) {
+  currentPreset = name;
+  controlsDiv.querySelectorAll(".preset-button").forEach((button) => {
+    const active = button.dataset.preset === name;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  const status = controlsDiv.querySelector(".preset-status");
+  if (status) status.textContent = description;
+}
+
+function updateAnatomicalViewButtons() {
+  document.querySelectorAll(".anatomical-view-button").forEach((button) => {
+    const active = button.dataset.anatomicalView === currentAnatomicalView;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function markCustomPreset() {
+  currentAnatomicalView = "none";
+  updateAnatomicalViewButtons();
+  markPreset("custom", "Ajuste personalizado. Use um preset para restaurar uma composição padronizada.");
+}
+
+function applyPreset(name) {
+  const preset = VIEWER_PRESETS[name];
+  if (!preset) return false;
+  clearStructureSelection();
+  const hasSegments = REQUIRED_COUINAUD_ROLES.every((role) => Boolean(meshItems[role] && meshes[role]));
+  if (preset.requiresSegments && !hasSegments) return false;
+  currentMaterialProfile = name;
+  Object.entries(meshes).forEach(([role, mesh]) => {
+    const item = meshItems[role] || { role };
+    const state = presetMeshState(name, item);
+    applyMaterialProfile(name, item, mesh);
+    mesh.userData.targetOpacity = state.opacity;
+    configureOpacityOcclusion(item, mesh, state.opacity);
+    syncStructureControl(role, state.visible, state.opacity);
+    animateMeshVisibility(mesh, state.visible);
+  });
+  markPreset(name, preset.description);
+  renderer.toneMappingExposure = name === "default" ? 1.28 : 1.35;
+  applyView(name === "segments" ? "anterior" : "padrao");
+  return true;
+}
+
+function applyInitialPreset(manifest) {
+  const requestedRaw = String(
+    manifest?.viewer_features?.default_visual_preset || DEFAULT_VISUAL_PRESET,
+  );
+  const requested = ["realistic", "surface"].includes(requestedRaw) ? DEFAULT_VISUAL_PRESET : requestedRaw;
+  const authorized = VIEWER_PRESETS[requested] ? requested : DEFAULT_VISUAL_PRESET;
+  const hasLiver = Object.values(meshItems).some((item) => meshCategory(item) === "organ");
+  if (!hasLiver || !applyPreset(authorized)) {
+    markCustomPreset();
+    return "custom";
+  }
+  return authorized;
+}
+
 function buildControls(items) {
   let controlIndex = 0;
   const stagger = (element) => {
     element.style.setProperty("--control-delay", `${Math.min(controlIndex, 8) * 48}ms`);
     controlIndex += 1;
   };
+  const presetPanel = document.createElement("div");
+  presetPanel.className = "row preset-panel";
+  stagger(presetPanel);
+  const presetHeading = document.createElement("div");
+  presetHeading.className = "preset-heading";
+  const presetTitle = document.createElement("strong");
+  presetTitle.textContent = "Composição da cena";
+  const presetHint = document.createElement("span");
+  presetHint.textContent = "presets de revisão";
+  presetHeading.append(presetTitle, presetHint);
+  const presetGrid = document.createElement("div");
+  presetGrid.className = "preset-grid";
+  const hasSegments = REQUIRED_COUINAUD_ROLES.every((role) => Boolean(meshItems[role] && meshes[role]));
+  for (const [name, preset] of Object.entries(VIEWER_PRESETS)) {
+    const button = makeButton(preset.label, "preset-button", () => applyPreset(name));
+    button.dataset.preset = name;
+    button.setAttribute("aria-pressed", "false");
+    if (preset.requiresSegments && !hasSegments) {
+      button.disabled = true;
+      button.title = "Segmentos de Couinaud ainda não disponíveis neste exame.";
+    }
+    presetGrid.appendChild(button);
+  }
+  const presetStatus = document.createElement("p");
+  presetStatus.className = "preset-status";
+  presetStatus.textContent = "Exibição original do manifesto. Escolha um preset para organizar a cena.";
+  presetPanel.append(presetHeading, presetGrid, presetStatus);
+  controlsDiv.appendChild(presetPanel);
+
   const views = document.createElement("div");
   views.className = "row views";
   stagger(views);
@@ -469,10 +1021,13 @@ function buildControls(items) {
   stagger(globalActions);
   globalActions.append(
     makeButton("Mostrar todas", "secondary-button", () => {
+      markCustomPreset();
       Object.values(meshes).forEach((mesh) => animateMeshVisibility(mesh, true));
       controlsDiv.querySelectorAll("input[type=checkbox][data-role]").forEach((box) => { box.checked = true; });
     }),
     makeButton("Ocultar todas", "secondary-button", () => {
+      markCustomPreset();
+      clearStructureSelection();
       Object.values(meshes).forEach((mesh) => animateMeshVisibility(mesh, false));
       controlsDiv.querySelectorAll("input[type=checkbox][data-role]").forEach((box) => { box.checked = false; });
     }),
@@ -492,6 +1047,8 @@ function buildControls(items) {
     checkbox.checked = item.default_visible !== false;
     checkbox.dataset.role = item.role;
     checkbox.addEventListener("change", () => {
+      markCustomPreset();
+      if (!checkbox.checked && selectedRole === item.role) clearStructureSelection();
       animateMeshVisibility(meshes[item.role], checkbox.checked);
       animateElementFeedback(row);
     });
@@ -500,6 +1057,8 @@ function buildControls(items) {
     swatch.style.background = item.color;
     label.append(checkbox, swatch, document.createTextNode(item.label || item.role));
     const isolate = makeButton("Só", "isolate-button", () => {
+      markCustomPreset();
+      if (selectedRole && selectedRole !== item.role) clearStructureSelection();
       Object.entries(meshes).forEach(([role, mesh]) => animateMeshVisibility(mesh, role === item.role));
       controlsDiv.querySelectorAll("input[type=checkbox][data-role]").forEach((box) => {
         box.checked = box.dataset.role === item.role;
@@ -513,10 +1072,13 @@ function buildControls(items) {
     opacity.max = "1";
     opacity.step = "0.05";
     opacity.value = String(Number.isFinite(Number(item.opacity)) ? Number(item.opacity) : 0.88);
+    opacity.dataset.role = item.role;
     opacity.setAttribute("aria-label", `Opacidade de ${item.label || item.role}`);
     opacity.addEventListener("input", () => {
+      markCustomPreset();
       const value = Number(opacity.value);
       meshes[item.role].userData.targetOpacity = value;
+      configureOpacityOcclusion(item, meshes[item.role], value);
       if (meshes[item.role].visible) meshes[item.role].material.opacity = value;
     });
     row.append(heading, opacity);
@@ -547,12 +1109,20 @@ function updateClipping() {
     mesh.material.clippingPlanes = enabled ? [clippingPlane] : [];
     mesh.material.needsUpdate = true;
   });
-  clipValue.textContent = `${Math.round(percent * 100)}% · ${coordinate.toFixed(1)} mm em LPS`;
+  const coordinateLps = coordinate - group.position[axis];
+  clipValue.textContent = `${Math.round(percent * 100)}% · ${coordinateLps.toFixed(1)} mm em LPS`;
 }
-clipEnabled.addEventListener("change", updateClipping);
-clipAxis.addEventListener("change", updateClipping);
-clipInvert.addEventListener("change", updateClipping);
-clipPosition.addEventListener("input", updateClipping);
+
+function markReferenceSyncManual() {
+  if (!referenceSync.checked) return;
+  referenceSync.checked = false;
+  referenceSyncStatus.textContent = "Sincronização pausada: corte 3D em ajuste manual.";
+}
+
+clipEnabled.addEventListener("change", () => { markReferenceSyncManual(); updateClipping(); });
+clipAxis.addEventListener("change", () => { markReferenceSyncManual(); updateClipping(); });
+clipInvert.addEventListener("change", () => { markReferenceSyncManual(); updateClipping(); });
+clipPosition.addEventListener("input", () => { markReferenceSyncManual(); updateClipping(); });
 
 function metric(parent, label, value) {
   const item = document.createElement("div");
@@ -562,6 +1132,535 @@ function metric(parent, label, value) {
   content.textContent = value;
   item.append(name, content);
   parent.appendChild(item);
+}
+
+function structureCategoryLabel(item) {
+  return {
+    organ: "Órgão segmentado",
+    vessel: "Estrutura vascular",
+    gallbladder: "Estrutura biliar",
+    segment: "Segmento de Couinaud",
+    candidate: "Região automática não confirmada",
+    classified_region: "Camada usada pela classificação",
+    lesion: "Região de lesão no manifesto",
+    other: "Estrutura complementar",
+  }[meshCategory(item)] || "Estrutura complementar";
+}
+
+function clearStructureSelection({ hidePanel = true, resetContext = true } = {}) {
+  const mesh = selectedRole ? meshes[selectedRole] : null;
+  if (mesh && selectedMaterialState) {
+    mesh.material.emissive.setHex(selectedMaterialState.emissive);
+    mesh.material.emissiveIntensity = selectedMaterialState.emissiveIntensity;
+    mesh.material.clearcoat = selectedMaterialState.clearcoat;
+    mesh.material.needsUpdate = true;
+  }
+  selectedRole = null;
+  selectedMaterialState = null;
+  selectionIsolated = false;
+  if (resetContext) selectionContextPreset = null;
+  if (selectionActionStatus) selectionActionStatus.textContent = "";
+  if (selectionDimensionsResult) selectionDimensionsResult.hidden = true;
+  if (hidePanel && selectionSection) selectionSection.hidden = true;
+}
+
+function selectStructure(role, options = {}) {
+  const mesh = meshes[role];
+  const item = meshItems[role];
+  if (!mesh || !item || !mesh.visible) return false;
+  const contextPreset = options.contextPreset || (
+    VIEWER_PRESETS[currentPreset] ? currentPreset : DEFAULT_VISUAL_PRESET
+  );
+  clearStructureSelection({ hidePanel: false });
+  selectedRole = role;
+  selectionContextPreset = contextPreset;
+  selectedMaterialState = {
+    emissive: mesh.material.emissive.getHex(),
+    emissiveIntensity: Number(mesh.material.emissiveIntensity),
+    clearcoat: Number(mesh.material.clearcoat),
+  };
+  if (!xrPresentationActive) {
+    mesh.material.emissive.setHex(0x2daf79);
+    mesh.material.emissiveIntensity = Math.max(selectedMaterialState.emissiveIntensity + 0.24, 0.30);
+    mesh.material.clearcoat = Math.max(selectedMaterialState.clearcoat, 0.30);
+    mesh.material.needsUpdate = true;
+  }
+  const metrics = item.metrics || {};
+  selectionName.textContent = item.label || role;
+  selectionCategory.textContent = structureCategoryLabel(item);
+  selectionMetrics.innerHTML = "";
+  if (Number.isFinite(Number(metrics.source_mask_volume_ml))) {
+    metric(selectionMetrics, "Volume", `${Number(metrics.source_mask_volume_ml).toFixed(1)} mL`);
+  }
+  if (Number.isFinite(Number(metrics.surface_area_cm2))) {
+    metric(selectionMetrics, "Superfície", `${Number(metrics.surface_area_cm2).toFixed(1)} cm²`);
+  }
+  if (Number.isFinite(Number(metrics.triangles))) {
+    metric(selectionMetrics, "Triângulos", Number(metrics.triangles).toLocaleString("pt-BR"));
+  }
+  const p95 = Number(metrics.surface_deviation_to_source_mask_mm?.p95);
+  if (Number.isFinite(p95)) metric(selectionMetrics, "Desvio p95", `${p95.toFixed(2)} mm`);
+  metric(selectionMetrics, "Malha fechada", metrics.watertight_and_manifold ? "sim" : "não");
+  const warnings = Array.isArray(metrics.warnings) ? metrics.warnings : [];
+  const category = meshCategory(item);
+  const contextual = ["candidate", "classified_region", "lesion"].includes(category)
+    ? "Esta camada é auxiliar e não confirma diagnóstico. " : "";
+  selectionWarning.textContent = `${contextual}As métricas medem fidelidade à máscara fonte, não acurácia anatômica.${warnings.length ? ` Alertas: ${warnings.join(", ")}.` : ""}`;
+  renderStructureDimensionSummary(role);
+  selectionSection.hidden = false;
+  if (options.alignReference !== false) alignReferenceToStructure(item, mesh);
+  if (options.scrollPanel !== false) {
+    selectionSection.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "nearest" });
+  }
+  return true;
+}
+
+function focusMeshRoles(roles, { viewName = "focus", margin = 1.32 } = {}) {
+  const targets = roles.map((role) => meshes[role]).filter((mesh) => mesh?.visible);
+  if (!targets.length) return false;
+  scene.updateMatrixWorld(true);
+  const bounds = new THREE.Box3();
+  targets.forEach((mesh) => bounds.expandByObject(mesh));
+  if (bounds.isEmpty()) return false;
+  const sphere = bounds.getBoundingSphere(new THREE.Sphere());
+  const radius = Math.max(sphere.radius, sceneRadius * 0.035, 0.5);
+  const direction = camera.position.clone().sub(orbit.target);
+  if (direction.lengthSq() < 1e-6) direction.copy(VIEWS.padrao);
+  direction.normalize();
+  const distance = fitDistance(radius, margin);
+  const targetPosition = sphere.center.clone().addScaledVector(direction, distance);
+  camera.near = Math.max(distance / 1000, 0.01);
+  camera.far = Math.max(distance * 12, sceneRadius * 12);
+  camera.updateProjectionMatrix();
+  currentView = viewName;
+  document.querySelectorAll(".viewbtn").forEach((button) => button.classList.remove("active"));
+  const immediate = reducedMotion.matches || sceneRadius <= 1;
+  if (immediate) {
+    cameraTween = null;
+    camera.position.copy(targetPosition);
+    orbit.target.copy(sphere.center);
+    orbit.update();
+  } else {
+    orbit.enabled = false;
+    cameraTween = {
+      fromPosition: camera.position.clone(),
+      toPosition: targetPosition,
+      fromTarget: orbit.target.clone(),
+      toTarget: sphere.center.clone(),
+      startedAt: performance.now(),
+      duration: 650,
+    };
+  }
+  return true;
+}
+
+function focusSelectedStructure() {
+  if (!selectedRole || !focusMeshRoles([selectedRole])) return false;
+  currentAnatomicalView = "none";
+  updateAnatomicalViewButtons();
+  selectionActionStatus.textContent = "Câmera enquadrada na estrutura selecionada.";
+  animateElementFeedback(selectionSection, "is-feedback");
+  return true;
+}
+
+function isolateSelectedStructure() {
+  if (!selectedRole || !meshes[selectedRole]) return false;
+  if (!selectionContextPreset) {
+    selectionContextPreset = VIEWER_PRESETS[currentPreset] ? currentPreset : DEFAULT_VISUAL_PRESET;
+  }
+  markCustomPreset();
+  Object.entries(meshes).forEach(([role, mesh]) => {
+    const visible = role === selectedRole;
+    animateMeshVisibility(mesh, visible);
+    syncStructureControl(role, visible, Number(mesh.userData.targetOpacity ?? mesh.material.opacity));
+  });
+  selectionIsolated = true;
+  selectionActionStatus.textContent = "Estrutura isolada; use Restaurar contexto para voltar à composição anterior.";
+  animateElementFeedback(selectionSection, "is-feedback");
+  return true;
+}
+
+function restoreSelectedContext() {
+  if (!selectedRole) return false;
+  const role = selectedRole;
+  const preset = VIEWER_PRESETS[selectionContextPreset]
+    ? selectionContextPreset : DEFAULT_VISUAL_PRESET;
+  if (!applyPreset(preset)) return false;
+  selectionIsolated = false;
+  if (meshes[role]?.visible) selectStructure(role);
+  if (selectionActionStatus) selectionActionStatus.textContent = `Contexto restaurado: ${VIEWER_PRESETS[preset].label}.`;
+  return true;
+}
+
+function renderStructureDimensionSummary(role) {
+  const result = structureMeasurements3d.find((measurement) => measurement.role === role);
+  if (!result) {
+    selectionDimensionsResult.hidden = true;
+    selectionDimensionsMetrics.innerHTML = "";
+    return;
+  }
+  selectionDimensionsMetrics.innerHTML = "";
+  metric(selectionDimensionsMetrics, "Largura LR", `${result.left_right_mm.toFixed(1)} mm`);
+  metric(selectionDimensionsMetrics, "Profundidade AP", `${result.anterior_posterior_mm.toFixed(1)} mm`);
+  metric(selectionDimensionsMetrics, "Extensão SI", `${result.superior_inferior_mm.toFixed(1)} mm`);
+  selectionDimensionsResult.hidden = false;
+}
+
+function clearStructureDimensionObjects() {
+  const dimensionSet = new Set(structureDimensionObjects);
+  structureDimensionObjects.forEach((object) => {
+    objectScaleTweens.delete(object);
+    object.removeFromParent();
+    disposeObject(object);
+  });
+  measurementObjects = measurementObjects.filter((object) => !dimensionSet.has(object));
+  structureDimensionObjects = [];
+}
+
+function trackDimensionObjects(startIndex) {
+  structureDimensionObjects.push(...measurementObjects.slice(startIndex));
+}
+
+function dimensionGuide(start, end, color, label) {
+  const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+  const material = new THREE.LineBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.96 });
+  const line = new THREE.Line(geometry, material);
+  line.renderOrder = 22;
+  measurementGroup.add(line);
+  measurementObjects.push(line);
+  structureDimensionObjects.push(line);
+  let startIndex = measurementObjects.length;
+  marker(start, color);
+  marker(end, color);
+  trackDimensionObjects(startIndex);
+  startIndex = measurementObjects.length;
+  textSprite(label, start.clone().add(end).multiplyScalar(0.5));
+  trackDimensionObjects(startIndex);
+}
+
+function measureSelectedStructure3d() {
+  const role = selectedRole;
+  const mesh = role ? meshes[role] : null;
+  const item = role ? meshItems[role] : null;
+  if (!mesh || !item || !mesh.visible) return false;
+  scene.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(mesh);
+  if (bounds.isEmpty()) return false;
+  const size = bounds.getSize(new THREE.Vector3());
+  const dimensions = [size.x, size.y, size.z];
+  if (dimensions.some((value) => !Number.isFinite(value) || value <= 0)) return false;
+  const measurement = {
+    role,
+    label: item.label || role,
+    left_right_mm: Number(size.x.toFixed(3)),
+    anterior_posterior_mm: Number(size.y.toFixed(3)),
+    superior_inferior_mm: Number(size.z.toFixed(3)),
+    method: "axis_aligned_lps_bounding_box",
+    coordinate_system: "LPS",
+    source: "selected_segmentation_mesh",
+    approximate: true,
+  };
+  structureMeasurements3d = structureMeasurements3d.filter((entry) => entry.role !== role);
+  structureMeasurements3d.push(measurement);
+  clearStructureDimensionObjects();
+  const padding = Math.max(sceneRadius * 0.035, Math.max(...dimensions) * 0.04, 2);
+  const xStart = new THREE.Vector3(bounds.min.x, bounds.min.y - padding, bounds.min.z - padding);
+  const xEnd = new THREE.Vector3(bounds.max.x, bounds.min.y - padding, bounds.min.z - padding);
+  const yStart = new THREE.Vector3(bounds.max.x + padding, bounds.min.y, bounds.min.z - padding);
+  const yEnd = new THREE.Vector3(bounds.max.x + padding, bounds.max.y, bounds.min.z - padding);
+  const zStart = new THREE.Vector3(bounds.max.x + padding, bounds.max.y + padding, bounds.min.z);
+  const zEnd = new THREE.Vector3(bounds.max.x + padding, bounds.max.y + padding, bounds.max.z);
+  dimensionGuide(xStart, xEnd, 0xd96b5f, `LR ${measurement.left_right_mm.toFixed(1)} mm`);
+  dimensionGuide(yStart, yEnd, 0x2daf79, `AP ${measurement.anterior_posterior_mm.toFixed(1)} mm`);
+  dimensionGuide(zStart, zEnd, 0x5f82c7, `SI ${measurement.superior_inferior_mm.toFixed(1)} mm`);
+  renderStructureDimensionSummary(role);
+  focusMeshRoles([role], { viewName: "focus", margin: 1.58 });
+  currentAnatomicalView = "none";
+  updateAnatomicalViewButtons();
+  selectionActionStatus.textContent = `Dimensões 3D de ${measurement.label} calculadas sobre a malha segmentada.`;
+  updateMeasurementStatus();
+  animateElementFeedback(selectionDimensionsResult, "is-feedback");
+  return true;
+}
+
+function anatomicalTargetRoles(name) {
+  const definition = ANATOMICAL_VIEWS[name];
+  if (!definition) return [];
+  return Object.entries(meshItems)
+    .filter(([, item]) => definition.targetCategories.includes(meshCategory(item)))
+    .map(([role]) => role);
+}
+
+function anatomicalViewAvailable(name) {
+  if (name === "segments") {
+    return REQUIRED_COUINAUD_ROLES.every((role) => Boolean(meshes[role]));
+  }
+  return anatomicalTargetRoles(name).length > 0;
+}
+
+function renderAnatomicalViewControls() {
+  anatomicalViewsSection.hidden = false;
+  document.querySelectorAll(".anatomical-view-button").forEach((button) => {
+    const name = button.dataset.anatomicalView;
+    const available = anatomicalViewAvailable(name);
+    button.disabled = !available;
+    button.title = available ? ANATOMICAL_VIEWS[name].description : "Estrutura não disponível neste exame.";
+  });
+  updateAnatomicalViewButtons();
+  anatomicalViewStatus.textContent = "Escolha um atalho para enquadrar uma camada anatômica sem alterar as malhas.";
+  renderSavedViews();
+}
+
+function applyAnatomicalView(name) {
+  const definition = ANATOMICAL_VIEWS[name];
+  const roles = anatomicalTargetRoles(name);
+  if (!definition || !anatomicalViewAvailable(name) || !roles.length) return false;
+  if (!applyPreset(definition.preset)) return false;
+  clipEnabled.checked = false;
+  updateClipping();
+  currentAnatomicalView = name;
+  selectionIsolated = false;
+  focusMeshRoles(roles, { viewName: "anatomical", margin: 1.38 });
+  updateAnatomicalViewButtons();
+  anatomicalViewStatus.textContent = definition.description;
+  animateElementFeedback(anatomicalViewsSection, "is-feedback");
+  return true;
+}
+
+function currentVisibleRoles() {
+  return [...controlsDiv.querySelectorAll('input[type="checkbox"][data-role]')]
+    .filter((checkbox) => checkbox.checked)
+    .map((checkbox) => checkbox.dataset.role);
+}
+
+function savedViewPayload(view) {
+  return {
+    bookmark_id: view.bookmark_id,
+    label: view.label,
+    active_view: view.active_view,
+    active_preset: view.active_preset,
+    active_anatomical_view: view.active_anatomical_view,
+    material_profile: view.material_profile,
+    selected_role: view.selected_role,
+    selection_isolated: view.selection_isolated,
+    camera_position_mm: view.camera_position_mm,
+    camera_target_mm: view.camera_target_mm,
+    reference_sync_enabled: view.reference_sync_enabled,
+    reference_view: view.reference_view,
+    reference_frame_index: view.reference_frame_index,
+    clipping: view.clipping,
+    visible_roles: view.visible_roles,
+    opacity_by_role: view.opacity_by_role,
+  };
+}
+
+function saveCurrentView() {
+  if (!viewerReadyForReview) {
+    savedViewStatus.textContent = "Aguarde o carregamento completo antes de salvar uma vista.";
+    return false;
+  }
+  if (savedViews.length >= MAX_SAVED_VIEWS) {
+    savedViewStatus.textContent = `Limite de ${MAX_SAVED_VIEWS} marcadores por revisão atingido.`;
+    return false;
+  }
+  savedViewSequence += 1;
+  const selectedLabel = selectedRole ? (meshItems[selectedRole]?.label || selectedRole) : null;
+  const anatomicalLabel = ANATOMICAL_VIEWS[currentAnatomicalView]?.label;
+  const label = `Vista ${savedViewSequence} · ${selectedLabel || anatomicalLabel || "Cena 3D"}`;
+  const opacityByRole = {};
+  Object.entries(meshes).forEach(([role, mesh]) => {
+    opacityByRole[role] = Number(mesh.userData.targetOpacity ?? mesh.material.opacity);
+  });
+  renderer.render(scene, camera);
+  let snapshotDataUrl = "";
+  try {
+    snapshotDataUrl = renderer.domElement.toDataURL("image/png");
+  } catch (error) {
+    console.warn("Captura comparativa indisponível:", error);
+  }
+  savedViews.push({
+    bookmark_id: `view-${String(savedViewSequence).padStart(3, "0")}`,
+    label,
+    active_view: currentView,
+    active_preset: currentPreset,
+    active_anatomical_view: currentAnatomicalView,
+    material_profile: currentMaterialProfile,
+    selected_role: selectedRole,
+    selection_isolated: selectionIsolated,
+    camera_position_mm: camera.position.toArray().map((value) => Number(value.toFixed(4))),
+    camera_target_mm: orbit.target.toArray().map((value) => Number(value.toFixed(4))),
+    reference_sync_enabled: referenceSync.checked,
+    reference_view: referenceView,
+    reference_frame_index: Number(referenceSlider.value),
+    clipping: {
+      enabled: clipEnabled.checked,
+      axis: clipAxis.value,
+      position_percent: Number(clipPosition.value),
+      inverted: clipInvert.checked,
+    },
+    visible_roles: currentVisibleRoles(),
+    opacity_by_role: opacityByRole,
+    snapshot_data_url: snapshotDataUrl,
+  });
+  renderSavedViews();
+  savedViewStatus.textContent = `${label} salva para esta revisão.`;
+  return true;
+}
+
+function restoreSavedView(bookmarkId) {
+  const view = savedViews.find((candidate) => candidate.bookmark_id === bookmarkId);
+  if (!view) return false;
+  clearStructureSelection();
+  currentMaterialProfile = VIEWER_PRESETS[view.material_profile]
+    ? view.material_profile : DEFAULT_VISUAL_PRESET;
+  Object.entries(meshes).forEach(([role, mesh]) => {
+    const item = meshItems[role] || { role };
+    const opacity = THREE.MathUtils.clamp(Number(view.opacity_by_role[role] ?? 1), 0, 1);
+    const visible = view.visible_roles.includes(role);
+    applyMaterialProfile(currentMaterialProfile, item, mesh);
+    mesh.userData.targetOpacity = opacity;
+    configureOpacityOcclusion(item, mesh, opacity);
+    syncStructureControl(role, visible, opacity);
+    animateMeshVisibility(mesh, visible);
+  });
+  const preset = VIEWER_PRESETS[view.active_preset];
+  markPreset(view.active_preset, preset?.description || "Composição personalizada restaurada de um marcador.");
+  currentAnatomicalView = ANATOMICAL_VIEWS[view.active_anatomical_view]
+    ? view.active_anatomical_view : "none";
+  updateAnatomicalViewButtons();
+  anatomicalViewStatus.textContent = ANATOMICAL_VIEWS[currentAnatomicalView]?.description
+    || "Vista personalizada restaurada de um marcador de revisão.";
+  if (currentManifest?.reference_images?.views?.[view.reference_view]?.frames?.length) {
+    selectReferenceView(view.reference_view, { sync: false });
+    const maximum = Number(referenceSlider.max);
+    referenceSlider.value = String(Math.min(Math.max(view.reference_frame_index, 0), maximum));
+    renderReferenceFrame();
+  }
+  referenceSync.checked = view.reference_sync_enabled;
+  clipEnabled.checked = view.clipping.enabled;
+  clipAxis.value = view.clipping.axis;
+  clipPosition.value = String(view.clipping.position_percent);
+  clipInvert.checked = view.clipping.inverted;
+  updateClipping();
+  const targetPosition = new THREE.Vector3().fromArray(view.camera_position_mm);
+  const targetOrbit = new THREE.Vector3().fromArray(view.camera_target_mm);
+  const distance = Math.max(targetPosition.distanceTo(targetOrbit), 1);
+  camera.near = Math.max(distance / 1000, 0.01);
+  camera.far = Math.max(distance * 12, sceneRadius * 12);
+  camera.updateProjectionMatrix();
+  currentView = "saved";
+  document.querySelectorAll(".viewbtn").forEach((button) => button.classList.remove("active"));
+  if (reducedMotion.matches) {
+    cameraTween = null;
+    camera.position.copy(targetPosition);
+    orbit.target.copy(targetOrbit);
+    orbit.update();
+  } else {
+    orbit.enabled = false;
+    cameraTween = {
+      fromPosition: camera.position.clone(),
+      toPosition: targetPosition,
+      fromTarget: orbit.target.clone(),
+      toTarget: targetOrbit,
+      startedAt: performance.now(),
+      duration: 650,
+    };
+  }
+  selectionIsolated = view.selection_isolated;
+  if (view.selected_role && view.visible_roles.includes(view.selected_role)) {
+    selectStructure(view.selected_role, {
+      alignReference: false,
+      scrollPanel: false,
+      contextPreset: VIEWER_PRESETS[view.active_preset] ? view.active_preset : DEFAULT_VISUAL_PRESET,
+    });
+    selectionIsolated = view.selection_isolated;
+  }
+  savedViewStatus.textContent = `${view.label} restaurada com câmera, corte e opacidades salvos.`;
+  animateElementFeedback(anatomicalViewsSection, "is-feedback");
+  return true;
+}
+
+function removeSavedView(bookmarkId) {
+  const previousLength = savedViews.length;
+  savedViews = savedViews.filter((view) => view.bookmark_id !== bookmarkId);
+  comparedSavedViewIds = comparedSavedViewIds.filter((id) => id !== bookmarkId);
+  renderSavedViews();
+  savedViewStatus.textContent = savedViews.length === previousLength
+    ? "Marcador não encontrado." : "Marcador removido desta revisão.";
+}
+
+function toggleSavedViewComparison(bookmarkId) {
+  if (comparedSavedViewIds.includes(bookmarkId)) {
+    comparedSavedViewIds = comparedSavedViewIds.filter((id) => id !== bookmarkId);
+  } else if (comparedSavedViewIds.length < 2) {
+    comparedSavedViewIds.push(bookmarkId);
+  } else {
+    savedViewComparisonStatus.textContent = "Remova A ou B antes de escolher outra vista.";
+    animateElementFeedback(savedViewComparison, "is-feedback");
+    return false;
+  }
+  renderSavedViews();
+  return true;
+}
+
+function renderSavedViewComparison() {
+  const selected = comparedSavedViewIds
+    .map((id) => savedViews.find((view) => view.bookmark_id === id))
+    .filter(Boolean);
+  savedViewComparison.hidden = savedViews.length < 2;
+  savedViewComparisonGrid.innerHTML = "";
+  selected.forEach((view, index) => {
+    const figure = document.createElement("figure");
+    figure.tabIndex = 0;
+    figure.setAttribute("role", "button");
+    figure.setAttribute("aria-label", `Abrir comparação ${index === 0 ? "A" : "B"}: ${view.label}`);
+    const image = document.createElement("img");
+    image.src = view.snapshot_data_url;
+    image.alt = `Captura 3D ${index === 0 ? "A" : "B"} — ${view.label}`;
+    const caption = document.createElement("figcaption");
+    caption.textContent = `${index === 0 ? "A" : "B"} · ${view.label}`;
+    figure.append(image, caption);
+    figure.addEventListener("click", () => restoreSavedView(view.bookmark_id));
+    figure.addEventListener("keydown", (event) => {
+      if (["Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        restoreSavedView(view.bookmark_id);
+      }
+    });
+    savedViewComparisonGrid.appendChild(figure);
+  });
+  if (selected.length === 2) {
+    savedViewComparisonStatus.textContent = "Comparação pronta. Clique em A ou B para restaurar essa cena 3D.";
+  } else if (savedViews.length >= 2) {
+    savedViewComparisonStatus.textContent = `Selecione ${2 - selected.length} vista(s) adicional(is) para comparar.`;
+  } else {
+    savedViewComparisonStatus.textContent = "Salve pelo menos duas vistas para iniciar a comparação.";
+  }
+}
+
+function renderSavedViews() {
+  if (!savedViewsDiv) return;
+  savedViewsDiv.innerHTML = "";
+  savedViews.forEach((view) => {
+    const row = document.createElement("div");
+    row.className = "saved-view-row";
+    const label = document.createElement("span");
+    label.textContent = view.label;
+    const compareIndex = comparedSavedViewIds.indexOf(view.bookmark_id);
+    const compare = makeButton(
+      compareIndex >= 0 ? (compareIndex === 0 ? "A" : "B") : "Comparar",
+      "secondary-button compare-view-button",
+      () => toggleSavedViewComparison(view.bookmark_id),
+    );
+    compare.classList.toggle("active", compareIndex >= 0);
+    compare.setAttribute("aria-pressed", String(compareIndex >= 0));
+    const open = makeButton("Abrir", "secondary-button", () => restoreSavedView(view.bookmark_id));
+    const remove = makeButton("Excluir", "secondary-button", () => removeSavedView(view.bookmark_id));
+    row.append(label, compare, open, remove);
+    savedViewsDiv.appendChild(row);
+  });
+  if (!savedViews.length) savedViewStatus.textContent = "Nenhuma vista salva.";
+  renderSavedViewComparison();
 }
 
 function renderQuality(items, manifest) {
@@ -601,6 +1700,94 @@ function renderQuality(items, manifest) {
     }
     cards.appendChild(card);
   }
+}
+
+function volumetryArtifactUrl(filename, fileMap, baseUrl) {
+  if (fileMap?.[filename]) {
+    const mime = filename.endsWith(".csv") ? "text/csv" : "application/json";
+    const url = URL.createObjectURL(new Blob([fileMap[filename]], { type: mime }));
+    referenceObjectUrls.push(url);
+    return url;
+  }
+  return baseUrl ? remoteArtifactUrl(baseUrl, filename) : "";
+}
+
+function renderVolumetry(manifest, fileMap, baseUrl = "") {
+  const section = $("volumetry-section");
+  const payload = manifest.volumetry;
+  const summary = payload?.whole_liver_summary;
+  const volume = Number(summary?.volume_ml);
+  if (!payload || !Number.isFinite(volume)) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+  const quality = summary.quality || {};
+  const grade = String(quality.grade || "B").toUpperCase();
+  $("volumetry-hero").innerHTML = "";
+  const primary = document.createElement("div");
+  primary.className = "volumetry-primary";
+  const value = document.createElement("strong");
+  value.textContent = `${volume.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mL`;
+  const label = document.createElement("span");
+  label.textContent = "volume hepático total segmentado";
+  primary.append(value, label);
+  const badge = document.createElement("span");
+  badge.className = `volumetry-grade grade-${grade.toLowerCase()}`;
+  badge.title = quality.label || "qualidade técnica";
+  badge.textContent = grade;
+  $("volumetry-hero").append(primary, badge);
+
+  const range = summary.technical_range_ml;
+  $("volumetry-range").textContent = range && Number(range.source_count) > 1
+    ? `Faixa técnica entre máscaras: ${Number(range.lower_ml).toFixed(1)}–${Number(range.upper_ml).toFixed(1)} mL · variação ${Number(range.spread_percent_of_reported).toFixed(1)}%`
+    : "Faixa entre máscaras indisponível: medida derivada de uma única máscara aprovada.";
+
+  const structureContainer = $("volumetry-structures");
+  structureContainer.innerHTML = "";
+  (payload.structures || [])
+    .filter((item) => item.role !== "orgao")
+    .forEach((item) => {
+      const hasMesh = Boolean(meshes[item.role]);
+      const row = document.createElement(hasMesh ? "button" : "div");
+      row.className = "volumetry-row";
+      if (hasMesh) {
+        row.type = "button";
+        row.title = "Selecionar esta estrutura no modelo 3D";
+        row.addEventListener("click", () => selectStructure(item.role));
+      }
+      const name = document.createElement("span");
+      name.textContent = item.label || item.role;
+      const measured = document.createElement("strong");
+      const usable = item.technical_quality?.usable !== false;
+      measured.textContent = usable
+        ? `${Number(item.volume_ml).toFixed(1)} mL${item.percent_of_whole_liver == null ? "" : ` · ${Number(item.percent_of_whole_liver).toFixed(1)}%`}`
+        : "não publicável";
+      row.append(name, measured);
+      structureContainer.appendChild(row);
+    });
+
+  const partition = payload.couinaud_partition || {};
+  const partitionNode = $("volumetry-partition");
+  partitionNode.classList.toggle("warning", Boolean(partition.available && !partition.gate_passed));
+  partitionNode.textContent = !partition.available
+    ? "Segmentos de Couinaud não disponíveis neste exame."
+    : partition.gate_passed
+      ? "Couinaud: oito segmentos formam uma partição exata do fígado; volumes liberados."
+      : `Couinaud não liberado para volumetria: cobertura ${Number(partition.liver_coverage_percent || 0).toFixed(1)}%, com lacunas ou voxels externos à máscara hepática.`;
+
+  const downloads = $("volumetry-downloads");
+  downloads.innerHTML = "";
+  [[payload.artifacts?.json, "Baixar JSON"], [payload.artifacts?.csv, "Baixar CSV"]]
+    .forEach(([filename, text]) => {
+      const url = filename && volumetryArtifactUrl(filename, fileMap, baseUrl);
+      if (!url) return;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.textContent = text;
+      downloads.appendChild(link);
+    });
 }
 
 function renderRelationships(manifest) {
@@ -653,12 +1840,20 @@ function renderCandidate(manifest) {
     : "O localizador foi executado, mas não encontrou região candidata dentro do fígado.";
 }
 
+function remoteArtifactUrl(base, filename) {
+  const safePath = String(filename).split("/").map(encodeURIComponent).join("/");
+  return `${base}/${safePath}`;
+}
+
 function referenceFrameUrl(filename) {
   const buffer = referenceFiles[filename];
-  if (!buffer) return "";
-  const url = URL.createObjectURL(new Blob([buffer], { type: "image/png" }));
-  referenceObjectUrls.push(url);
-  return url;
+  if (buffer) {
+    const url = URL.createObjectURL(new Blob([buffer], { type: "image/png" }));
+    referenceObjectUrls.push(url);
+    return url;
+  }
+  if (!referenceBaseUrl) return "";
+  return remoteArtifactUrl(referenceBaseUrl, filename);
 }
 
 function renderReferenceFrame() {
@@ -682,7 +1877,74 @@ function renderReferenceFrame() {
   referenceMeta.textContent = `${referenceView} · plano ${index + 1}/${view.frames.length} · índice ${frame.index}${position}`;
 }
 
-function selectReferenceView(viewName) {
+const REFERENCE_CLIP_AXES = Object.freeze({ axial: "z", coronal: "y", sagittal: "x" });
+
+function currentReferenceFrame() {
+  const view = currentManifest?.reference_images?.views?.[referenceView];
+  if (!view?.frames?.length) return null;
+  const index = Math.min(Number(referenceSlider.value), view.frames.length - 1);
+  return { frame: view.frames[index], index, view };
+}
+
+function syncReferenceToClipping({ activate = true } = {}) {
+  if (!referenceSync.checked || !currentManifest || sceneBounds.isEmpty() || sourceBounds.isEmpty()) return false;
+  const selected = currentReferenceFrame();
+  const axis = REFERENCE_CLIP_AXES[referenceView];
+  const rawPositionLps = selected?.frame?.position_lps_mm;
+  const positionLps = Number(rawPositionLps);
+  if (!selected || !axis || rawPositionLps == null || !Number.isFinite(positionLps)) {
+    referenceSyncStatus.textContent = "Sincronização indisponível: plano sem coordenada LPS.";
+    return false;
+  }
+  const minimumLps = sourceBounds.min[axis];
+  const maximumLps = sourceBounds.max[axis];
+  const span = maximumLps - minimumLps;
+  if (!(span > 0)) {
+    referenceSyncStatus.textContent = "Sincronização indisponível: limites 3D inválidos.";
+    return false;
+  }
+  const percent = THREE.MathUtils.clamp(((positionLps - minimumLps) / span) * 100, 0, 100);
+  clipAxis.value = axis;
+  clipPosition.value = String(percent);
+  clipInvert.checked = false;
+  if (activate) clipEnabled.checked = true;
+  updateClipping();
+  const orientation = { axial: "Axial", coronal: "Coronal", sagittal: "Sagital" }[referenceView];
+  referenceSyncStatus.textContent = `${orientation} sincronizado · ${positionLps.toFixed(1)} mm LPS · ${Math.round(percent)}% do volume.`;
+  return true;
+}
+
+function structureCenterLps(mesh) {
+  if (!mesh?.geometry) return null;
+  if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+  if (!mesh.geometry.boundingBox || mesh.geometry.boundingBox.isEmpty()) return null;
+  return mesh.geometry.boundingBox.getCenter(new THREE.Vector3());
+}
+
+function alignReferenceToStructure(item, mesh) {
+  const view = currentManifest?.reference_images?.views?.[referenceView];
+  const axis = REFERENCE_CLIP_AXES[referenceView];
+  const centerLps = structureCenterLps(mesh);
+  if (!view?.frames?.length || !axis || !centerLps) return false;
+  const coordinateLps = Number(centerLps[axis]);
+  const candidates = view.frames
+    .map((frame, index) => ({ frame, index, position: Number(frame.position_lps_mm) }))
+    .filter(({ frame, position }) => frame.position_lps_mm != null && Number.isFinite(position));
+  if (!candidates.length || !Number.isFinite(coordinateLps)) return false;
+  const nearest = candidates.reduce((best, candidate) => (
+    Math.abs(candidate.position - coordinateLps) < Math.abs(best.position - coordinateLps)
+      ? candidate : best
+  ));
+  referenceSlider.value = String(nearest.index);
+  renderReferenceFrame();
+  const clippingAligned = referenceSync.checked && syncReferenceToClipping();
+  const orientation = { axial: "Axial", coronal: "Coronal", sagittal: "Sagital" }[referenceView];
+  referenceSyncStatus.textContent = `${orientation} alinhado a ${item.label || item.role} · centro ${coordinateLps.toFixed(1)} mm LPS · plano ${nearest.index + 1}/${view.frames.length}${clippingAligned ? " · corte 3D ativo" : ""}.`;
+  animateElementFeedback(referenceDock, "is-feedback");
+  return true;
+}
+
+function selectReferenceView(viewName, { sync = true } = {}) {
   const view = currentManifest?.reference_images?.views?.[viewName];
   if (!view?.frames?.length) return;
   referenceView = viewName;
@@ -695,21 +1957,71 @@ function selectReferenceView(viewName) {
     button.setAttribute("aria-selected", String(selected));
   });
   renderReferenceFrame();
+  if (sync) syncReferenceToClipping();
 }
 
-function setupReferences(manifest, fileMap) {
+function setupReferences(manifest, fileMap, { baseUrl = "" } = {}) {
   referenceFiles = fileMap;
+  referenceBaseUrl = baseUrl;
   const views = manifest.reference_images?.views;
   const available = views && Object.values(views).some((view) => view?.frames?.length);
   referenceDock.hidden = !available;
   $("review-2d").disabled = !available;
   if (!available) return;
-  selectReferenceView(views.axial?.frames?.length ? "axial" : Object.keys(views)[0]);
+  referenceSync.checked = true;
+  referenceSyncStatus.textContent = "Pronto para sincronizar ao mover o plano.";
+  selectReferenceView(views.axial?.frames?.length ? "axial" : Object.keys(views)[0], { sync: false });
 }
 document.querySelectorAll("#reference-tabs button").forEach((button) => {
   button.addEventListener("click", () => selectReferenceView(button.dataset.view));
 });
-referenceSlider.addEventListener("input", renderReferenceFrame);
+referenceSlider.addEventListener("input", () => { renderReferenceFrame(); syncReferenceToClipping(); });
+referenceSync.addEventListener("change", () => {
+  if (referenceSync.checked) syncReferenceToClipping();
+  else {
+    clipEnabled.checked = false;
+    updateClipping();
+    referenceSyncStatus.textContent = "Sincronização 2D/3D desativada.";
+  }
+});
+
+function setReferenceViewForXR(viewName) {
+  const view = currentManifest?.reference_images?.views?.[viewName];
+  if (!view?.frames?.length) return false;
+  selectReferenceView(viewName, { sync: false });
+  if (referenceSync.checked) syncReferenceToClipping();
+  return true;
+}
+
+function stepReferenceFrame(delta) {
+  const maximum = Number(referenceSlider.max);
+  if (!Number.isFinite(maximum) || maximum < 0) return false;
+  const next = THREE.MathUtils.clamp(Number(referenceSlider.value) + Number(delta || 0), 0, maximum);
+  referenceSlider.value = String(next);
+  renderReferenceFrame();
+  if (referenceSync.checked) syncReferenceToClipping();
+  return true;
+}
+
+function setReferenceSyncEnabled(enabled) {
+  referenceSync.checked = Boolean(enabled);
+  if (referenceSync.checked) syncReferenceToClipping();
+  else referenceSyncStatus.textContent = "Sincronização 2D/3D desativada.";
+  return referenceSync.checked;
+}
+
+function getReferenceState() {
+  const selected = currentReferenceFrame();
+  return {
+    available: Boolean(selected),
+    view: referenceView,
+    frame_index: Number(referenceSlider.value),
+    frame_count: selected?.view?.frames?.length || 0,
+    sync_enabled: referenceSync.checked,
+    image_src: referenceImage.currentSrc || referenceImage.src || "",
+    metadata: referenceMeta.textContent || "",
+  };
+}
 $("reference-collapse").addEventListener("click", () => {
   const collapsed = !referenceBody.hidden;
   referenceBody.hidden = collapsed;
@@ -734,7 +2046,47 @@ function renderMetadata(manifest) {
   ].filter(Boolean).join("\n");
 }
 
-function renderManifest(manifest, fileMap) {
+function finalizeManifestPresentation(manifest, fileMap, options = {}) {
+  currentManifest = manifest;
+  if (!Object.keys(meshes).length) throw new Error("Nenhuma malha do manifesto foi carregada.");
+  frameScene();
+  controlsDiv.innerHTML = "";
+  buildControls(manifest.meshes);
+  applyInitialPreset(manifest);
+  renderQuality(manifest.meshes, manifest);
+  renderVolumetry(manifest, fileMap, options.referenceBaseUrl || "");
+  renderRelationships(manifest);
+  renderCandidate(manifest);
+  renderMetadata(manifest);
+  setupReferences(
+    manifest,
+    options.referenceFileMap ?? fileMap,
+    { baseUrl: options.referenceBaseUrl || "" },
+  );
+  renderAnatomicalViewControls();
+  clipSection.hidden = manifest.viewer_features?.orthogonal_clipping === false;
+  clipEnabled.checked = false;
+  clipPosition.value = "50";
+  clipInvert.checked = false;
+  updateClipping();
+  viewerReadyForReview = options.complete !== false;
+  if (jobId) {
+    approveButton.disabled = !viewerReadyForReview;
+    revisionButton.disabled = !viewerReadyForReview;
+  }
+  if (viewerReadyForReview) {
+    drop.classList.add("loaded");
+    drop.innerHTML = `<b>${manifest.case_id || "Caso"}</b><br/>${options.referenceBaseUrl ? "modelo carregado · referências 2D sob demanda" : "modelo e referências carregados"}`;
+  }
+  document.querySelectorAll(".panel-section:not([hidden])").forEach((section) => {
+    section.classList.remove("is-populated");
+    void section.offsetWidth;
+    section.classList.add("is-populated");
+  });
+  if (options.animate !== false) animateModelEntrance();
+}
+
+function renderManifest(manifest, fileMap, options = {}) {
   if (!manifest || !Array.isArray(manifest.meshes) || !manifest.meshes.length) {
     throw new Error("Manifesto sem coleção de malhas.");
   }
@@ -748,33 +2100,14 @@ function renderManifest(manifest, fileMap) {
     }
     addMesh(item, loader.parse(buffer));
   }
-  if (!Object.keys(meshes).length) throw new Error("Nenhuma malha do manifesto foi carregada.");
-  frameScene();
-  buildControls(manifest.meshes);
-  renderQuality(manifest.meshes, manifest);
-  renderRelationships(manifest);
-  renderCandidate(manifest);
-  renderMetadata(manifest);
-  setupReferences(manifest, fileMap);
-  clipSection.hidden = manifest.viewer_features?.orthogonal_clipping === false;
-  clipEnabled.checked = false;
-  clipPosition.value = "50";
-  clipInvert.checked = false;
-  updateClipping();
-  drop.classList.add("loaded");
-  drop.innerHTML = `<b>${manifest.case_id || "Caso"}</b><br/>modelo e referências carregados`;
-  document.querySelectorAll(".panel-section:not([hidden])").forEach((section) => {
-    section.classList.remove("is-populated");
-    void section.offsetWidth;
-    section.classList.add("is-populated");
-  });
-  animateModelEntrance();
+  finalizeManifestPresentation(manifest, fileMap, options);
 }
 
 function updateMeasurementStatus() {
   if (!measurementEnabled) {
-    measurementStatus.textContent = measurementValues.length
-      ? `${measurementValues.length} medição(ões) · régua desativada.`
+    const totalMeasurements = measurementValues.length + structureMeasurements3d.length;
+    measurementStatus.textContent = totalMeasurements
+      ? `${totalMeasurements} medição(ões), incluindo ${structureMeasurements3d.length} tridimensional(is) · régua manual desativada.`
       : "Régua desativada.";
     animateElementFeedback(measurementStatus, "is-feedback");
     return;
@@ -803,12 +2136,35 @@ function marker(point, color = 0x0ea575) {
   const object = new THREE.Mesh(geometry, material);
   object.position.copy(point);
   object.renderOrder = 20;
-  scene.add(object);
+  measurementGroup.add(object);
   measurementObjects.push(object);
   if (!reducedMotion.matches) {
     object.scale.setScalar(0.05);
     objectScaleTweens.set(object, { startedAt: performance.now(), duration: 340 });
   }
+}
+
+function handleMeasurementPoint(point) {
+  const selectedPoint = point.clone();
+  marker(selectedPoint);
+  if (!measurePendingPoint) {
+    measurePendingPoint = selectedPoint;
+    updateMeasurementStatus();
+    return null;
+  }
+  const start = measurePendingPoint;
+  const distance = start.distanceTo(selectedPoint);
+  const geometry = new THREE.BufferGeometry().setFromPoints([start, selectedPoint]);
+  const material = new THREE.LineBasicMaterial({ color: 0x0a7f61, depthTest: false });
+  const line = new THREE.Line(geometry, material);
+  line.renderOrder = 19;
+  measurementGroup.add(line);
+  measurementObjects.push(line);
+  textSprite(`${distance.toFixed(1)} mm`, start.clone().add(selectedPoint).multiplyScalar(0.5));
+  measurementValues.push(Number(distance.toFixed(3)));
+  measurePendingPoint = null;
+  updateMeasurementStatus();
+  return distance;
 }
 
 function textSprite(text, point) {
@@ -831,7 +2187,7 @@ function textSprite(text, point) {
   sprite.position.copy(point);
   sprite.scale.set(sceneRadius * 0.24, sceneRadius * 0.06, 1);
   sprite.renderOrder = 21;
-  scene.add(sprite);
+  measurementGroup.add(sprite);
   measurementObjects.push(sprite);
 }
 
@@ -842,7 +2198,7 @@ renderer.domElement.addEventListener("pointerdown", (event) => {
   pointerDown = { x: event.clientX, y: event.clientY };
 });
 renderer.domElement.addEventListener("pointerup", (event) => {
-  if (!measurementEnabled || !pointerDown) return;
+  if (!pointerDown) return;
   const moved = Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y);
   pointerDown = null;
   if (moved > 5) return;
@@ -855,36 +2211,45 @@ renderer.domElement.addEventListener("pointerup", (event) => {
   camera.updateMatrixWorld(true);
   raycaster.setFromCamera(pointer, camera);
   const intersections = raycaster.intersectObject(group, true)
-    .filter((intersection) => intersection.object?.isMesh && intersection.object.visible);
+    .filter((intersection) => intersection.object?.isMesh
+      && intersection.object.visible
+      && Number(intersection.object.material?.opacity ?? 1) > 0.02);
+  if (!measurementEnabled) {
+    if (!intersections.length) {
+      clearStructureSelection();
+      return;
+    }
+    const first = intersections[0];
+    const firstItem = meshItems[first.object.userData.role];
+    const organIsTransparent = meshCategory(firstItem) === "organ"
+      && Number(first.object.material.opacity) < 0.999;
+    const selected = organIsTransparent
+      ? (intersections.find((intersection) => meshCategory(
+        meshItems[intersection.object.userData.role],
+      ) !== "organ") || first)
+      : first;
+    selectStructure(selected.object.userData.role);
+    return;
+  }
   if (!intersections.length) {
     measurementStatus.textContent = "Nenhuma superfície visível nesse ponto.";
     animateElementFeedback(measurementStatus, "is-feedback");
     return;
   }
-  const point = intersections[0].point.clone();
-  marker(point);
-  if (!measurePendingPoint) {
-    measurePendingPoint = point;
-    updateMeasurementStatus();
-    return;
-  }
-  const start = measurePendingPoint;
-  const distance = start.distanceTo(point);
-  const geometry = new THREE.BufferGeometry().setFromPoints([start, point]);
-  const material = new THREE.LineBasicMaterial({ color: 0x0a7f61, depthTest: false });
-  const line = new THREE.Line(geometry, material);
-  line.renderOrder = 19;
-  scene.add(line);
-  measurementObjects.push(line);
-  textSprite(`${distance.toFixed(1)} mm`, start.clone().add(point).multiplyScalar(0.5));
-  measurementValues.push(Number(distance.toFixed(3)));
-  measurePendingPoint = null;
-  measurementStatus.textContent = `Distância: ${distance.toFixed(1)} mm · clique para iniciar outra medição.`;
-  animateElementFeedback(measurementStatus, "is-feedback");
+  handleMeasurementPoint(intersections[0].point);
 });
 
 $("measure").addEventListener("click", () => setMeasurementEnabled(!measurementEnabled));
 $("clear-measures").addEventListener("click", clearMeasurements);
+$("selection-clear").addEventListener("click", () => clearStructureSelection());
+$("selection-focus").addEventListener("click", focusSelectedStructure);
+$("selection-isolate").addEventListener("click", isolateSelectedStructure);
+$("selection-dimensions").addEventListener("click", measureSelectedStructure3d);
+$("selection-context").addEventListener("click", restoreSelectedContext);
+document.querySelectorAll(".anatomical-view-button").forEach((button) => {
+  button.addEventListener("click", () => applyAnatomicalView(button.dataset.anatomicalView));
+});
+$("save-current-view").addEventListener("click", saveCurrentView);
 $("reset-view").addEventListener("click", () => applyView("padrao"));
 $("wireframe").addEventListener("click", () => {
   wireframeEnabled = !wireframeEnabled;
@@ -918,6 +2283,15 @@ function reviewPayload(status) {
       ? null : ($("candidate-decision").value || null),
     viewer_state: {
       active_view: currentView,
+      active_preset: currentPreset,
+      active_anatomical_view: currentAnatomicalView,
+      reference_sync_enabled: referenceSync.checked,
+      reference_view: referenceView,
+      reference_frame_index: Number(referenceSlider.value),
+      selected_role: selectedRole,
+      selection_isolated: selectionIsolated,
+      saved_views: savedViews.slice(0, MAX_SAVED_VIEWS).map(savedViewPayload),
+      compared_saved_view_ids: comparedSavedViewIds.slice(0, 2),
       wireframe_enabled: wireframeEnabled,
       clipping: {
         enabled: clipEnabled.checked,
@@ -926,6 +2300,7 @@ function reviewPayload(status) {
         inverted: clipInvert.checked,
       },
       measurements_mm: measurementValues.slice(0, 20),
+      structure_dimensions_3d: structureMeasurements3d.slice(0, 16),
       visible_roles: Object.entries(meshes).filter(([, mesh]) => mesh.visible).map(([role]) => role),
     },
   };
@@ -934,8 +2309,44 @@ function reviewPayload(status) {
 const params = new URLSearchParams(location.search);
 const casePath = params.get("case");
 const jobId = params.get("job");
+const preferXrAssets = params.get("xr") === "1"
+  || /OculusBrowser|Quest/i.test(navigator.userAgent || "");
+const xrToken = new URLSearchParams(location.hash.slice(1)).get("xr_token");
+let rgbPanelCatalogPromise = null;
+
+async function getRgbPanelCatalog() {
+  if (!jobId) return { schema: "oren-rgb-panel-catalog-v1", count: 0, panels: [] };
+  if (!rgbPanelCatalogPromise) {
+    rgbPanelCatalogPromise = fetch(`/api/jobs/${encodeURIComponent(jobId)}/rgb-panels`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Painéis RGB indisponíveis (${response.status}).`);
+        return response.json();
+      })
+      .then((catalog) => ({
+        ...catalog,
+        panels: Array.isArray(catalog.panels) ? catalog.panels : [],
+      }))
+      .catch((error) => {
+        rgbPanelCatalogPromise = null;
+        throw error;
+      });
+  }
+  return rgbPanelCatalogPromise;
+}
+
+function renderArtifactName(item) {
+  const xr = item?.xr_asset;
+  if (preferXrAssets && xr?.fidelity_gate_passed && typeof xr.stl === "string") {
+    return xr.stl;
+  }
+  return item.stl;
+}
 
 async function submitApproval(status) {
+  if (!viewerReadyForReview) {
+    approvalStatus.textContent = "Aguarde o carregamento completo das estruturas 3D.";
+    return;
+  }
   const payload = reviewPayload(status);
   if (status === "approved") {
     const baseRequired = [
@@ -955,7 +2366,10 @@ async function submitApproval(status) {
   revisionButton.disabled = true;
   approvalStatus.textContent = "Registrando revisão...";
   try {
-    const response = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/approval`, {
+    const approvalEndpoint = xrToken
+      ? `/api/jobs/${encodeURIComponent(jobId)}/xr-session/${encodeURIComponent(xrToken)}/approval`
+      : `/api/jobs/${encodeURIComponent(jobId)}/approval`;
+    const response = await fetch(approvalEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -972,18 +2386,40 @@ async function submitApproval(status) {
   }
 }
 
+function setReviewChecklistItem(item, checked) {
+  const ids = {
+    inspected_3d_contour: "review-3d",
+    compared_2d_reference: "review-2d",
+    reviewed_candidate_against_mr: "review-candidate",
+    acknowledged_research_only: "review-research",
+  };
+  const node = $(ids[item]);
+  if (!node || node.disabled) return false;
+  node.checked = Boolean(checked);
+  return node.checked;
+}
+
+function setCandidateReviewDecision(value) {
+  const allowed = ["", "accepted_as_region_of_interest", "rejected", "needs_correction"];
+  if (!allowed.includes(value) || $("candidate-decision-row").hidden) return false;
+  $("candidate-decision").value = value;
+  return true;
+}
+
+function getReviewState() {
+  const payload = reviewPayload("pending");
+  return {
+    checklist: payload.checklist,
+    candidate_review_decision: payload.candidate_review_decision,
+    candidate_available: !$("candidate-decision-row").hidden,
+    status: approvalStatus.textContent || "",
+  };
+}
+
 if (jobId) {
   approvalDiv.style.display = "block";
   approveButton.addEventListener("click", () => submitApproval("approved"));
   revisionButton.addEventListener("click", () => submitApproval("revision_requested"));
-}
-
-function referenceFilenames(manifest) {
-  const files = [];
-  for (const view of Object.values(manifest.reference_images?.views || {})) {
-    for (const frame of view?.frames || []) if (frame.file) files.push(frame.file);
-  }
-  return [...new Set(files)];
 }
 
 async function fetchBuffer(url) {
@@ -992,16 +2428,125 @@ async function fetchBuffer(url) {
   return response.arrayBuffer();
 }
 
+function setLoadProgress(phase, completed, total) {
+  loadingState.phase = phase;
+  loadingState.completed = completed;
+  loadingState.total = total;
+  loadingState.ready = false;
+  drop.classList.remove("loaded");
+  const title = document.createElement("b");
+  title.textContent = phase;
+  const detail = document.createElement("span");
+  detail.textContent = `${completed}/${total} estruturas`;
+  const progress = document.createElement("progress");
+  progress.max = Math.max(total, 1);
+  progress.value = completed;
+  progress.setAttribute("aria-label", "Progresso do carregamento do modelo 3D");
+  drop.replaceChildren(title, document.createElement("br"), detail, progress);
+}
+
+function meshPriority(item) {
+  const category = meshCategory(item);
+  return {
+    organ: 0, vessel: 1, gallbladder: 1, candidate: 1, lesion: 1,
+    classified_region: 2, segment: 3, other: 4,
+  }[category] ?? 4;
+}
+
+async function fetchMeshBuffersBounded(base, items, target, concurrency = 3) {
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex];
+      nextIndex += 1;
+      target[item.stl] = await fetchBuffer(remoteArtifactUrl(base, renderArtifactName(item)));
+    }
+  }
+  const workerCount = Math.min(Math.max(concurrency, 1), items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+}
+
+function nextAnimationFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function prepareIncrementalMesh(item, buffer) {
+  const mesh = addMesh(item, loader.parse(buffer));
+  const presetName = VIEWER_PRESETS[currentPreset] ? currentPreset : DEFAULT_VISUAL_PRESET;
+  const state = presetMeshState(presetName, item);
+  applyMaterialProfile(presetName, item, mesh);
+  mesh.userData.targetOpacity = state.opacity;
+  configureOpacityOcclusion(item, mesh, state.opacity);
+  mesh.visible = state.visible;
+  mesh.material.opacity = state.opacity;
+}
+
+async function loadRemoteManifestProgressively(base, manifest) {
+  if (!Array.isArray(manifest.meshes) || !manifest.meshes.length) {
+    throw new Error("Manifesto sem coleção de malhas.");
+  }
+  loadingState.startedAt = performance.now();
+  loadingState.firstOrganMs = null;
+  loadingState.readyMs = null;
+  const ordered = manifest.meshes
+    .map((item, index) => ({ item, index }))
+    .sort((left, right) => meshPriority(left.item) - meshPriority(right.item) || left.index - right.index)
+    .map(({ item }) => item);
+  const organ = ordered.find((item) => meshCategory(item) === "organ");
+  if (!organ) throw new Error("Manifesto sem malha hepática prioritária.");
+  const total = ordered.length;
+  const fileMap = {};
+  setLoadProgress("Carregando fígado", 0, total);
+  fileMap[organ.stl] = await fetchBuffer(remoteArtifactUrl(base, renderArtifactName(organ)));
+  loadingState.firstOrganMs = performance.now() - loadingState.startedAt;
+  const coreManifest = {
+    ...manifest,
+    meshes: [organ],
+    reference_images: null,
+    spatial_relationships: [],
+    candidate_context: null,
+    candidate_region: null,
+  };
+  renderManifest(coreManifest, { [organ.stl]: fileMap[organ.stl] }, { complete: false });
+  setLoadProgress("Fígado disponível · carregando anatomia", 1, total);
+  const remaining = ordered.filter((item) => item !== organ);
+  await fetchMeshBuffersBounded(base, remaining, fileMap);
+  let prepared = 1;
+  for (const item of remaining) {
+    await nextAnimationFrame();
+    prepareIncrementalMesh(item, fileMap[item.stl]);
+    delete fileMap[item.stl];
+    prepared += 1;
+    setLoadProgress("Preparando anatomia sem bloquear a cena", prepared, total);
+    await nextAnimationFrame();
+  }
+  finalizeManifestPresentation(manifest, {}, {
+    complete: true,
+    referenceBaseUrl: base,
+    referenceFileMap: {},
+    animate: false,
+  });
+  loadingState.phase = "ready";
+  loadingState.completed = total;
+  loadingState.total = total;
+  loadingState.ready = true;
+  loadingState.readyMs = performance.now() - loadingState.startedAt;
+}
+
 if (casePath) {
   (async () => {
     const base = casePath.replace(/\/$/, "");
     const response = await fetch(`${base}/viewer_manifest.json`);
     if (!response.ok) throw new Error("Manifesto do modelo não disponível.");
     const manifest = await response.json();
-    const files = [...manifest.meshes.map((item) => item.stl), ...referenceFilenames(manifest)];
-    const buffers = await Promise.all(files.map((filename) => fetchBuffer(`${base}/${filename}`)));
-    renderManifest(manifest, Object.fromEntries(files.map((filename, index) => [filename, buffers[index]])));
-  })().catch((error) => { console.error(error); alert(`Falha ao carregar o modelo: ${error.message}`); });
+    await loadRemoteManifestProgressively(base, manifest);
+  })().catch((error) => {
+    loadingState.phase = "failed";
+    loadingState.ready = false;
+    viewerReadyForReview = false;
+    console.error(error);
+    alert(`Falha ao carregar o modelo: ${error.message}`);
+  });
 }
 
 drop.addEventListener("dragover", (event) => { event.preventDefault(); drop.classList.add("hover"); });
@@ -1031,11 +2576,120 @@ window.addEventListener("keydown", (event) => {
   else if (key === "2") applyView("superior");
   else if (key === "3") applyView("direita");
   else if (key === "m") setMeasurementEnabled(!measurementEnabled);
-  else if (key === "c") { clipEnabled.checked = !clipEnabled.checked; updateClipping(); }
+  else if (key === "c") { clipEnabled.checked = !clipEnabled.checked; markReferenceSyncManual(); updateClipping(); }
   else if (key === "escape") setMeasurementEnabled(false);
 });
 
+function setStructureVisibility(role, visible) {
+  const mesh = meshes[role];
+  if (!mesh) return false;
+  animateMeshVisibility(mesh, Boolean(visible));
+  syncStructureControl(
+    role,
+    Boolean(visible),
+    Number(mesh.userData.targetOpacity ?? mesh.material.opacity),
+  );
+  markCustomPreset();
+  return true;
+}
+
+function setStructureOpacity(role, opacity) {
+  const mesh = meshes[role];
+  const item = meshItems[role];
+  if (!mesh || !item) return false;
+  const value = THREE.MathUtils.clamp(Number(opacity), 0, 1);
+  mesh.userData.targetOpacity = value;
+  configureOpacityOcclusion(item, mesh, value);
+  if (mesh.visible) mesh.material.opacity = value;
+  syncStructureControl(role, mesh.visible, value);
+  markCustomPreset();
+  return true;
+}
+
+function setClippingState(state = {}) {
+  if (typeof state.enabled === "boolean") clipEnabled.checked = state.enabled;
+  if (["x", "y", "z"].includes(state.axis)) clipAxis.value = state.axis;
+  if (Number.isFinite(Number(state.position_percent))) {
+    clipPosition.value = String(THREE.MathUtils.clamp(Number(state.position_percent), 0, 100));
+  }
+  if (typeof state.inverted === "boolean") clipInvert.checked = state.inverted;
+  markReferenceSyncManual();
+  updateClipping();
+}
+
+function getClippingState() {
+  return {
+    enabled: Boolean(clipEnabled.checked),
+    axis: clipAxis.value,
+    position_percent: Number(clipPosition.value),
+    inverted: Boolean(clipInvert.checked),
+  };
+}
+
+function setWireframeEnabled(enabled) {
+  wireframeEnabled = Boolean(enabled);
+  Object.values(meshes).forEach((mesh) => { mesh.material.wireframe = wireframeEnabled; });
+  $("wireframe").classList.toggle("active", wireframeEnabled);
+  $("wireframe").setAttribute("aria-pressed", String(wireframeEnabled));
+  return wireframeEnabled;
+}
+
+function getXrReady() {
+  if (loadingState.phase === "failed") return false;
+  if (viewerReadyForReview) return true;
+  return Object.entries(meshes).some(([role, mesh]) => (
+    mesh?.visible && meshItems[role] && meshCategory(meshItems[role]) === "organ"
+  ));
+}
+
 window.__argos = {
   meshes, scene, renderer, camera, THREE,
-  applyView, clearMeasurements, updateClipping,
+  group, measurementGroup, meshItems,
+  applyView, applyPreset, applyInitialPreset, applyAnatomicalView,
+  saveCurrentView, restoreSavedView, measureSelectedStructure3d,
+  focusSelectedStructure, isolateSelectedStructure, restoreSelectedContext,
+  clearMeasurements, updateClipping, syncReferenceToClipping,
+  selectStructure, clearStructureSelection, handleMeasurementPoint,
+  setMeasurementEnabled, setStructureVisibility, setStructureOpacity, setClippingState, getClippingState,
+  setXrPresentationActive, stabilizeXrScene,
+  setWireframeEnabled, setReferenceViewForXR, stepReferenceFrame, setReferenceSyncEnabled,
+  getReferenceState, setReviewChecklistItem, setCandidateReviewDecision, getReviewState,
+  submitApproval,
+  getMeasurementEnabled: () => measurementEnabled,
+  getWireframeEnabled: () => wireframeEnabled,
+  getSelectedRole: () => selectedRole,
+  getStructureRoles: () => Object.keys(meshes),
+  getStructureLabel: (role) => meshItems[role]?.label || role,
+  getStructureCategory: (role) => meshItems[role] ? meshCategory(meshItems[role]) : null,
+  getSavedViews: () => savedViews.slice(0, MAX_SAVED_VIEWS).map(savedViewPayload),
+  getManifest: () => currentManifest,
+  getRgbPanelCatalog,
+  getSceneRadius: () => sceneRadius,
+  getSceneBounds: () => sceneBounds.clone(),
+  getViewerReady: () => viewerReadyForReview,
+  getXrReady,
+  setOrbitEnabled: (enabled) => { orbit.enabled = Boolean(enabled); },
+  getLoadingState: () => ({ ...loadingState }),
+  VIEWER_PRESETS, DEFAULT_VISUAL_PRESET,
 };
+
+initializeOrenXR(window.__argos).catch((error) => {
+  console.warn("WebXR opcional indisponível:", error);
+  const entry = document.getElementById("xr-entry");
+  const status = document.getElementById("xr-status");
+  if (entry) {
+    entry.hidden = false;
+    entry.disabled = false;
+    entry.textContent = "Recarregar acesso ao Meta Quest";
+    entry.addEventListener("click", () => window.location.reload(), { once: true });
+  }
+  if (status) status.textContent = `Falha ao preparar WebXR: ${error.message}. Toque para recarregar.`;
+  const job = new URLSearchParams(location.search).get("job");
+  if (job) fetch(`/api/jobs/${encodeURIComponent(job)}/xr-client-event`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true,
+    body: JSON.stringify({
+      event: "session_failed", mode: "unknown", error_name: String(error?.name || "InitError").slice(0, 80),
+      message: String(error?.message || error).slice(0, 300),
+    }),
+  }).catch(() => {});
+});

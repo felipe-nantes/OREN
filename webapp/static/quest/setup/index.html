@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>OREN — Preparar realidade aumentada</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #071018; color: #eef7f5; }
+    main { width: min(42rem, 88vw); padding: 2rem; border: 1px solid #284758; border-radius: 1.5rem; background: #101e29; }
+    h1 { margin-top: 0; font-size: 1.65rem; }
+    p, li { color: #c4d4d9; line-height: 1.55; }
+    code { display: block; padding: .85rem; border-radius: .7rem; background: #071018; color: #83efd5; overflow-wrap: anywhere; }
+    button { width: 100%; margin-top: 1rem; padding: 1rem; border: 0; border-radius: .8rem; background: #0b8f72; color: white; font-weight: 700; font-size: 1rem; }
+    #diagnostic { color: #9bcbd8; font-weight: 650; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Preparar realidade aumentada</h1>
+    <p id="diagnostic">Verificando o Quest Browser…</p>
+    <ol>
+      <li>Abra uma nova aba e digite:</li>
+    </ol>
+    <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code>
+    <ol start="2">
+      <li>Em <b>Insecure origins treated as secure</b>, informe exatamente:</li>
+    </ol>
+    <code id="origin"></code>
+    <ol start="3">
+      <li>Selecione <b>Enabled</b> e pressione <b>Relaunch</b>.</li>
+      <li>Após o navegador reabrir, volte a <b id="return-address"></b>.</li>
+    </ol>
+    <button id="retry" type="button">Testar novamente agora</button>
+  </main>
+  <script>
+    const diagnostic = document.getElementById("diagnostic");
+    const origin = document.getElementById("origin");
+    origin.textContent = window.location.origin;
+    document.getElementById("return-address").textContent = `${window.location.host}/quest`;
+    const ready = Boolean(window.isSecureContext && navigator.xr);
+    diagnostic.textContent = ready
+      ? "WebXR foi liberado. Você já pode voltar ao caso."
+      : `WebXR ainda está bloqueado para ${window.location.origin}.`;
+    document.getElementById("retry").addEventListener("click", () => {
+      let target = "/quest/";
+      try { target = sessionStorage.getItem("oren:xr-return-url") || target; } catch (_error) { /* opcional */ }
+      window.location.replace(target);
+    });
+  </script>
+</body>
+</html>

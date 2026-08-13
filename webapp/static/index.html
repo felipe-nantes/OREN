@@ -72,6 +72,16 @@
             <select id="backendSelect"></select>
             <div class="small" id="backendHint"></div>
           </div>
+          <div class="note hidden" id="enhanced3dPicker">
+            <label for="enhanced3d">
+              <input id="enhanced3d" type="checkbox" />
+              <b>Usar segmentação 3-D aprimorada (experimental)</b>
+            </label>
+            <div class="small">
+              Em exames multifásicos, melhora apenas o modelo anatômico usando MRSegmentator na fase arterial.
+              Não altera a classificação, os painéis nem o relatório.
+            </div>
+          </div>
           <div class="note">O envio é processado localmente. O exame é des-identificado automaticamente e nenhum dado sai desta máquina.</div>
         </div>
 
@@ -118,6 +128,8 @@ const STEP_LABELS = {recebendo:'Recebendo exame',
 
 STEP_LABELS.modelo_3d='Gerando modelo 3D do fígado';
 
+STEP_LABELS.segmentacao_3d_aprimorada='Gerando segmentação 3-D aprimorada';
+
 // O classificador visual roda no próprio processo do servidor: não há gateway
 // externo cujo estado precise ser exibido.
 
@@ -143,6 +155,7 @@ function fromInput(input){
 }
 
 let polling=null;
+let activeJobId=null;
 // Um único caminho de análise: o classificador visual da Etapa C, que é o de
 // melhor acertividade medida. Não há seleção de modo -- oferecer configurações
 // mais fracas convidaria o usuário a escolher a pior sem ter como saber disso.
@@ -161,6 +174,7 @@ async function startAnalysis(items){
   for(const {file,rel} of dicoms){ fd.append('files', file, file.name); rels.push(rel); }
   fd.append('relpaths', JSON.stringify(rels));
   fd.append('scenario', 'hybrid_supervised');
+  fd.append('enhanced_3d', ($('#enhanced3d') && $('#enhanced3d').checked) ? '1' : '0');
   // Só acompanha o envio quando há mais de um backend pronto; caso contrário o
   // servidor usa o seu padrão e não há escolha a comunicar.
   const escolhido = $('#backendSelect') && $('#backendSelect').value;
@@ -174,6 +188,7 @@ async function startAnalysis(items){
 }
 function setBar(p,label){ $('#bar').style.width=Math.max(5,p)+'%'; if(label) $('#stepLabel').textContent=label; }
 function poll(id){
+  activeJobId=id;
   clearInterval(polling);
   polling=setInterval(async()=>{
     let s;
@@ -190,6 +205,32 @@ function list(arr){ if(!arr||!arr.length) return '<span style="color:var(--mut)"
 function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 function pct(x){ return (x==null||isNaN(x)) ? '—' : (100*Number(x)).toFixed(1)+'%'; }
+
+function addQuestActions(actions, container){
+  if(!activeJobId) return;
+  for(const [role,label] of [['clinician','Gerar link Quest · médico'],['patient','Gerar link Quest · paciente']]){
+    const button=el('button','',label);
+    button.onclick=async()=>{
+      button.disabled=true;
+      try{
+        const response=await fetch('/api/jobs/'+encodeURIComponent(activeJobId)+'/xr-session',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({role,ttl_minutes:30})
+        });
+        const data=await response.json();
+        if(!response.ok) throw new Error(data.detail||'Falha ao criar sessão Quest.');
+        try{ await navigator.clipboard.writeText(data.viewer_url); }catch(_error){}
+        const note=el('div','note');
+        note.innerHTML='<b>Link seguro do Quest (30 min).</b><br><a target="_blank" rel="noopener" href="'
+          +escapeHtml(data.viewer_url)+'">'+escapeHtml(data.viewer_url)+'</a><br>O endereço também foi copiado quando permitido.';
+        container.appendChild(note);
+      }catch(error){
+        container.appendChild(el('div','note',escapeHtml(error.message)));
+      }finally{ button.disabled=false; }
+    };
+    actions.appendChild(button);
+  }
+}
 
 function renderVisualResult(result){
   // O classificador visual responde duas coisas: TEM alteração (positivo/negativo)
@@ -277,6 +318,20 @@ function renderVisualResult(result){
       +u.union_volume_ml.toFixed(0)+' mL.';
     c.appendChild(info);
   }
+  const shadow=result.liver_visualization_shadow||{};
+  if(shadow.status==='APPROVED'||shadow.status==='APPROVED_WITH_WARNING'){
+    const info=el('div','note');
+    info.style.borderLeft='3px solid #39c07f'; info.style.paddingLeft='10px';
+    const fase=((shadow.selection||{}).selected_phase==='arterial')?'fase arterial':'volume representativo';
+    info.innerHTML='<b>Modelo 3-D aprimorado.</b> Segmentação experimental gerada pela '
+      +escapeHtml(fase)+', somente para visualização e revisão humana.';
+    c.appendChild(info);
+  }else if(shadow.status==='failed'){
+    const info=el('div','note');
+    info.style.borderLeft='3px solid #d98324'; info.style.paddingLeft='10px';
+    info.innerHTML='<b>3-D aprimorado indisponível.</b> O visualizador usou automaticamente a máscara anterior.';
+    c.appendChild(info);
+  }
   // Fragmentação: o visualizador isola o corpo principal, e a remoção dos
   // fragmentos precisa ser dita. Caso contrário o usuário vê um fígado limpo
   // sem saber que pedaços foram tirados da cena.
@@ -292,6 +347,7 @@ function renderVisualResult(result){
     const actions=el('div','btns');
     const open=el('button','primary','Visualizar fígado em 3D e revisar');
     open.onclick=()=>{ window.location.href=result.viewer_url; };
+    addQuestActions(actions,c);
     actions.appendChild(open); c.appendChild(actions);
   }else{
     c.appendChild(el('div','note','A triagem foi concluída, mas o modelo 3D não ficou disponível nesta execução.'));
@@ -363,6 +419,7 @@ function renderResult(result){
     const actions=el('div','btns');
     const open=el('button','primary','Visualizar fígado em 3D e revisar');
     open.onclick=()=>{ window.location.href=result.viewer_url; };
+    addQuestActions(actions,c);
     actions.appendChild(open); c.appendChild(actions);
   }else{
     c.appendChild(el('div','note','O relatório foi concluído, mas o modelo 3D não ficou disponível nesta execução.'));
@@ -401,6 +458,14 @@ async function carregarBackends(){
   show($('#backendPicker'), true);
 }
 carregarBackends();
+async function carregarSegmentacao3d(){
+  let dados;
+  try{ dados = await (await fetch('/api/segmentation-visualization')).json(); }catch{ return; }
+  if(!dados.available){ return; }
+  $('#enhanced3d').checked = Boolean(dados.selected_by_default);
+  show($('#enhanced3dPicker'), true);
+}
+carregarSegmentacao3d();
 drop.addEventListener('click',()=>$('#folderInput').click());
 $('#pickFolder').addEventListener('click',()=>$('#folderInput').click());
 $('#pickFiles').addEventListener('click',()=>$('#fileInput').click());

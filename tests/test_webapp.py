@@ -174,6 +174,123 @@ def test_model_endpoints_and_manual_approval(monkeypatch, tmp_path):
     assert saved["review_type"] == "human_visual_review"
 
 
+def test_rgb_panel_catalog_only_serves_authorized_case_panels(monkeypatch, tmp_path):
+    import json
+
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    job_id = "ab1234"
+    case_dir = tmp_path / job_id / "case"
+    panels = case_dir / "panels"
+    outputs = case_dir / "outputs"
+    panels.mkdir(parents=True)
+    outputs.mkdir(parents=True)
+    (outputs / "viewer_manifest.json").write_text(json.dumps({"meshes": []}), "utf-8")
+    first = panels / "medgemma_liver_screening_panel_001_of_002.png"
+    second = panels / "medgemma_liver_screening_panel_002_of_002.png"
+    first.write_bytes(b"png-one")
+    second.write_bytes(b"png-two")
+    (panels / "private.png").write_bytes(b"not-authorized")
+
+    client = TestClient(server.app)
+    catalog = client.get(f"/api/jobs/{job_id}/rgb-panels")
+    assert catalog.status_code == 200
+    payload = catalog.json()
+    assert payload["schema"] == "oren-rgb-panel-catalog-v1"
+    assert payload["count"] == 2
+    assert [item["filename"] for item in payload["panels"]] == [first.name, second.name]
+    assert client.get(payload["panels"][0]["url"]).content == b"png-one"
+    assert client.get(f"/api/jobs/{job_id}/rgb-panels/private.png").status_code == 404
+    assert client.get(f"/api/jobs/{job_id}/rgb-panels/../outputs/viewer_manifest.json").status_code == 404
+
+
+def test_xr_session_is_short_lived_role_scoped_and_restart_resilient(monkeypatch, tmp_path):
+    import json
+
+    from dtwin.core import sha256_of
+
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    job_id = "a1b2c3"
+    outputs = tmp_path / job_id / "case" / "outputs"
+    outputs.mkdir(parents=True)
+    stl = outputs / "figado_orgao.stl"
+    stl.write_bytes(b"solid liver\nendsolid liver\n")
+    manifest = {
+        "meshes": [{
+            "role": "orgao", "stl": stl.name, "color": "#ffffff",
+            "metrics": {"mesh_sha256": sha256_of(stl)},
+        }]
+    }
+    (outputs / "viewer_manifest.json").write_text(json.dumps(manifest), "utf-8")
+    client = TestClient(server.app, base_url="http://192.168.15.8:8082")
+
+    patient = client.post(
+        f"/api/jobs/{job_id}/xr-session", json={"role": "patient", "ttl_minutes": 15}
+    )
+    assert patient.status_code == 200
+    patient_url = patient.json()["viewer_url"]
+    assert patient_url.startswith("http://192.168.15.8:8082/viewer/index.html?")
+    patient_token = patient_url.split("#xr_token=", 1)[1]
+    assert patient_token not in list((outputs / "xr_sessions").iterdir())[0].name
+    assert client.get(f"/api/jobs/{job_id}/xr-session/{patient_token}").json()["role"] == "patient"
+    assert client.post(
+        f"/api/jobs/{job_id}/xr-session/{patient_token}/approval",
+        json={"status": "revision_requested"},
+    ).status_code == 403
+
+    clinician = client.post(
+        f"/api/jobs/{job_id}/xr-session", json={"role": "clinician"}
+    )
+    clinician_token = clinician.json()["viewer_url"].split("#xr_token=", 1)[1]
+    server._jobs.pop(job_id, None)  # simula processo HTTPS reiniciado
+    approved = client.post(
+        f"/api/jobs/{job_id}/xr-session/{clinician_token}/approval",
+        json={"status": "revision_requested"},
+    )
+    assert approved.status_code == 200
+    assert approved.json()["xr_session"]["role"] == "clinician"
+    saved = json.loads((outputs / "approval.json").read_text("utf-8"))
+    assert saved["xr_session"]["schema"] == "oren-xr-session-v1"
+
+
+def test_xr_client_event_accepts_only_bounded_diagnostic_payload(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    case_dir = tmp_path / "ab12cd" / "case"
+    case_dir.mkdir(parents=True)
+    client = TestClient(server.app)
+
+    accepted = client.post(
+        "/api/jobs/ab12cd/xr-client-event",
+        json={
+            "event": "session_failed",
+            "mode": "immersive-ar",
+            "error_name": "InvalidStateError",
+            "message": "XR session could not start",
+        },
+    )
+    assert accepted.status_code == 200
+    assert accepted.json() == {"accepted": True}
+    assert client.post(
+        "/api/jobs/ab12cd/xr-client-event",
+        json={"event": "arbitrary_event", "mode": "immersive-ar"},
+    ).status_code == 422
+
+
+def test_viewer_allowlist_includes_hash_protected_xr_lod(tmp_path):
+    from dtwin.core import sha256_of
+
+    source = tmp_path / "organ.stl"
+    lod = tmp_path / "organ_xr_lod1.stl"
+    source.write_bytes(b"source")
+    lod.write_bytes(b"lod")
+    manifest = {"meshes": [{
+        "role": "orgao", "stl": source.name,
+        "metrics": {"mesh_sha256": sha256_of(source)},
+        "xr_asset": {"stl": lod.name, "sha256": sha256_of(lod)},
+    }]}
+    assets = server._viewer_assets(manifest)
+    assert assets[lod.name]["sha256"] == sha256_of(lod)
+
+
 def test_viewer_v2_checks_assets_and_requires_auditable_review(monkeypatch, tmp_path):
     import json
 
@@ -232,12 +349,52 @@ def test_viewer_v2_checks_assets_and_requires_auditable_review(monkeypatch, tmp_
             },
             "viewer_state": {
                 "active_view": "anterior",
+                "active_preset": "anatomy",
+                "active_anatomical_view": "vascular",
                 "wireframe_enabled": True,
+                "reference_sync_enabled": True,
+                "reference_view": "axial",
+                "reference_frame_index": 7,
+                "selected_role": "orgao",
+                "selection_isolated": True,
+                "saved_views": [{
+                    "bookmark_id": "view-001",
+                    "label": "Vista 1 · Fígado",
+                    "active_view": "anatomical",
+                    "active_preset": "default",
+                    "active_anatomical_view": "liver",
+                    "material_profile": "default",
+                    "selected_role": "orgao",
+                    "selection_isolated": False,
+                    "camera_position_mm": [10.0, 20.0, 30.0],
+                    "camera_target_mm": [0.0, 0.0, 0.0],
+                    "reference_sync_enabled": True,
+                    "reference_view": "axial",
+                    "reference_frame_index": 7,
+                    "clipping": {
+                        "enabled": False, "axis": "z",
+                        "position_percent": 50, "inverted": False,
+                    },
+                    "visible_roles": ["orgao"],
+                    "opacity_by_role": {"orgao": 1.0},
+                }],
+                "compared_saved_view_ids": ["view-001"],
                 "clipping": {
                     "enabled": True, "axis": "z",
                     "position_percent": 42, "inverted": False,
                 },
                 "measurements_mm": [12.5],
+                "structure_dimensions_3d": [{
+                    "role": "orgao",
+                    "label": "Fígado",
+                    "left_right_mm": 145.2,
+                    "anterior_posterior_mm": 88.4,
+                    "superior_inferior_mm": 120.1,
+                    "method": "axis_aligned_lps_bounding_box",
+                    "coordinate_system": "LPS",
+                    "source": "selected_segmentation_mesh",
+                    "approximate": True,
+                }],
                 "visible_roles": ["orgao"],
             },
         },
@@ -247,6 +404,16 @@ def test_viewer_v2_checks_assets_and_requires_auditable_review(monkeypatch, tmp_
     assert saved["review_protocol"] == "argos-viewer-review-v2"
     assert saved["checklist"]["compared_2d_reference"] is True
     assert saved["viewer_state"]["measurements_mm"] == [12.5]
+    assert saved["viewer_state"]["structure_dimensions_3d"][0]["anterior_posterior_mm"] == 88.4
+    assert saved["viewer_state"]["active_preset"] == "anatomy"
+    assert saved["viewer_state"]["reference_sync_enabled"] is True
+    assert saved["viewer_state"]["reference_view"] == "axial"
+    assert saved["viewer_state"]["reference_frame_index"] == 7
+    assert saved["viewer_state"]["selected_role"] == "orgao"
+    assert saved["viewer_state"]["selection_isolated"] is True
+    assert saved["viewer_state"]["active_anatomical_view"] == "vascular"
+    assert saved["viewer_state"]["saved_views"][0]["bookmark_id"] == "view-001"
+    assert saved["viewer_state"]["compared_saved_view_ids"] == ["view-001"]
     assert saved["viewer_manifest_sha256"] == sha256_of(outputs / "viewer_manifest.json")
     assert saved["artifact_hashes"][png.name] == sha256_of(png)
 
@@ -343,6 +510,90 @@ def test_analyze_creates_job_and_status_is_queryable(monkeypatch, tmp_path):
     assert (tmp_path / job_id / "_upload" / "estudo" / "IMG-0001.dcm").is_file()
 
 
+def test_completed_job_state_survives_process_restart(monkeypatch, tmp_path):
+    import json
+
+    from dtwin.core import sha256_of
+
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    job_id = "a0b1c2"
+    outputs = tmp_path / job_id / "case" / "outputs"
+    outputs.mkdir(parents=True)
+    mesh = outputs / "figado_orgao.stl"
+    mesh.write_bytes(b"solid liver\nendsolid liver\n")
+    manifest = {
+        "schema": "argos-viewer-manifest-v2",
+        "meshes": [{
+            "role": "orgao",
+            "stl": mesh.name,
+            "metrics": {"mesh_sha256": sha256_of(mesh)},
+        }],
+    }
+    (outputs / "viewer_manifest.json").write_text(json.dumps(manifest), "utf-8")
+    server._jobs[job_id] = {
+        "state": "processing",
+        "step": "modelo_3d",
+        "progress": 94,
+        "analysis_scenario": "hybrid_supervised",
+        "enhanced_3d": True,
+        "result": None,
+        "approval": {"status": "pending"},
+    }
+    server._set(
+        job_id,
+        state="done",
+        step="concluido",
+        progress=100,
+        result={
+            "status": "concluido",
+            "viewer_ready": True,
+            "viewer_url": f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}",
+        },
+    )
+    assert (outputs / "webapp_job_state.json").is_file()
+
+    server._jobs.pop(job_id)
+    response = TestClient(server.app).get(f"/api/status/{job_id}")
+    assert response.status_code == 200
+    assert response.json()["state"] == "done"
+    assert response.json()["enhanced_3d"] is True
+
+
+def test_completed_job_restore_fails_closed_after_asset_tampering(monkeypatch, tmp_path):
+    import json
+
+    from dtwin.core import sha256_of
+
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    job_id = "d0e1f2"
+    outputs = tmp_path / job_id / "case" / "outputs"
+    outputs.mkdir(parents=True)
+    mesh = outputs / "figado_orgao.stl"
+    mesh.write_bytes(b"original")
+    (outputs / "viewer_manifest.json").write_text(
+        json.dumps({
+            "schema": "argos-viewer-manifest-v2",
+            "meshes": [{
+                "role": "orgao",
+                "stl": mesh.name,
+                "metrics": {"mesh_sha256": sha256_of(mesh)},
+            }],
+        }),
+        "utf-8",
+    )
+    server._jobs[job_id] = {"state": "processing", "result": None}
+    server._set(
+        job_id,
+        state="done",
+        step="concluido",
+        progress=100,
+        result={"status": "concluido", "viewer_ready": True},
+    )
+    server._jobs.pop(job_id)
+    mesh.write_bytes(b"tampered")
+    assert TestClient(server.app).get(f"/api/status/{job_id}").status_code == 404
+
+
 def test_individual_screening_config_recusa_caminho_arbitrario():
     """A resolução de config segue existindo para benchmark e linha de comando,
     onde comparar configurações é o objetivo. Ela não é alcançável pelo exame
@@ -378,6 +629,58 @@ def test_analyze_roda_sempre_o_classificador_visual(monkeypatch, tmp_path):
     assert "medgemma" not in visto
 
 
+def test_analyze_accepts_only_authorized_enhanced_3d_flag(monkeypatch, tmp_path):
+    executable = tmp_path / "mrsegmentator.exe"
+    executable.write_bytes(b"fake")
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(server, "MRSEGMENTATOR_EXE", executable)
+    monkeypatch.setattr(server, "ENHANCED_3D_OPT_IN_ENABLED", True)
+    monkeypatch.setattr(server, "process_visual_job", lambda *a, **k: None)
+    client = TestClient(server.app)
+    accepted = client.post(
+        "/api/analyze",
+        files=[("files", ("IMG-0001.dcm", b"fake", "application/dicom"))],
+        data={"relpaths": '["estudo/IMG-0001.dcm"]', "enhanced_3d": "1"},
+    )
+    assert accepted.status_code == 200
+    payload = accepted.json()
+    assert payload["enhanced_3d"] is True
+    assert server._jobs[payload["job_id"]]["enhanced_3d"] is True
+
+    rejected = client.post(
+        "/api/analyze",
+        files=[("files", ("IMG-0002.dcm", b"fake", "application/dicom"))],
+        data={"enhanced_3d": "../../modelo"},
+    )
+    assert rejected.status_code == 400
+
+
+def test_enhanced_3d_requested_fails_before_processing_when_unavailable(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(server, "ENHANCED_3D_OPT_IN_ENABLED", True)
+    monkeypatch.setattr(server, "MRSEGMENTATOR_EXE", tmp_path / "missing.exe")
+    monkeypatch.setattr(server, "process_visual_job", lambda *a, **k: None)
+    client = TestClient(server.app)
+    response = client.post(
+        "/api/analyze",
+        files=[("files", ("IMG-0001.dcm", b"fake", "application/dicom"))],
+        data={"enhanced_3d": "1"},
+    )
+    assert response.status_code == 409
+    assert "indisponível" in response.json()["detail"]
+
+
+def test_segmentation_visualization_capability_is_fail_closed(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "ENHANCED_3D_OPT_IN_ENABLED", True)
+    monkeypatch.setattr(server, "MRSEGMENTATOR_EXE", tmp_path / "missing.exe")
+    payload = server.segmentation_visualization_capability()
+    assert payload["available"] is False
+    assert payload["selected_by_default"] is False
+    assert payload["classification_immutable"] is True
+
+
 def test_analyze_recusa_pedido_de_modo_mais_fraco(monkeypatch, tmp_path):
     """Recusar é melhor que rebaixar em silêncio: quem pediu outro modo precisa
     saber que não o recebeu, em vez de levar um resultado pior sem perceber."""
@@ -402,6 +705,9 @@ def test_paginas_nao_oferecem_escolha_de_modo():
         assert "data-scenario=" not in page, f"{arquivo} ainda oferece seleção de modo"
     individual = Path("webapp/static/index.html").read_text(encoding="utf-8")
     assert "fd.append('scenario', 'hybrid_supervised')" in individual
+    assert "id=\"enhanced3d\"" in individual
+    assert "fd.append('enhanced_3d'" in individual
+    assert "Não altera a classificação" in individual
 
 
 def test_exame_individual_accepts_dicom_bruto_e_expoe_resolucao_de_fases():
@@ -1616,6 +1922,17 @@ def test_mascara_uniao_e_construida_depois_da_classificacao_no_codigo():
     assert pos_uniao > pos_classificacao, (
         "a união de fases precisa ser construída depois da decisão congelada"
     )
+
+
+def test_shadow_3d_roda_depois_da_classificacao_e_antes_da_malha():
+    import inspect
+
+    fonte = inspect.getsource(server.process_visual_job)
+    pos_classificacao = fonte.index("classify_embeddings(")
+    pos_shadow = fonte.index("_build_enhanced_visualization_shadow(")
+    pos_modelo = fonte.index("_build_model(")
+    assert pos_classificacao < pos_shadow < pos_modelo
+    assert "if UNION_MASK_ENABLED and not shadow_approved" in fonte
 
 
 def test_uniao_de_fases_usa_as_chaves_reais_do_multiphase_ingest(tmp_path, monkeypatch):

@@ -1,5 +1,9 @@
 # Visualizador (modo Pesquisa)
 
+Possui extensão progressiva para Meta Quest 3S/WebXR. Consulte
+`docs/222_META_QUEST_3S_WEBXR_IMPLEMENTADO.md` para HTTPS, perfis, controles e
+LOD auditável. Sem WebXR, o fluxo desktop permanece inalterado.
+
 Visualizador 3D estático (Three.js, sem build) para os STLs gerados pelo pipeline.
 **NÃO destinado a decisão clínica.** Coordenadas LPS.
 
@@ -41,6 +45,23 @@ backend local e persistida no caso como `outputs/approval.json`.
 O visualizador oferece vistas anatômicas nomeadas, controles por estrutura,
 corte ortogonal, modo de malha, régua de superfície, captura PNG, tela cheia e
 referências axial/coronal/sagital da RM com contorno automático.
+
+Os atalhos **Fígado**, **Segmentos**, **Vasos** e **Candidato** aplicam uma
+composição autorizada e enquadram a camada correspondente. Durante a revisão é
+possível salvar até oito marcadores visuais; cada marcador restaura câmera,
+visibilidade, opacidades, corte, referência 2D e estrutura selecionada e é
+persistido no registro de aprovação.
+
+Duas vistas salvas podem ser marcadas como **A** e **B** para comparação lado a
+lado. As miniaturas são capturas locais exclusivas do canvas 3D; pixels da RM
+2D não são incorporados nem enviados ao backend. Clicar em uma miniatura
+restaura a cena correspondente.
+
+Uma estrutura selecionada também pode ser medida em três dimensões LPS:
+esquerda–direita (LR), anterior–posterior ou profundidade (AP) e
+superior–inferior (SI). As dimensões são calculadas sobre a caixa envolvente da
+malha segmentada e permanecem identificadas como medidas automáticas
+aproximadas, não como confirmação clínica.
 
 O painel de qualidade mede a fidelidade **da malha à máscara fonte**; ele não
 mede acurácia clínica da segmentação. Manifestos v2 exigem um checklist de

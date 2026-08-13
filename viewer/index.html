@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OREN — Visualizador 3D</title>
-  <link rel="stylesheet" href="./argos-viewer.css?v=oren-20260803-4" />
+  <link rel="stylesheet" href="./argos-viewer.css?v=oren-20260811-11" />
 </head>
 <body>
   <div id="banner">Modo Pesquisa — não destinado a decisão clínica · Coordenadas LPS</div>
@@ -19,6 +19,21 @@
         <button id="snapshot" type="button" title="Salvar uma captura PNG sem dados identificáveis">Capturar</button>
         <button id="fullscreen" type="button" title="Alternar tela cheia">Tela cheia</button>
       </div>
+      <section id="xr-launcher" class="xr-launcher" aria-label="Visualização imersiva">
+        <div>
+          <strong>Meta Quest 3S</strong>
+          <span id="xr-status" role="status">Verificando compatibilidade WebXR...</span>
+        </div>
+        <label id="xr-profile-row" hidden>
+          Perfil
+          <select id="xr-profile">
+            <option value="clinician">Médico / pesquisador</option>
+            <option value="patient">Paciente / demonstração</option>
+          </select>
+        </label>
+        <label id="xr-mixed-reality-row" hidden><input id="xr-mixed-reality" type="checkbox" /> Mixed reality</label>
+        <button id="xr-entry" type="button" hidden>Entrar no Meta Quest</button>
+      </section>
       <div id="measurement-status" aria-live="polite">Régua desativada.</div>
       <section id="reference-dock" aria-label="Referência bidimensional da ressonância" hidden>
         <header>
@@ -40,6 +55,8 @@
           </div>
           <input id="reference-slider" type="range" min="0" max="0" value="0" step="1" aria-label="Plano da referência 2D" />
           <div id="reference-meta"></div>
+          <label class="reference-sync-row"><input id="reference-sync" type="checkbox" checked /> Sincronizar plano 2D com corte 3D</label>
+          <div id="reference-sync-status" role="status">Pronto para sincronizar ao mover o plano.</div>
           <p>Amarelo: limite do fígado. Âmbar: região candidata automática não confirmada, quando presente. A imagem é apoio de revisão, não um visualizador diagnóstico.</p>
         </div>
       </section>
@@ -56,6 +73,46 @@
         <div class="section-title"><span>Exploração</span><small>estrutura, visibilidade e opacidade</small></div>
         <div id="controls"></div>
       </section>
+      <section id="selection-section" class="panel-section selection-section" hidden>
+        <div class="section-title"><span>Estrutura selecionada</span><small>clique direto no modelo</small></div>
+        <div class="selection-heading"><strong id="selection-name"></strong><span id="selection-category"></span></div>
+        <div id="selection-metrics" class="metric-grid selection-metrics"></div>
+        <p id="selection-warning" class="section-note"></p>
+        <div class="selection-actions" role="group" aria-label="Ações da estrutura selecionada">
+          <button id="selection-focus" type="button" class="secondary-button">Focar estrutura</button>
+          <button id="selection-isolate" type="button" class="secondary-button">Isolar estrutura</button>
+          <button id="selection-dimensions" type="button" class="secondary-button">Medir em 3D</button>
+          <button id="selection-context" type="button" class="secondary-button">Restaurar contexto</button>
+        </div>
+        <div id="selection-action-status" class="selection-action-status" role="status"></div>
+        <div id="selection-dimensions-result" class="selection-dimensions-result" hidden>
+          <strong>Dimensões da malha em LPS</strong>
+          <div id="selection-dimensions-metrics" class="metric-grid selection-dimensions-metrics"></div>
+          <p>LR: esquerda–direita · AP: anterior–posterior (profundidade) · SI: superior–inferior. Medida aproximada da segmentação automática.</p>
+        </div>
+        <button id="selection-clear" type="button" class="secondary-button">Limpar seleção</button>
+      </section>
+      <section id="anatomical-views-section" class="panel-section anatomical-views-section" hidden>
+        <div class="section-title"><span>Vistas anatômicas</span><small>atalhos reproduzíveis</small></div>
+        <div class="anatomical-view-grid" role="group" aria-label="Vistas anatômicas rápidas">
+          <button type="button" class="anatomical-view-button" data-anatomical-view="liver">Fígado</button>
+          <button type="button" class="anatomical-view-button" data-anatomical-view="segments">Segmentos</button>
+          <button type="button" class="anatomical-view-button" data-anatomical-view="vascular">Vasos</button>
+          <button type="button" class="anatomical-view-button" data-anatomical-view="candidate">Candidato</button>
+        </div>
+        <div id="anatomical-view-status" class="anatomical-view-status" role="status"></div>
+        <div class="saved-view-heading">
+          <strong>Marcadores desta revisão</strong>
+          <button id="save-current-view" type="button" class="secondary-button">Salvar vista atual</button>
+        </div>
+        <div id="saved-views" class="saved-views"></div>
+        <div id="saved-view-status" class="selection-action-status" role="status">Nenhuma vista salva.</div>
+        <div id="saved-view-comparison" class="saved-view-comparison" hidden>
+          <div class="saved-view-comparison-heading"><strong>Comparação A/B</strong><span>capturas somente do modelo 3D</span></div>
+          <div id="saved-view-comparison-grid" class="saved-view-comparison-grid"></div>
+          <p id="saved-view-comparison-status">Selecione duas vistas salvas para comparar.</p>
+        </div>
+      </section>
       <section id="clip-section" class="panel-section" hidden>
         <div class="section-title"><span>Plano de corte</span><small>inspeção da superfície</small></div>
         <label class="toggle-row"><input id="clip-enabled" type="checkbox" /> Ativar corte ortogonal</label>
@@ -63,7 +120,7 @@
           <label>Plano<select id="clip-axis"><option value="z">Axial</option><option value="y">Coronal</option><option value="x">Sagital</option></select></label>
           <label class="toggle-row"><input id="clip-invert" type="checkbox" /> Inverter</label>
         </div>
-        <input id="clip-position" type="range" min="0" max="100" value="50" step="1" aria-label="Posição do plano de corte" />
+        <input id="clip-position" type="range" min="0" max="100" value="50" step="0.01" aria-label="Posição do plano de corte" />
         <div id="clip-value">50% do volume</div>
         <p class="section-note">O corte revela superfícies internas, mas não simula ressecção nem preenche tecido.</p>
       </section>
@@ -71,6 +128,15 @@
         <div class="section-title"><span>Qualidade da reconstrução</span><small>malha versus máscara fonte</small></div>
         <div id="quality-summary"></div>
         <div id="quality-cards"></div>
+      </section>
+      <section id="volumetry-section" class="panel-section volumetry-section" hidden>
+        <div class="section-title"><span>Volumetria hepática</span><small>máscara em espaço físico</small></div>
+        <div id="volumetry-hero"></div>
+        <div id="volumetry-range"></div>
+        <div id="volumetry-structures"></div>
+        <div id="volumetry-partition"></div>
+        <div id="volumetry-downloads" class="volumetry-downloads"></div>
+        <p class="section-note">A medida descreve a máscara automática, não comprova acurácia anatômica nem substitui revisão humana.</p>
       </section>
       <section id="relationships-section" class="panel-section" hidden>
         <div class="section-title"><span>Relações espaciais</span><small>medidas exploratórias</small></div>
@@ -114,6 +180,6 @@
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.js" } }
   </script>
-  <script type="module" src="./app.js?v=oren-20260803-5"></script>
+  <script type="module" src="./app.js?v=oren-20260812-44"></script>
 </body>
 </html>

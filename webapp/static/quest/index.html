@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OREN — Abrindo caso no Meta Quest</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #071018; color: #eef7f5; }
+    main { width: min(34rem, 85vw); padding: 2rem; border: 1px solid #284758; border-radius: 1.5rem; background: #101e29; text-align: center; }
+    h1 { font-size: 1.55rem; margin: 0 0 .75rem; }
+    p { color: #b9cbd2; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>OREN · Meta Quest</h1>
+    <p id="status">Criando uma sessão segura para o caso TCGA-DD-A4NJ…</p>
+  </main>
+  <script>
+    (async () => {
+      const status = document.getElementById("status");
+      try {
+        const response = await fetch("/api/jobs/3304454260a5/xr-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: "clinician", ttl_minutes: 120 }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.viewer_url) throw new Error(result.detail || "Sessão indisponível");
+        status.textContent = "Sessão criada. Abrindo o fígado em mixed reality…";
+        window.location.replace(result.viewer_url);
+      } catch (error) {
+        status.textContent = `Não foi possível abrir o caso: ${error.message}`;
+      }
+    })();
+  </script>
+</body>
+</html>

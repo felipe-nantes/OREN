@@ -38,6 +38,9 @@ webapp = [
     "uvicorn>=0.34",
     "python-multipart>=0.0.9",
 ]
+quest = [
+    "cryptography>=43",
+]
 medgemma = [
     "accelerate>=1.10",
     "bitsandbytes>=0.48",

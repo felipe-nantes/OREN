@@ -19,6 +19,7 @@ o uso clínico exige a revisão humana real do painel.
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import logging
@@ -26,12 +27,14 @@ import math
 import os
 import platform
 import shutil
+import secrets
+import socket
 import subprocess
 import sys
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
 from urllib.request import urlopen
@@ -263,6 +266,36 @@ CANDIDATE_TIMEOUT = int(os.environ.get("WEBAPP_CANDIDATE_TIMEOUT", "95"))
 # fase que estoura o tempo é só excluída da união, nunca falha o exame.
 UNION_PHASE_TIMEOUT = int(os.environ.get("WEBAPP_UNION_PHASE_TIMEOUT", "240"))
 UNION_MASK_ENABLED = os.environ.get("WEBAPP_UNION_MASK_ENABLED", "1") == "1"
+SEGMENTATION_VISUALIZATION_CONFIG = REPO / "configs/segmentation_visualization_v2.yaml"
+try:
+    _segmentation_visualization_config = yaml.safe_load(
+        SEGMENTATION_VISUALIZATION_CONFIG.read_text(encoding="utf-8")
+    ) or {}
+except (OSError, yaml.YAMLError):
+    _segmentation_visualization_config = {}
+_authorized_segmentation_backends = {
+    str(item.get("id"))
+    for item in (_segmentation_visualization_config.get("candidate_backends") or [])
+    if isinstance(item, dict) and item.get("enabled") is True
+}
+ENHANCED_3D_OPT_IN_ENABLED = bool(
+    _segmentation_visualization_config.get("enabled")
+    and ((_segmentation_visualization_config.get("webapp") or {}).get(
+        "available_in_individual_exam"
+    ))
+    and "mrsegmentator" in _authorized_segmentation_backends
+)
+_mrsegmentator_environment = REPO / ".venv-mrseg"
+_mrsegmentator_default = _mrsegmentator_environment / (
+    "Scripts/mrsegmentator.exe" if os.name == "nt" else "bin/mrsegmentator"
+)
+# The Windows installation intentionally uses its isolated .venv-mrseg.  A
+# container installs the same executable system-wide and declares its absolute
+# path explicitly.  Browser input can never influence this value.
+MRSEGMENTATOR_EXE = Path(
+    os.environ.get("WEBAPP_MRSEGMENTATOR_EXE", str(_mrsegmentator_default))
+).resolve()
+ENHANCED_3D_TIMEOUT = int(os.environ.get("WEBAPP_ENHANCED_3D_TIMEOUT", "180"))
 # O Starlette limita uploads multipart a 1000 arquivos por padrão (proteção
 # genérica contra DoS). Um dataset de benchmark real (muitos exames, cada um com
 # centenas/milhares de fatias DICOM) estoura isso com facilidade. O servidor só
@@ -286,9 +319,17 @@ _medgemma_screening_lock = threading.Lock()
 
 
 def _set(job_id: str, **kw) -> None:
+    completed_snapshot = None
     with _lock:
         if job_id in _jobs:
             _jobs[job_id].update(**kw)
+            if _jobs[job_id].get("state") == "done":
+                completed_snapshot = dict(_jobs[job_id])
+    if completed_snapshot is not None:
+        try:
+            _persist_completed_job_state(job_id, completed_snapshot)
+        except Exception:  # noqa: BLE001
+            log.exception("Job %s: falha ao persistir estado final", job_id)
 
 
 def _set_benchmark(benchmark_id: str, **kw) -> None:
@@ -746,6 +787,18 @@ def _viewer_assets(manifest: dict) -> dict[str, dict[str, str | None]]:
             "media_type": "model/stl",
             "sha256": metrics.get("mesh_sha256") if isinstance(metrics, dict) else None,
         }
+        xr_asset = item.get("xr_asset")
+        if isinstance(xr_asset, dict):
+            xr_filename = xr_asset.get("stl")
+            if (
+                isinstance(xr_filename, str)
+                and Path(xr_filename).name == xr_filename
+                and xr_filename.lower().endswith(".stl")
+            ):
+                assets[xr_filename] = {
+                    "media_type": "model/stl",
+                    "sha256": xr_asset.get("sha256"),
+                }
     views = (manifest.get("reference_images") or {}).get("views", {})
     if isinstance(views, dict):
         for view in views.values():
@@ -764,6 +817,30 @@ def _viewer_assets(manifest: dict) -> dict[str, dict[str, str | None]]:
                         "media_type": "image/png",
                         "sha256": frame.get("sha256"),
                     }
+    volumetry = manifest.get("volumetry")
+    if isinstance(volumetry, dict):
+        artifacts = volumetry.get("artifacts")
+        if isinstance(artifacts, dict):
+            json_name = artifacts.get("json")
+            csv_name = artifacts.get("csv")
+            if (
+                isinstance(json_name, str)
+                and Path(json_name).name == json_name
+                and json_name.lower().endswith(".json")
+            ):
+                assets[json_name] = {
+                    "media_type": "application/json",
+                    "sha256": None,
+                }
+            if (
+                isinstance(csv_name, str)
+                and Path(csv_name).name == csv_name
+                and csv_name.lower().endswith(".csv")
+            ):
+                assets[csv_name] = {
+                    "media_type": "text/csv; charset=utf-8",
+                    "sha256": artifacts.get("csv_sha256"),
+                }
     return assets
 
 
@@ -780,6 +857,21 @@ def _model_done(case_dir: Path) -> bool:
         }
         if not mesh_names or not mesh_names <= set(assets):
             return False
+        volumetry = manifest.get("volumetry")
+        if isinstance(volumetry, dict):
+            artifacts = volumetry.get("artifacts") or {}
+            json_name = artifacts.get("json")
+            csv_name = artifacts.get("csv")
+            if not all(
+                isinstance(name, str) and Path(name).name == name
+                for name in (json_name, csv_name)
+            ):
+                return False
+            persisted_volumetry = json.loads(
+                (manifest_path.parent / json_name).read_text(encoding="utf-8")
+            )
+            if persisted_volumetry != volumetry:
+                return False
         for filename, spec in assets.items():
             path = manifest_path.parent / filename
             if not path.is_file():
@@ -813,6 +905,22 @@ def _build_model(case_dir: Path) -> tuple[bool, str]:
 
 def _mesma_geometria_sitk(a: sitk.Image, b: sitk.Image) -> bool:
     return a.GetSize() == b.GetSize() and a.GetSpacing() == b.GetSpacing() and a.GetOrigin() == b.GetOrigin()
+
+
+def _build_enhanced_visualization_shadow(
+    case_dir: Path, phase_paths: dict[str, Path]
+) -> dict[str, Any]:
+    """Run the authorized visualization-only adapter; browser paths are never accepted."""
+
+    from dtwin.segmentation_shadow import run_phase_aware_shadow
+
+    return run_phase_aware_shadow(
+        case_root=case_dir,
+        phase_paths=phase_paths,
+        reference_volume=case_dir / "volume.nii.gz",
+        mrsegmentator_exe=MRSEGMENTATOR_EXE,
+        timeout_seconds=ENHANCED_3D_TIMEOUT,
+    )
 
 
 def _build_union_liver_mask(case_dir: Path, phase_paths: dict[str, Path]) -> dict[str, Any]:
@@ -1160,6 +1268,8 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
     )
 
     case_dir = (WORKSPACE / job_id / "case").resolve()
+    with _lock:
+        enhanced_3d_requested = bool((_jobs.get(job_id) or {}).get("enhanced_3d"))
     started = time.monotonic()
     duracoes: dict[str, float] = {}
     qualidade_mascara: dict | None = None
@@ -1325,8 +1435,33 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
         # venosa -- isto só melhora o que o modelo 3D mostra, nunca o que foi
         # classificado. Roda antes de _build_model para que o estágio de malha
         # já encontre mask_organ_union.nii.gz, se ela existir.
-        uniao_mascara: dict[str, Any] = {"status": "union_disabled"}
-        if UNION_MASK_ENABLED:
+        # A decisão e os painéis já estão congelados. Esta etapa escreve somente
+        # os artefatos v2 de visualização e jamais altera mask_organ.nii.gz.
+        visualizacao_shadow: dict[str, Any] = {"status": "not_requested"}
+        if enhanced_3d_requested:
+            _set(job_id, state="processing", step="segmentacao_3d_aprimorada", progress=91)
+            t0 = time.monotonic()
+            try:
+                visualizacao_shadow = _build_enhanced_visualization_shadow(
+                    case_dir, multiphase.phase_paths
+                )
+            except Exception as exc:  # noqa: BLE001
+                visualizacao_shadow = {
+                    "status": "failed",
+                    "reason": type(exc).__name__,
+                    "fallback": "existing_union_or_venous",
+                    "production_files_written": False,
+                }
+                log.warning("Job visual %s: 3-D aprimorado indisponível (%s)", job_id, exc)
+            duracoes["segmentacao_3d_aprimorada"] = round(time.monotonic() - t0, 4)
+
+        shadow_approved = visualizacao_shadow.get("status") in {
+            "APPROVED", "APPROVED_WITH_WARNING"
+        }
+        uniao_mascara: dict[str, Any] = {
+            "status": "replaced_by_phase_aware_shadow" if shadow_approved else "union_disabled"
+        }
+        if UNION_MASK_ENABLED and not shadow_approved:
             _set(job_id, state="processing", step="mascara_uniao", progress=91)
             t0 = time.monotonic()
             try:
@@ -1368,10 +1503,17 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             "durations_seconds": duracoes,
             "liver_mask_quality": qualidade_mascara,
             "liver_mask_union": uniao_mascara,
+            "liver_visualization_shadow": visualizacao_shadow,
             "liver_volume_warning": _aviso_volume_figado(
                 qualidade_mascara,
-                uniao_mascara.get("union_volume_ml")
-                if uniao_mascara.get("status") == "union_built" else None,
+                (
+                    ((visualizacao_shadow.get("mask") or {}).get("volume_ml"))
+                    if shadow_approved
+                    else (
+                        uniao_mascara.get("union_volume_ml")
+                        if uniao_mascara.get("status") == "union_built" else None
+                    )
+                ),
             ),
             "liver_fragmentation_warning": _aviso_fragmentacao_figado(qualidade_mascara),
             "candidate_localization": candidate_localization,
@@ -1410,6 +1552,169 @@ def _case_dir_for_job(job_id: str) -> Path:
     return (WORKSPACE / job_id / "case").resolve()
 
 
+def _completed_job_state_path(job_id: str) -> Path:
+    return _case_dir_for_job(job_id) / "outputs" / "webapp_job_state.json"
+
+
+def _persist_completed_job_state(job_id: str, job: dict[str, Any]) -> Path:
+    """Persist a completed webapp state atomically beside its artifacts."""
+    if job.get("state") != "done":
+        raise ValueError("only completed jobs may be persisted")
+    allowed = {
+        "state", "step", "progress", "analysis_scenario", "enhanced_3d",
+        "result", "approval", "operational_timing", "operational_timing_artifact",
+        "viewer_error",
+    }
+    payload = {key: job.get(key) for key in allowed if key in job}
+    payload.update(
+        schema="oren-webapp-completed-job-v1",
+        job_id=job_id,
+        persisted_at=datetime.now(timezone.utc).isoformat(),
+    )
+    path = _completed_job_state_path(job_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    temporary.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False, default=str) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+    return path
+
+
+def _legacy_completed_job_from_artifacts(job_id: str) -> dict[str, Any] | None:
+    """Migrate a pre-persistence completed job without fabricating analysis data."""
+    case_dir = _case_dir_for_job(job_id)
+    if not _model_done(case_dir):
+        return None
+    manifest_path = case_dir / "outputs" / "viewer_manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    candidate = manifest.get("candidate_region") or {}
+    request = candidate.get("request") or {}
+    raw_prediction = str(request.get("prediction") or "INCONCLUSIVE").upper()
+    prediction = {
+        "POSITIVE": "POSITIVA",
+        "NEGATIVE": "NEGATIVA",
+        "INCONCLUSIVE": "INCONCLUSIVA",
+    }.get(raw_prediction, raw_prediction)
+    approval_path = case_dir / "outputs" / "approval.json"
+    approval: dict[str, Any] = {"status": "pending"}
+    if approval_path.is_file():
+        try:
+            loaded = json.loads(approval_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                approval = loaded
+        except (OSError, json.JSONDecodeError):
+            pass
+    result = {
+        "status": "concluido",
+        "analysis_scenario": "recovered_legacy_completed_job",
+        "prediction": prediction,
+        "visual_score": request.get("visual_score"),
+        "visual_threshold": request.get("visual_threshold"),
+        "panel_count": len(_rgb_panel_files(job_id)),
+        "candidate_localization": candidate or None,
+        "viewer_ready": True,
+        "viewer_url": f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}",
+        "approval": approval,
+        "requires_human_review": True,
+        "research_only": True,
+        "clinical_use_allowed": False,
+        "disclaimer": DISCLAIMER,
+        "restored_from_artifacts": True,
+    }
+    return {
+        "state": "done",
+        "step": "concluido",
+        "progress": 100,
+        "analysis_scenario": result["analysis_scenario"],
+        "enhanced_3d": False,
+        "result": result,
+        "approval": approval,
+    }
+
+
+def _restore_completed_job(job_id: str) -> dict[str, Any] | None:
+    path = _completed_job_state_path(job_id)
+    restored: dict[str, Any] | None = None
+    if path.is_file():
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if (
+                isinstance(payload, dict)
+                and payload.get("schema") == "oren-webapp-completed-job-v1"
+                and payload.get("job_id") == job_id
+                and payload.get("state") == "done"
+                and isinstance(payload.get("result"), dict)
+            ):
+                result = payload["result"]
+                if not result.get("viewer_ready") or _model_done(_case_dir_for_job(job_id)):
+                    restored = payload
+        except (OSError, json.JSONDecodeError):
+            restored = None
+    if restored is None:
+        restored = _legacy_completed_job_from_artifacts(job_id)
+        if restored is not None:
+            _persist_completed_job_state(job_id, restored)
+    if restored is None:
+        return None
+    with _lock:
+        existing = _jobs.get(job_id)
+        if existing is None:
+            _jobs[job_id] = restored
+            existing = _jobs[job_id]
+    return existing
+
+
+def _xr_session_path(case_dir: Path, token: str) -> Path:
+    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return case_dir / "outputs" / "xr_sessions" / f"{digest}.json"
+
+
+def _read_xr_session(job_id: str, token: str) -> dict[str, Any]:
+    if not token or len(token) > 256:
+        raise HTTPException(status_code=401, detail="Sessao XR invalida.")
+    case_dir = _case_dir_for_job(job_id)
+    path = _xr_session_path(case_dir, token)
+    try:
+        session = json.loads(path.read_text("utf-8"))
+        expires_at = datetime.fromisoformat(str(session["expires_at"]))
+    except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=401, detail="Sessao XR invalida.") from exc
+    if session.get("job_id") != job_id or expires_at <= datetime.now(timezone.utc):
+        path.unlink(missing_ok=True)
+        raise HTTPException(status_code=401, detail="Sessao XR expirada.")
+    return session
+
+
+def _quest_base_url(request: Request) -> str:
+    configured = os.environ.get("OREN_QUEST_BASE_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+    hostname = request.url.hostname or "127.0.0.1"
+    request_port = request.url.port
+    # Quando a sessão nasce no próprio atalho aberto pelo Quest, preservar a
+    # origem que já provou estar acessível. Forçar HTTPS:8443 aqui fazia o
+    # navegador abandonar o servidor HTTP:8082 funcional após a tela de loading.
+    if hostname not in {"127.0.0.1", "localhost", "::1"}:
+        default_port = 443 if request.url.scheme == "https" else 80
+        port_suffix = f":{request_port}" if request_port and request_port != default_port else ""
+        return f"{request.url.scheme}://{hostname}{port_suffix}"
+    if hostname in {"127.0.0.1", "localhost", "::1"}:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            probe.connect(("10.255.255.255", 1))
+            hostname = str(probe.getsockname()[0])
+        except OSError:
+            hostname = "127.0.0.1"
+        finally:
+            probe.close()
+    return f"https://{hostname}:{int(os.environ.get('OREN_QUEST_PORT', '8443'))}"
+
+
 class ReviewChecklistPayload(BaseModel):
     inspected_3d_contour: bool = False
     compared_2d_reference: bool = False
@@ -1424,11 +1729,66 @@ class ClippingStatePayload(BaseModel):
     inverted: bool = False
 
 
+class ViewerSavedViewPayload(BaseModel):
+    bookmark_id: str = Field(max_length=24, pattern=r"^view-[0-9]{3}$")
+    label: str = Field(min_length=1, max_length=96)
+    active_view: Literal[
+        "padrao", "anterior", "superior", "direita", "focus", "anatomical", "saved"
+    ] = "saved"
+    active_preset: Literal[
+        "custom", "default", "surface", "realistic", "anatomy", "triage", "segments"
+    ] = "custom"
+    active_anatomical_view: Literal[
+        "none", "liver", "segments", "vascular", "candidate"
+    ] = "none"
+    material_profile: Literal["default", "anatomy", "triage", "segments"] = "default"
+    selected_role: str | None = Field(default=None, max_length=64, pattern=r"^[a-z0-9_]+$")
+    selection_isolated: bool = False
+    camera_position_mm: list[float] = Field(min_length=3, max_length=3)
+    camera_target_mm: list[float] = Field(min_length=3, max_length=3)
+    reference_sync_enabled: bool = True
+    reference_view: Literal["axial", "coronal", "sagittal"] = "axial"
+    reference_frame_index: int = Field(default=0, ge=0)
+    clipping: ClippingStatePayload = Field(default_factory=ClippingStatePayload)
+    visible_roles: list[str] = Field(default_factory=list, max_length=64)
+    opacity_by_role: dict[str, float] = Field(default_factory=dict)
+
+
+class StructureDimensions3DPayload(BaseModel):
+    role: str = Field(max_length=64, pattern=r"^[a-z0-9_]+$")
+    label: str = Field(min_length=1, max_length=96)
+    left_right_mm: float = Field(gt=0, le=5000)
+    anterior_posterior_mm: float = Field(gt=0, le=5000)
+    superior_inferior_mm: float = Field(gt=0, le=5000)
+    method: Literal["axis_aligned_lps_bounding_box"] = "axis_aligned_lps_bounding_box"
+    coordinate_system: Literal["LPS"] = "LPS"
+    source: Literal["selected_segmentation_mesh"] = "selected_segmentation_mesh"
+    approximate: Literal[True] = True
+
+
 class ViewerStatePayload(BaseModel):
-    active_view: Literal["padrao", "anterior", "superior", "direita"] = "padrao"
+    active_view: Literal[
+        "padrao", "anterior", "superior", "direita", "focus", "anatomical", "saved"
+    ] = "padrao"
+    active_preset: Literal[
+        "custom", "default", "surface", "realistic", "anatomy", "triage", "segments"
+    ] = "custom"
+    active_anatomical_view: Literal[
+        "none", "liver", "segments", "vascular", "candidate"
+    ] = "none"
     wireframe_enabled: bool = False
+    reference_sync_enabled: bool = True
+    reference_view: Literal["axial", "coronal", "sagittal"] = "axial"
+    reference_frame_index: int = Field(default=0, ge=0)
+    selected_role: str | None = Field(default=None, max_length=64, pattern=r"^[a-z0-9_]+$")
+    selection_isolated: bool = False
+    saved_views: list[ViewerSavedViewPayload] = Field(default_factory=list, max_length=8)
+    compared_saved_view_ids: list[str] = Field(default_factory=list, max_length=2)
     clipping: ClippingStatePayload | None = None
     measurements_mm: list[float] = Field(default_factory=list)
+    structure_dimensions_3d: list[StructureDimensions3DPayload] = Field(
+        default_factory=list, max_length=16
+    )
     visible_roles: list[str] = Field(default_factory=list)
 
 
@@ -1439,6 +1799,20 @@ class ApprovalPayload(BaseModel):
     candidate_review_decision: Literal[
         "accepted_as_region_of_interest", "rejected", "needs_correction"
     ] | None = None
+
+
+class XRSessionRequest(BaseModel):
+    role: Literal["patient", "clinician"] = "clinician"
+    ttl_minutes: int = Field(default=30, ge=5, le=120)
+
+
+class XRClientEventPayload(BaseModel):
+    event: Literal[
+        "viewer_ready", "entry_click", "session_requested", "session_started", "session_failed"
+    ]
+    mode: Literal["immersive-ar", "immersive-vr", "unknown"] = "unknown"
+    error_name: str | None = Field(default=None, max_length=80)
+    message: str | None = Field(default=None, max_length=300)
 
 
 def _run_delayed_medsiglip_advisory(
@@ -2630,6 +3004,22 @@ def medgemma_backends() -> dict:
     }
 
 
+@app.get("/api/segmentation-visualization")
+def segmentation_visualization_capability() -> dict:
+    available = bool(ENHANCED_3D_OPT_IN_ENABLED and MRSEGMENTATOR_EXE.is_file())
+    webapp_config = _segmentation_visualization_config.get("webapp") or {}
+    return {
+        "available": available,
+        "mode": "quality_triggered_secondary_protected_fusion_v1",
+        "selected_by_default": bool(
+            available and webapp_config.get("selected_by_default") is True
+        ),
+        "scope": "visualization_only",
+        "classification_immutable": True,
+        "research_only": True,
+    }
+
+
 @app.post("/api/analyze")
 async def analyze(request: Request) -> dict:
     form = await _upload_form(request)
@@ -2650,6 +3040,17 @@ async def analyze(request: Request) -> dict:
             ),
         )
     scenario = INDIVIDUAL_SCREENING_MODE
+    enhanced_raw = form.get("enhanced_3d")
+    if enhanced_raw is not None and str(enhanced_raw) not in {"0", "1"}:
+        raise HTTPException(status_code=400, detail="Opção de 3-D aprimorado inválida.")
+    enhanced_3d = str(enhanced_raw or "0") == "1"
+    if enhanced_3d and not (
+        ENHANCED_3D_OPT_IN_ENABLED and MRSEGMENTATOR_EXE.is_file()
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Segmentação 3-D aprimorada indisponível neste ambiente.",
+        )
     # A escolha de backend MedGemma NÃO é escolha de cenário: ela só tem efeito
     # se o exame cair no fallback monofásico. Um id não registrado é recusado
     # aqui, antes de gastar segmentação, em vez de rebaixado em silêncio.
@@ -2681,11 +3082,16 @@ async def analyze(request: Request) -> dict:
             "state": "queued", "step": "recebendo", "progress": 5, "result": None,
             "analysis_scenario": scenario,
             "monophase_medgemma_config": monophase_config,
+            "enhanced_3d": enhanced_3d,
         }
     threading.Thread(
         target=process_visual_job, args=(job_id, raw_dir), daemon=True
     ).start()
-    return {"job_id": job_id, "analysis_scenario": scenario}
+    return {
+        "job_id": job_id,
+        "analysis_scenario": scenario,
+        "enhanced_3d": enhanced_3d,
+    }
 
 
 @app.get("/api/status/{job_id}")
@@ -2693,12 +3099,15 @@ def status(job_id: str) -> dict:
     with _lock:
         job = _jobs.get(job_id)
     if not job:
+        job = _restore_completed_job(job_id)
+    if not job:
         raise HTTPException(status_code=404, detail="Job não encontrado.")
     return {
         "state": job["state"],
         "step": job["step"],
         "progress": job["progress"],
         "analysis_scenario": job.get("analysis_scenario"),
+        "enhanced_3d": bool(job.get("enhanced_3d")),
         "result": job["result"] if job["state"] == "done" else None,
         "approval": job.get("approval"),
         "operational_timing": job.get("operational_timing"),
@@ -2828,12 +3237,123 @@ def benchmark_report_csv(benchmark_id: str):
     )
 
 
+@app.post("/api/jobs/{job_id}/xr-session")
+def create_xr_session(job_id: str, payload: XRSessionRequest, request: Request) -> dict:
+    """Issue a short-lived, revocable link for a Quest session.
+
+    The random secret is kept in the URL fragment, so it is not sent while the
+    viewer shell and model assets load.  Only its SHA-256 is persisted locally.
+    """
+    case_dir = _case_dir_for_job(job_id)
+    if not _model_done(case_dir):
+        raise HTTPException(status_code=409, detail="Modelo 3D ainda nao esta disponivel.")
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    session = {
+        "schema": "oren-xr-session-v1",
+        "job_id": job_id,
+        "role": payload.role,
+        "created_at": now.isoformat(),
+        "expires_at": (now + timedelta(minutes=payload.ttl_minutes)).isoformat(),
+        "research_only": True,
+        "clinical_use_allowed": False,
+    }
+    path = _xr_session_path(case_dir, token)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f".{path.name}.tmp")
+    temp.write_text(json.dumps(session, indent=2, ensure_ascii=False), encoding="utf-8")
+    temp.replace(path)
+    base = _quest_base_url(request)
+    viewer_url = (
+        f"{base}/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}"
+        f"&xr=1&xr_role={payload.role}&xr_build=20260812-44#xr_token={token}"
+    )
+    return {**session, "viewer_url": viewer_url}
+
+
+@app.get("/api/jobs/{job_id}/xr-session/{token}")
+def get_xr_session(job_id: str, token: str) -> dict:
+    return _read_xr_session(job_id, token)
+
+
+@app.post("/api/jobs/{job_id}/xr-client-event")
+def record_xr_client_event(job_id: str, payload: XRClientEventPayload) -> dict:
+    _case_dir_for_job(job_id)  # valida o identificador sem ler dados clínicos
+    log.info(
+        "XR client %s: event=%s mode=%s error=%s message=%s",
+        job_id, payload.event, payload.mode, payload.error_name or "-", payload.message or "-",
+    )
+    return {"accepted": True}
+
+
+@app.post("/api/jobs/{job_id}/xr-session/{token}/approval")
+def approve_model_from_xr(job_id: str, token: str, payload: ApprovalPayload) -> dict:
+    session = _read_xr_session(job_id, token)
+    if session.get("role") != "clinician":
+        raise HTTPException(
+            status_code=403,
+            detail="O perfil de paciente nao pode registrar aprovacao tecnica.",
+        )
+    result = approve_model(job_id, payload)
+    result["xr_session"] = {
+        "schema": session["schema"],
+        "role": session["role"],
+        "created_at": session["created_at"],
+    }
+    approval_path = _case_dir_for_job(job_id) / "outputs" / "approval.json"
+    temp = approval_path.with_name(".approval.json.xr.tmp")
+    temp.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+    temp.replace(approval_path)
+    _set(job_id, approval=result)
+    return result
+
+
 @app.get("/api/jobs/{job_id}/model/viewer_manifest.json")
 def model_manifest(job_id: str):
     path = _case_dir_for_job(job_id) / "outputs" / "viewer_manifest.json"
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Modelo 3D nao disponivel.")
     return FileResponse(path, media_type="application/json")
+
+
+def _rgb_panel_files(job_id: str) -> list[Path]:
+    panel_dir = _case_dir_for_job(job_id) / "panels"
+    if not panel_dir.is_dir():
+        return []
+    return sorted(
+        path for path in panel_dir.glob("medgemma_liver_screening_panel_???_of_???.png")
+        if path.is_file() and path.name == Path(path.name).name
+    )
+
+
+@app.get("/api/jobs/{job_id}/rgb-panels")
+def rgb_panel_catalog(job_id: str) -> dict:
+    panels = _rgb_panel_files(job_id)
+    return {
+        "schema": "oren-rgb-panel-catalog-v1",
+        "job_id": job_id,
+        "count": len(panels),
+        "panels": [
+            {
+                "index": index,
+                "filename": panel.name,
+                "url": f"/api/jobs/{job_id}/rgb-panels/{panel.name}",
+                "sha256": sha256_of(panel),
+            }
+            for index, panel in enumerate(panels, start=1)
+        ],
+    }
+
+
+@app.get("/api/jobs/{job_id}/rgb-panels/{filename}")
+def rgb_panel_file(job_id: str, filename: str):
+    if Path(filename).name != filename:
+        raise HTTPException(status_code=404, detail="Painel RGB nao encontrado.")
+    authorized = {path.name: path for path in _rgb_panel_files(job_id)}
+    path = authorized.get(filename)
+    if path is None:
+        raise HTTPException(status_code=404, detail="Painel RGB nao encontrado.")
+    return FileResponse(path, media_type="image/png")
 
 
 @app.get("/api/jobs/{job_id}/model/{filename}")
@@ -2866,7 +3386,14 @@ def approve_model(job_id: str, payload: ApprovalPayload) -> dict:
     with _lock:
         job = _jobs.get(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job nao encontrado.")
+        # O servidor HTTPS do Quest pode ser iniciado depois do processamento.
+        # Reconstruir somente o estado mínimo evita perder a revisão após restart.
+        with _lock:
+            _jobs[job_id] = {
+                "state": "done", "step": "concluido", "progress": 100,
+                "result": {}, "approval": {"status": "pending"},
+            }
+            job = _jobs[job_id]
     manifest_path = case_dir / "outputs" / "viewer_manifest.json"
     try:
         manifest = json.loads(manifest_path.read_text("utf-8"))
@@ -2902,11 +3429,49 @@ def approve_model(job_id: str, payload: ApprovalPayload) -> dict:
     }
     if len(state.visible_roles) > 64 or any(role not in allowed_roles for role in state.visible_roles):
         raise HTTPException(status_code=422, detail="Estado do visualizador contem estrutura invalida.")
+    bookmark_ids: set[str] = set()
+    for saved_view in state.saved_views:
+        if saved_view.bookmark_id in bookmark_ids:
+            raise HTTPException(status_code=422, detail="Marcador de vista duplicado.")
+        bookmark_ids.add(saved_view.bookmark_id)
+        saved_roles = set(saved_view.visible_roles)
+        opacity_roles = set(saved_view.opacity_by_role)
+        if (
+            not saved_roles.issubset(allowed_roles)
+            or not opacity_roles.issubset(allowed_roles)
+            or (saved_view.selected_role is not None and saved_view.selected_role not in allowed_roles)
+        ):
+            raise HTTPException(status_code=422, detail="Marcador de vista contem estrutura invalida.")
+        camera_values = saved_view.camera_position_mm + saved_view.camera_target_mm
+        if any(not math.isfinite(value) or abs(value) > 100_000 for value in camera_values):
+            raise HTTPException(status_code=422, detail="Camera do marcador de vista invalida.")
+        if any(
+            not math.isfinite(opacity) or not 0 <= opacity <= 1
+            for opacity in saved_view.opacity_by_role.values()
+        ):
+            raise HTTPException(status_code=422, detail="Opacidade do marcador de vista invalida.")
+    if (
+        len(set(state.compared_saved_view_ids)) != len(state.compared_saved_view_ids)
+        or any(bookmark_id not in bookmark_ids for bookmark_id in state.compared_saved_view_ids)
+    ):
+        raise HTTPException(status_code=422, detail="Comparacao de vistas contem marcador invalido.")
     if len(state.measurements_mm) > 20 or any(
         not math.isfinite(value) or value < 0 or value > 5000
         for value in state.measurements_mm
     ):
         raise HTTPException(status_code=422, detail="Medicoes do visualizador invalidas.")
+    measured_roles: set[str] = set()
+    for dimensions in state.structure_dimensions_3d:
+        if dimensions.role not in allowed_roles or dimensions.role in measured_roles:
+            raise HTTPException(status_code=422, detail="Medicao tridimensional contem estrutura invalida.")
+        measured_roles.add(dimensions.role)
+        values = (
+            dimensions.left_right_mm,
+            dimensions.anterior_posterior_mm,
+            dimensions.superior_inferior_mm,
+        )
+        if any(not math.isfinite(value) or not 0 < value <= 5000 for value in values):
+            raise HTTPException(status_code=422, detail="Dimensoes tridimensionais invalidas.")
     clipping = state.clipping or ClippingStatePayload()
     if not math.isfinite(clipping.position_percent) or not 0 <= clipping.position_percent <= 100:
         raise HTTPException(status_code=422, detail="Plano de corte invalido.")
