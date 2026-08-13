@@ -1,0 +1,32 @@
+schema: argos-liver-segmentation-benchmark-config-v2
+status: retrospective_reference_evaluation
+research_only: true
+
+cohort:
+  id: chaos_t1_in_reference_v2
+  root: data/prepared/chaos_v21_blind
+  source_name: t1_in.nii.gz
+  reference_name: liver_mask.nii.gz
+  ground_truth_used_only_after_prediction: true
+
+models:
+  - id: total_mr
+    display_name: TotalSegmentator total_mr
+    color: "#00D8FF"
+    required: true
+    mask_template: experiments/total_mr_vs_chaos_v1/masks/{case_id}.nii.gz
+  - id: mrsegmentator
+    display_name: MRSegmentator
+    color: "#FF3FD2"
+    required: true
+    mask_template: experiments/mrsegmentator_chaos_gpu_fast_v2/masks/{case_id}.nii.gz
+  - id: mrisegmenter_abdomen
+    display_name: MRISegmenter-Abdomen
+    color: "#54E346"
+    required: false
+    label_value: 5
+    mask_template: experiments/mrisegmenter_chaos_v2/masks/{case_id}.nii.gz
+
+output:
+  root: experiments/liver_segmentation_benchmark_chaos_v2
+  generate_gallery: true

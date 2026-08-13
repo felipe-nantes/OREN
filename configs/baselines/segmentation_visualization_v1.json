@@ -1,0 +1,28 @@
+{
+  "contract": {
+    "classification_mask": "mask_organ.nii.gz",
+    "classification_mask_immutable": true,
+    "human_review_required": true,
+    "organ_backend": "totalsegmentator_mri",
+    "organ_task": "total_mr",
+    "research_only": true,
+    "union_phases": [
+      "arterial",
+      "venous",
+      "delayed"
+    ],
+    "visualization_mask_preference": [
+      "mask_organ_union.nii.gz",
+      "mask_organ.nii.gz"
+    ]
+  },
+  "files": {
+    "dtwin/stages.py": "414eae8a5fd6594df5468a2be91121f2e36b2eb5b28098c933f545a6d8e87c8f",
+    "profiles/figado.yaml": "2f4cfb90a40696db37d5a63bdc042ab3bffe8d5d603ab0587c8a61e411638572",
+    "viewer/app.js": "6e45e84ecc6cf8813074676fb87133003694e1d152e52cae7ca056f8ece2e199",
+    "webapp/seg_worker.py": "c6d9f457eb6e53931202c8bfa6547dc09cb9144967b84dde5d705a7b224f272c",
+    "webapp/server.py": "909c2665f069f91664d6bb1222ad1450ebd022535d75b42ca1e63f16b63b9412"
+  },
+  "git_commit": "b7aed9b2eab253c9ae13f673fc9d1048b9926251",
+  "schema": "argos-segmentation-visualization-baseline-v1"
+}

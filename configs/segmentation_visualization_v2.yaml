@@ -1,0 +1,84 @@
+schema: argos-segmentation-visualization-config-v2
+enabled: true
+status: research_default_with_safe_fallback
+
+webapp:
+  available_in_individual_exam: true
+  selected_by_default: true
+  multiphase_only: true
+
+# O webapp carrega somente os gates de disponibilidade desta configuracao. O
+# navegador nao pode escolher executavel, fase, caminhos ou backend.
+scope:
+  purpose: visualization_only
+  research_only: true
+  human_review_required: true
+  may_change_classification_input: false
+
+protected_artifacts:
+  classification_volume: volume.nii.gz
+  classification_mask: mask_organ.nii.gz
+  current_union_mask: mask_organ_union.nii.gz
+  medgemma_report: medgemma_report.json
+
+experimental_artifacts:
+  input_manifest: segmentation_input_manifest_v2.json
+  visualization_mask: mask_organ_visualization_v2.nii.gz
+  quality_manifest: segmentation_quality_manifest_v2.json
+
+input_contract:
+  strategy: native_intensity_preserved
+  store_source_path: false
+  store_dicom_metadata: false
+  require_3d: true
+  require_finite_geometry: true
+  output_grid: classification_volume
+  mask_interpolation: nearest_neighbor
+
+baseline:
+  backend: totalsegmentator_mri
+  task: total_mr
+  classification_mask: mask_organ.nii.gz
+  visualization_preference:
+    - mask_organ_union.nii.gz
+    - mask_organ.nii.gz
+
+candidate_backends:
+  - id: mrsegmentator
+    enabled: true
+    environment: .venv-mrseg
+    version: 2.0.0
+    selection_policy:
+      id: quality_triggered_secondary_protected_fusion_v1
+      preferred_phase: t1_arterial
+      require_preferred_phase_on_reference_grid: true
+      fallback: native_representative_reference
+      adaptive_confirmation:
+        enabled: true
+        secondary_preference: [t1_delayed, t1_venous, native_representative_reference]
+        trigger_only_on_technical_uncertainty: true
+        maximum_secondary_seconds: 55
+        maximum_extension_mm: 12
+        maximum_added_fraction: 0.18
+        reject_new_image_border_contact: true
+  - id: mrisegmenter_abdomen
+    enabled: false
+    environment: isolated_required
+
+promotion_gates:
+  chaos:
+    minimum_median_dice: 0.92
+    minimum_median_dice_gain_vs_total_mr: 0.01
+    minimum_case_dice: 0.80
+    median_volume_ratio_range: [0.90, 1.10]
+  operational:
+    maximum_empty_masks: 0
+    maximum_end_to_end_seconds: 180
+  mesh:
+    maximum_volume_error_percent: 2.0
+    maximum_surface_p95_voxels: 1.0
+
+fallback:
+  backend: totalsegmentator_mri
+  task: total_mr
+  automatic_on_candidate_failure: true

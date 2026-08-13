@@ -169,6 +169,12 @@ class Case:
     @property
     def mask_organ_union(self) -> Path: return self.root / "mask_organ_union.nii.gz"
     @property
+    def mask_organ_visualization_v2(self) -> Path:
+        return self.root / "mask_organ_visualization_v2.nii.gz"
+    @property
+    def segmentation_quality_manifest_v2(self) -> Path:
+        return self.root / "segmentation_quality_manifest_v2.json"
+    @property
     def mask_organ_classified_region_clean(self) -> Path:
         return self.root / "mask_organ_classified_region_clean.nii.gz"
     @property

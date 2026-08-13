@@ -1,0 +1,36 @@
+schema: argos-liver-segmentation-benchmark-config-v2
+status: retrospective_development_reference_evaluation
+research_only: true
+
+cohort:
+  id: liverhccseg_registered_phase_fusion_development_v2
+  root: data/prepared/liverhccseg_v21_blind
+  source_name: t1_venous.nii.gz
+  reference_name: liver_mask.nii.gz
+  ground_truth_used_only_after_prediction: true
+
+models:
+  - id: total_mr
+    display_name: TotalSegmentator total_mr
+    color: "#00D8FF"
+    required: true
+    mask_template: experiments/total_mr_liverhccseg_venous_gpu_full_v2/masks/{case_id}.nii.gz
+  - id: mrsegmentator_venous
+    display_name: MRSegmentator venous
+    color: "#FF3FD2"
+    required: true
+    mask_template: experiments/mrsegmentator_liverhccseg_venous_gpu_fast_v2/masks/{case_id}.nii.gz
+  - id: mrsegmentator_majority2
+    display_name: MRSegmentator registered majority 2/4
+    color: "#54E346"
+    required: true
+    mask_template: experiments/mrsegmentator_liverhccseg_registered_majority2_v2/masks/{case_id}.nii.gz
+  - id: mrsegmentator_guarded_union_fill12
+    display_name: MRSegmentator guarded union + fill
+    color: "#FF9F1C"
+    required: true
+    mask_template: experiments/mrsegmentator_liverhccseg_registered_guarded_union_fill12_v2/masks/{case_id}.nii.gz
+
+output:
+  root: experiments/liver_segmentation_benchmark_liverhccseg_phase_fusion_v2
+  generate_gallery: true

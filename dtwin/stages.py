@@ -47,6 +47,9 @@ from .viewer_artifacts import (
     lesion_segment_overlap,
     nearest_surface_relationships,
 )
+from .segmentation_contract import approved_visualization_mask
+from .volumetry import VolumetryStructure, build_volumetry_manifest
+from .viewer_xr import build_xr_render_asset
 
 log = logging.getLogger("dtwin")
 
@@ -146,6 +149,9 @@ def _fonte_da_malha_do_orgao(case: Case) -> Path:
     (experiments/three_phase_union_v1). Cai para a venosa quando a união não
     existe -- por exemplo no benchmark em lote, que não a constrói.
     """
+    shadow = approved_visualization_mask(case.root)
+    if shadow is not None:
+        return shadow
     return case.mask_organ_union if case.mask_organ_union.is_file() else case.mask_organ
 
 
@@ -500,6 +506,22 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
     task = seg.get("motor_task", "total_mr")
     label = seg["rotulo_alvo"]
     anatomy = _anatomy_structures(profile)
+    anatomy_fast_by_task: dict[str, bool] = {}
+    anatomy_require_complete: dict[str, bool] = {}
+    for task_entry in (profile.get("segmentacao_anatomia") or {}).get("tarefas", []):
+        current_task = str(task_entry.get("motor_task") or "").strip()
+        configured_fast = task_entry.get("fast", fast)
+        if not isinstance(configured_fast, bool):
+            raise PipelineError(
+                f"segmentacao_anatomia.tarefas[{current_task}].fast deve ser booleano."
+            )
+        anatomy_fast_by_task[current_task] = configured_fast
+        require_complete = task_entry.get("require_complete", False)
+        if not isinstance(require_complete, bool):
+            raise PipelineError(
+                f"segmentacao_anatomia.tarefas[{current_task}].require_complete deve ser booleano."
+            )
+        anatomy_require_complete[current_task] = require_complete
 
     try:
         from totalsegmentator.python_api import totalsegmentator
@@ -516,14 +538,25 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
         labels_by_task.setdefault(anatomy_task, set()).add(str(entry["rotulo"]))
     for current_task, labels in labels_by_task.items():
         try:
+            call_kwargs = {
+                "input": str(case.volume),
+                "output": str(case.seg_dir),
+                "task": current_task,
+                "device": device,
+                "fast": (
+                    fast
+                    if current_task == task
+                    else anatomy_fast_by_task.get(current_task, fast)
+                ),
+                "quiet": True,
+            }
+            # A API do TotalSegmentator 2.x aceita roi_subset apenas nas tasks
+            # gerais. Tasks dedicadas (como liver_segments_mr) já têm um
+            # conjunto fechado de classes e abortam se esse argumento chegar.
+            if current_task in {"total", "total_mr"}:
+                call_kwargs["roi_subset"] = sorted(labels)
             totalsegmentator(
-                input=str(case.volume),
-                output=str(case.seg_dir),
-                task=current_task,
-                roi_subset=sorted(labels),
-                device=device,
-                fast=fast,
-                quiet=True,
+                **call_kwargs,
             )
         except Exception as e:  # noqa: BLE001
             if current_task == task:
@@ -552,10 +585,38 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
     save_image(organ_img, case.mask_organ)
     log.info("Estágio 3: órgão '%s' segmentado automaticamente (task=%s).", label, task)
 
+    volume_geometry = read_image(case.volume)
+    anatomy_validity: dict[tuple[str, str], bool] = {}
     for anatomy_task, entry in anatomy:
         role = str(entry["papel"])
         produced = case.seg_dir / f"{entry['rotulo']}.nii.gz"
-        if not produced.exists() or int(array_from(read_image(produced)).sum()) == 0:
+        valid = False
+        if produced.exists():
+            produced_image = read_image(produced)
+            valid = bool(
+                int(array_from(produced_image).sum()) > 0
+                and produced_image.GetSize() == volume_geometry.GetSize()
+                and np.allclose(produced_image.GetSpacing(), volume_geometry.GetSpacing(), atol=1e-6)
+                and np.allclose(produced_image.GetOrigin(), volume_geometry.GetOrigin(), atol=1e-5)
+                and np.allclose(produced_image.GetDirection(), volume_geometry.GetDirection(), atol=1e-6)
+            )
+        anatomy_validity[(anatomy_task, role)] = valid
+
+    incomplete_tasks = {
+        anatomy_task
+        for anatomy_task, _ in anatomy
+        if anatomy_require_complete.get(anatomy_task, False)
+        and not all(
+            anatomy_validity[(task_name, str(task_entry["papel"]))]
+            for task_name, task_entry in anatomy
+            if task_name == anatomy_task
+        )
+    }
+
+    for anatomy_task, entry in anatomy:
+        role = str(entry["papel"])
+        produced = case.seg_dir / f"{entry['rotulo']}.nii.gz"
+        if anatomy_task in incomplete_tasks or not anatomy_validity[(anatomy_task, role)]:
             _remove_anatomy_artifacts(case, role)
             log.info("Estágio 3: anatomia opcional ausente (%s/%s).", anatomy_task, role)
             continue
@@ -940,9 +1001,13 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
     viewer_cfg = profile.get("viewer", {}) or {}
     quality_cfg = viewer_cfg.get("quality_metrics", {}) or {}
     anatomy = _anatomy_structures(profile)
-    has_couinaud = any(
-        str(entry["papel"]).startswith("couinaud_") and case.anatomy_mesh(str(entry["papel"])).exists()
+    couinaud_roles = [
+        str(entry["papel"])
         for _, entry in anatomy
+        if str(entry["papel"]).startswith("couinaud_")
+    ]
+    has_couinaud = bool(couinaud_roles) and all(
+        case.anatomy_mesh(role).exists() for role in couinaud_roles
     )
     plan = [
         {
@@ -1027,6 +1092,20 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
                 quality_cfg.get("max_surface_p95_voxels", 1.0)
             ),
         )
+        xr_asset = build_xr_render_asset(
+            mesh=mesh,
+            source_stl=stl,
+            source_metrics=metrics,
+            mask_path=Path(spec["mask"]),
+            output_path=case.outputs / f"{profile['id']}_{role}_xr_lod1.stl",
+            material=str(spec["material"]),
+            max_volume_error_percent=float(
+                quality_cfg.get("max_volume_error_percent", 2.0)
+            ),
+            max_surface_p95_voxels=float(
+                quality_cfg.get("max_surface_p95_voxels", 1.0)
+            ),
+        )
         meshes_by_role[role] = mesh
         items.append({
             "role": role,
@@ -1037,6 +1116,7 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
             "opacity": spec["opacity"],
             "default_visible": spec["default_visible"],
             "metrics": metrics,
+            "xr_asset": xr_asset,
         })
         log.info("Estágio 7: STL exportado -> %s", stl)
 
@@ -1086,6 +1166,26 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
     candidate_region = None
     if case.candidate_manifest.is_file():
         candidate_region = json.loads(case.candidate_manifest.read_text("utf-8"))
+    volumetry_structures = [
+        VolumetryStructure(
+            role=str(item["role"]),
+            label=str(item["label"]),
+            mask_path=Path(next(spec["mask"] for spec in plan if spec["role"] == item["role"])),
+            material=str(item["material"]),
+        )
+        for item in items
+    ]
+    volumetry = build_volumetry_manifest(
+        reference_volume=case.volume,
+        structures=volumetry_structures,
+        output_dir=case.outputs,
+        case_id=manifest.get("case_id"),
+        segmentation_quality=(
+            case.segmentation_quality_manifest_v2
+            if case.segmentation_quality_manifest_v2.is_file()
+            else None
+        ),
+    )
     viewer = {
         "schema": "argos-viewer-manifest-v2",
         "schema_version": 2,
@@ -1107,13 +1207,21 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
         "lesion_context": lesion_context,
         "candidate_context": candidate_context,
         "candidate_region": candidate_region,
+        "volumetry": volumetry,
         "viewer_features": {
+            "default_visual_preset": "default",
             "orthogonal_clipping": True,
             "surface_distance_measurement": True,
             "wireframe_inspection": True,
             "reference_mr_stack": True,
             "screenshot": True,
             "unconfirmed_candidate_review": candidate_region is not None,
+            "physical_mask_volumetry": True,
+            "webxr": True,
+            "webxr_schema": "oren-webxr-viewer-v1",
+            "webxr_modes": ["immersive-vr", "immersive-ar"],
+            "webxr_optional_features": ["local-floor", "hand-tracking"],
+            "webxr_measurement_authority": "binary_mask_in_physical_space",
         },
         "review_requirements": {
             "inspect_3d_contour": True,

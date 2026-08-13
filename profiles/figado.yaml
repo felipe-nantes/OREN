@@ -36,6 +36,8 @@ segmentacao_anatomia:
   habilitada: true
   tarefas:
     - motor_task: liver_segments_mr
+      fast: false                # esta task dedicada rejeita explicitamente --fast
+      require_complete: true     # publicar Couinaud apenas com I–VIII válidos
       estruturas:
         - {papel: couinaud_i,    rotulo: liver_segment_1, nome: "Segmento Couinaud I",    cor: "#E69F00", material: segment, opacidade: 0.82}
         - {papel: couinaud_ii,   rotulo: liver_segment_2, nome: "Segmento Couinaud II",   cor: "#56B4E9", material: segment, opacidade: 0.82}

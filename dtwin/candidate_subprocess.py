@@ -7,6 +7,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from .segmentation_subprocess import prepare_totalsegmentator_environment
+
 
 def run_candidate_subprocess(
     *,
@@ -21,6 +23,7 @@ def run_candidate_subprocess(
     launcher_root.mkdir(parents=True, exist_ok=True)
     launcher = launcher_root / "candidate_worker.py"
     shutil.copyfile(Path(__file__).with_name("candidate_worker.py"), launcher)
+    environment = prepare_totalsegmentator_environment()
     return subprocess.run(
         [
             python_executable or sys.executable,
@@ -31,6 +34,7 @@ def run_candidate_subprocess(
             str(Path(request_path).resolve()),
         ],
         cwd=launcher_root,
+        env=environment,
         capture_output=True,
         text=True,
         timeout=int(timeout_seconds),

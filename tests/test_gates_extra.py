@@ -38,7 +38,12 @@ ANATOMY_PROFILE = {
             },
             {
                 "motor_task": "liver_segments_mr",
-                "estruturas": [{"papel": "couinaud_i", "rotulo": "liver_segment_1"}],
+                "fast": False,
+                "require_complete": True,
+                "estruturas": [
+                    {"papel": "couinaud_i", "rotulo": "liver_segment_1"},
+                    {"papel": "couinaud_ii", "rotulo": "liver_segment_2"},
+                ],
             },
         ],
     },
@@ -85,24 +90,46 @@ def test_stage3_exports_supported_internal_anatomy_without_affecting_liver_gate(
     calls = []
 
     def writer(**kw):
-        calls.append((kw["task"], tuple(kw["roi_subset"])))
+        roi_subset = kw.get("roi_subset")
+        calls.append((kw["task"], tuple(roi_subset) if roi_subset else None, kw["fast"]))
         out = Path(kw["output"])
         vol = read_image(Path(kw["input"]))
         arr = array_from(vol)
-        for index, label in enumerate(kw["roi_subset"]):
+        labels = roi_subset or ["liver_segment_1", "liver_segment_2"]
+        for index, label in enumerate(labels):
             mask = make_sphere_mask(
                 arr.shape, tuple(s // 2 + index for s in arr.shape), max(arr.shape) // 6
             )
             save_image(array_to_image(mask, vol, np.uint8), out / f"{label}.nii.gz")
 
     _install_fake_totalseg(monkeypatch, writer)
-    stage3_segment_organ(synthetic_case, ANATOMY_PROFILE, device="cpu", fast=False)
+    stage3_segment_organ(synthetic_case, ANATOMY_PROFILE, device="cpu", fast=True)
 
-    assert ("total_mr", ("gallbladder", "liver")) in calls
-    assert ("liver_segments_mr", ("liver_segment_1",)) in calls
+    assert ("total_mr", ("gallbladder", "liver"), True) in calls
+    assert ("liver_segments_mr", None, False) in calls
     assert synthetic_case.mask_organ.exists()
     assert synthetic_case.anatomy_mask("vesicula_biliar").exists()
     assert synthetic_case.anatomy_mask("couinaud_i").exists()
+    assert synthetic_case.anatomy_mask("couinaud_ii").exists()
+
+
+def test_stage3_never_publishes_partial_required_anatomy(synthetic_case, monkeypatch):
+    def writer(**kw):
+        out = Path(kw["output"])
+        vol = read_image(Path(kw["input"]))
+        arr = array_from(vol)
+        labels = kw.get("roi_subset") or ["liver_segment_1"]
+        for label in labels:
+            mask = make_sphere_mask(
+                arr.shape, tuple(s // 2 for s in arr.shape), max(arr.shape) // 6
+            )
+            save_image(array_to_image(mask, vol, np.uint8), out / f"{label}.nii.gz")
+
+    _install_fake_totalseg(monkeypatch, writer)
+    stage3_segment_organ(synthetic_case, ANATOMY_PROFILE, device="cpu", fast=True)
+
+    assert not synthetic_case.anatomy_mask("couinaud_i").exists()
+    assert not synthetic_case.anatomy_mask("couinaud_ii").exists()
 
 
 def test_stage3_missing_output_aborts(synthetic_case, monkeypatch):

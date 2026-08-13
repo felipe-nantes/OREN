@@ -20,12 +20,25 @@ def test_finalize_produces_stls_and_manifest(synthetic_case):
     assert organ_stl.exists() and organ_stl.stat().st_size > 0
     assert lesion_stl.exists() and lesion_stl.stat().st_size > 0
     assert manifest.exists()
+    assert (case.outputs / "volumetry_manifest.json").is_file()
+    assert (case.outputs / "volumetry_summary.csv").is_file()
 
     data = json.loads(manifest.read_text(encoding="utf-8"))
     assert data["schema"] == "argos-viewer-manifest-v2"
     assert data["schema_version"] == 2
     assert data["organ"] == "figado"
     assert data["coordinate_system"] == "LPS"
+    assert data["viewer_features"]["default_visual_preset"] == "default"
+    assert data["viewer_features"]["physical_mask_volumetry"] is True
+    assert data["volumetry"]["schema"] == "oren-volumetry-manifest-v1"
+    assert data["volumetry"]["mesh_is_authoritative_for_volume"] is False
+    persisted_volumetry = json.loads(
+        (case.outputs / "volumetry_manifest.json").read_text(encoding="utf-8")
+    )
+    assert persisted_volumetry == data["volumetry"]
+    assert data["volumetry"]["artifacts"]["csv_sha256"] == sha256_of(
+        case.outputs / "volumetry_summary.csv"
+    )
     roles = {m["role"]: m for m in data["meshes"]}
     assert set(roles) == {"orgao", "lesao"}
     # STL refs are relative filenames only (viewer depends on this)
@@ -100,7 +113,9 @@ def test_finalize_exports_internal_anatomy_when_available(synthetic_case):
     assert {"orgao", "lesao", "couinaud_i", "vesicula_biliar"} <= set(roles)
     assert roles["couinaud_i"]["label"] == "Segmento Couinaud I"
     assert roles["couinaud_i"]["material"] == "segment"
-    assert roles["orgao"]["default_visible"] is False
+    # Um segmento isolado é preservado para auditoria, mas não pode ativar a
+    # composição Couinaud como se I–VIII estivessem completos.
+    assert roles["orgao"]["default_visible"] is True
     assert (case.outputs / roles["couinaud_i"]["stl"]).is_file()
 
 
@@ -174,6 +189,37 @@ def test_fonte_da_malha_prefere_uniao_quando_disponivel(tmp_path):
 
     sitk.WriteImage(imagem, str(case.mask_organ_union))
     assert _fonte_da_malha_do_orgao(case) == case.mask_organ_union, "com união, prefere a união"
+
+
+def test_fonte_da_malha_so_prefere_shadow_com_receipt_seguro(tmp_path):
+    import SimpleITK as sitk
+
+    from dtwin.core import Case
+    from dtwin.stages import _fonte_da_malha_do_orgao
+
+    case = Case(root=tmp_path)
+    imagem = sitk.GetImageFromArray(
+        make_sphere_mask((20, 20, 20), (10, 10, 10), 5).astype(np.uint8)
+    )
+    sitk.WriteImage(imagem, str(case.mask_organ))
+    sitk.WriteImage(imagem, str(case.mask_organ_union))
+    sitk.WriteImage(imagem, str(case.mask_organ_visualization_v2))
+    quality = {
+        "schema": "argos-segmentation-visualization-quality-v2",
+        "status": "APPROVED",
+        "purpose": "visualization_only",
+        "classification_input_immutable": True,
+        "ground_truth_read": False,
+        "lesion_masks_read": 0,
+        "production_files_written": False,
+        "mask": {"sha256": sha256_of(case.mask_organ_visualization_v2)},
+    }
+    case.segmentation_quality_manifest_v2.write_text(json.dumps(quality), encoding="utf-8")
+    assert _fonte_da_malha_do_orgao(case) == case.mask_organ_visualization_v2
+
+    quality["ground_truth_read"] = True
+    case.segmentation_quality_manifest_v2.write_text(json.dumps(quality), encoding="utf-8")
+    assert _fonte_da_malha_do_orgao(case) == case.mask_organ_union
 
 
 def test_estagio5_descarta_uniao_com_geometria_divergente(tmp_path):
