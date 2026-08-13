@@ -1,0 +1,63 @@
+# ARGOS Graphify safety boundary
+# This graph describes source architecture only. Medical data and generated
+# clinical/research artifacts must never enter the code knowledge graph.
+
+# Local environments, caches and tool internals
+.git/
+.codex/
+.codex-backups/
+.codex-temp/
+.codex-tmp/
+.local/
+.venv/
+.venv*/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+graphify-out/
+
+# Medical datasets, case outputs and experimental artifacts
+casos/
+data/
+datasets/
+dicom/
+dicoms/
+artifacts/
+experiments/
+benchmarks/experiments/
+rag/
+.medgemma/
+
+# Vendored/static binaries and generated media
+viewer/vendor/
+webapp/static/vendor/
+assets/
+*.dcm
+*.dicom
+*.nii
+*.nii.gz
+*.nrrd
+*.mha
+*.mhd
+*.stl
+*.vtp
+*.vtk
+*.glb
+*.gltf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mp4
+*.zip
+*.7z
+*.pt
+*.pth
+*.safetensors
+
+# Office lock files and packaged reports
+docs/~$*
+docs/*.zip

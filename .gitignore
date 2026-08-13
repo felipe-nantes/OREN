@@ -88,7 +88,28 @@ experiments/sinal_no_sintetico_v1/
 
 # Artefatos locais de execucao (nunca versionados)
 .codex-temp/
+.local/
+.codex/hooks.json
+.codex/skills/graphify/
 experiments/
 experiments/phase_union_validation_v1/
 experiments/precontrast_segmentation_v1/
 .venv-mrseg/
+.env.docker
+.env.docker.local
+
+# Graphify: mantenha o grafo arquitetural, mas nao os caches locais/portaveis
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.graphify_detect.json
+graphify-out/.graphify_ast.json
+graphify-out/.graphify_semantic.json
+graphify-out/.graphify_manifest.json
+graphify-out/.graphify_analysis.json
+graphify-out/.graphify_labels.json
+graphify-out/cache/
+graphify-out/cost.json
+graphify-out/20??-??-??/
+
+# Arquivos temporarios criados pelo Microsoft Office
+~$*.docx
