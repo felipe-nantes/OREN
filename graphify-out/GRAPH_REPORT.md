@@ -1,16 +1,16 @@
-# Graph Report - argos-main  (2026-08-13)
+# Graph Report - argos-main  (2026-08-14)
 
 ## Corpus Check
-- 1057 files · ~710,878 words
+- 1080 files · ~727,364 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 10206 nodes · 27216 edges · 572 communities (563 shown, 9 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 307 edges (avg confidence: 0.6)
+- 10429 nodes · 27519 edges · 597 communities (583 shown, 14 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 314 edges (avg confidence: 0.6)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b7aed9b2`
+- Built from commit: `fec93d77`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,245 +19,245 @@
 - openswisshcc_axial_atlas.py
 - test_webapp.py
 - app.js
-- lld_mmri_v23_liver_enriched_timing.py
+- build_public_independent_cohort
 - load_screening_config
-- candidate_dataset.py
-- load_protected_cases
+- ProtectedTrainingCase
+- sha256_file
 - synthetic_external_stress_v1.py
 - server.py
 - now_utc
-- openswisshcc_multisequence_geometry.py
+- openswisshcc_multisequence_panel.py
 - openswisshcc_localizer_roi_inference.py
 - _load_json
 - openswisshcc_axial_atlas_evaluation.py
-- process_job
+- radiomics_classifier.py
 - v24_liver_enriched_openswisshcc.py
 - create_app
 - _canonical_hash
-- array_from
+- read_image
 - test_graphrag_metadata.py
-- medgemma_screening.py
+- test_medgemma_screening.py
 - monophase_complementary_candidates.py
-- stages.py
+- test_engine_finalize.py
 - visual_inference.py
-- sha256_file
+- localized_candidate_supervision.py
 - ZipFile
-- _sha256
-- test_operational_timing.py
+- _write_json_atomic
+- monophase_external_failure_audit.py
 - Case
 - openswisshcc_v24_planarity_contrast.py
-- gd_eob_hbp_pilot.py
+- gd_eob_hcc_external.py
 - lld_mmri_v23_full_fov_timing.py
-- openswisshcc_localizer_enhancement_roi.py
+- test_openswisshcc_localizer_enhancement_roi.py
 - canonical_sha256
 - medsiglip_classifier.py
-- lld_mmri_v23_liver_enriched_pilot.py
-- openswisshcc_v23_shape_fusion.py
-- protocol.py
+- _sha256
+- openswisshcc_v20_fusion.py
+- lld_mmri_v23_evaluation.py
 - openswisshcc_v15_fusion.py
-- lld_mmri_v23_preparation.py
+- core.py
 - openswisshcc_alignment.py
 - openswisshcc_candidate_localization_audit.py
 - openswisshcc_v11_fusion.py
-- build_public_independent_cohort
+- chaos_v21_preparation.py
 - build_volumetry_manifest
 - runner.py
-- liverhccseg_v21_signals.py
-- openswisshcc_candidate_volume.py
-- PipelineError
+- synthetic_external_stress_v1_eval.py
+- _mesh_from_mask
+- openswisshcc_candidate_volume_score.py
 - openswisshcc_v27_nested_recalibration.py
-- build_lld_mmri_v23_shape_branch
+- medgemma_client.py
 - v23_retrospective_multicohort_phase2.py
 - v23_retrospective_multicohort_phase3.py
 - multiphase_ingest.py
-- chaos_v21_panels.py
+- test_openswisshcc_enhancement_score_preflight.py
 - openswisshcc_volumetric_gate.py
 - v23_retrospective_multicohort_phase4.py
 - verify_embeddings
 - test_rag_retrieval_eval.py
 - compute_benchmark_metrics
-- ProtectedTrainingCase
+- robustness.py
 - liver_segmentation_comparison.py
 - run_lld_mmri_v23_segmentation_pilot
-- openswisshcc_volumetric.py
-- openswisshcc_multisequence_freeze.py
-- process_monophase_medsiglip_job
-- run_raw_phase_equivalence_benchmark.py
+- openswisshcc_candidate_volume.py
+- run_openswisshcc_volumetric_pairwise.py
+- resolve_monophase_sequence_contract
+- Plano — Realismo anatômico seguro no visualizador OREN e WebXR
 - test_medgemma_volumetric.py
 - openswisshcc_inference_batch.py
-- _nested_loocv
+- medsiglip_partial_finetune.py
 - test_rag_index_hardening.py
-- sha256_of
+- ensure_certificate
 - segmentation_contract.py
 - properties
 - build_highdimensional_stack
 - openswisshcc_holdout_signals.py
-- make_sphere_mask
-- block_optional_module_for_spawn
+- write_run_outputs
+- total_mr_liver_vessels_segmenter
 - openswisshcc_holdout_evaluation.py
-- core.py
+- Engine
 - external_bundle_evaluation.py
 - medsiglip_zero_shot.py
 - run_phase_aware_shadow
-- lld_mmri_v23_signals.py
+- run_raw_phase_equivalence_benchmark.py
 - openswisshcc_freeze.py
 - openswisshcc_lesion_localizer.py
 - v23_external_validation.py
 - radiomics_features.py
 - build_internal_blind_benchmark_120.py
-- openswisshcc_candidate_volume_evaluation.py
+- openswisshcc_axial_atlas_chunk_score.py
 - freeze_retrospective_multicohort_contract
 - resolve_authorized_blind_phase_folders
-- medsiglip_partial_finetune.py
+- medsiglip_pairwise_subtype.py
 - test_visual_subtype.py
-- viewer_artifacts.py
+- stages.py
 - importers.py
 - Como transferir e executar o ARGOS/OREN Docker em outro PC
 - mrsegmentator_chaos_runner.py
-- openswisshcc_lesion_localizer_chunks.py
+- merge_localizer_chunks
 - patch25d_classifier.py
-- openswisshcc_volumetric_pairwise.py
+- gd_eob_hbp_pilot.py
 - dataset_audit.py
-- openswisshcc_slice_pairwise.py
+- test_openswisshcc_volume_score.py
 - Runbook — Rodar o projeto no MAC
 - RuntimeError
 - restoreSavedView
-- test_lld_mmri_v23_preparation.py
+- openswisshcc_multisequence_batch.py
 - openswisshcc_lesion_localizer_evaluation.py
 - extract_development_registration_transforms
-- radiomics_classifier.py
-- synthetic_external_stress_v1_eval.py
+- openswisshcc_candidate_volume_evaluation.py
+- public_independent_v21_evaluation.py
 - openswisshcc_holdout_review.py
 - openswisshcc_review.py
-- public_independent_v21_evaluation.py
-- openswisshcc_candidate_volume_timing_run.py
-- monophase_external_failure_audit.py
+- build_xr_render_asset
+- openswisshcc_holdout_panels.py
+- openswisshcc_enhancement_timing_projection.py
 - properties
 - liver_mask_phase_fusion.py
 - 5. Melhorias recomendadas
 - openswisshcc_multisequence_chunks.py
-- openswisshcc_v20_fusion.py
-- lld_mmri_v23_evaluation.py
+- openswisshcc_multisequence_freeze.py
+- lld_mmri_v23_liver_enriched_timing.py
 - 174_CONSOLIDADO_ESTADO_ATUAL.md
-- v24_liver_enriched_evaluation.py
-- read_image
+- load_profile
+- test_operational_timing.py
 - write_dicom_series
 - V21 — preparação real do LiverHccSeg
-- lld_mmri_v23_download.py
+- openswisshcc_multisequence_quality.py
 - Plano para atingir 75% na identificação do subtipo
 - openswisshcc_v23_error_audit.py
 - Plano — Seleção aprendida de componente
 - patch25d_dataset.py
 - build_dicom_quality_showcase.py
 - build_rag_corpus.py
-- chaos_v21_review.py
+- chaos_v21_panels.py
 - liverhccseg_v21_review.py
-- lld_mmri_v23_harmonization.py
+- test_viewer_presets.py
 - Passo 3 — Múltiplas instâncias: REPROVADO, e o oráculo é inacessível
-- openswisshcc_inference.py
+- infer_reviewed_candidate
 - loadRemoteManifestProgressively
 - adjudicate_hcc_vs_benign_mimic
-- openswisshcc_multisequence_batch.py
-- lld_mmri_v23_segmentation_pilot.py
+- evaluate_fusion_development
+- evaluate_liver_mask_quality
 - lld_mmri_v23_technical_amendment.py
-- build_timing_selection_plan
-- test_openswisshcc_multisequence_inference.py
+- v24_liver_enriched_evaluation.py
+- verify_holdout_v21_signal_context
 - late_fusion.py
 - raw_phase_review.py
 - xr.js
 - required
 - properties
-- lld_mmri_v23_direct_timing.py
-- liverhccseg_v21_panels.py
+- evaluate_highdimensional_development
+- openswisshcc_volumetric_medsiglip.py
 - lld_mmri_v23_panels.py
 - openswisshcc_localizer_roi_evaluation.py
-- medgemma_server_base.py
-- build_exam_panels
+- PipelineError
+- chaos_v21_review.py
 - openswiss_monophase_atlas_candidates.py
 - Report
-- test_openswisshcc_enhancement_maps.py
-- audit_enhancement_localizer
-- openswisshcc_evaluation.py
-- openswisshcc_fallback.py
-- test_openswisshcc_holdout.py
-- openswisshcc_multisequence_quality.py
-- openswisshcc_multisequence_panel.py
 - verify_v23_baseline_lock
+- audit_enhancement_localizer
+- test_openswisshcc_evaluation.py
+- models.py
+- test_openswisshcc_holdout.py
+- openswisshcc_multisequence_evaluation.py
+- openswisshcc_localizer_roi_timing.py
+- ARGOS/OREN Docker portátil — Mac Apple Silicon e outros computadores
 - raw_dicom_phase_resolver.py
 - orientation
-- openswisshcc_candidate_volume_full87.py
+- validate_atlas_bundle
 - Visualizador 3D — de onde vem a "quadradice" e o que resolve
 - test_docker_integration.py
 - openswisshcc_enhancement_pilot_evaluation.py
 - openswisshcc_multisequence_gate.py
-- openswisshcc_multisequence_quality_cohort.py
+- scan_multisequence_geometry
 - public_independent_v21_negative_evaluation.py
 - resolve_raw_dicom_phases
 - test_roi_ceiling_t2dwi_embedding_pilot.py
 - v24_liver_enriched_inference.py
 - evaluate_enhancement_features_development
-- test_openswisshcc_highdimensional_evaluation.py
-- write_run_outputs
+- medgemma_benchmark.py
+- build_volumetric_candidate_cohort
 - environment.py
-- build_xr_render_asset
-- lld_mmri_v23_predictions.py
+- test_medgemma_panel_multiphase.py
+- openswisshcc_axial_atlas_rag_evaluation.py
 - build_relatorio_consolidado_docx.js
 - finalizeManifestPresentation
 - required
-- select_best_mr_series
-- lld_mmri_v23_geometry_audit.py
+- prepare_inference_case
+- test_lld_mmri_v23_geometry_audit.py
 - compute_candidate_enhancement_features
 - compute_candidate_shape_features
 - Por que alguns fígados 3D ficam bons e outros ruins — diagnóstico e plano
-- openswisshcc_volumetric_gallery.py
-- test_openswisshcc_volumetric_inference.py
+- openswisshcc_axial_atlas_chunk_evaluation.py
+- run
 - process_visual_job
 - compute_subtype_metrics
-- test_openswisshcc_axial_atlas_evaluation.py
+- build_volumetric_review_gallery
 - test_rag_index.py
 - test_rag_sidecar.py
 - Guia de Uso — Digital Twin Cirúrgico (passo a passo)
 - main
-- record_candidate_volume_review
-- openswisshcc_highdimensional_evaluation.py
+- selectStructure
+- build_review_gallery
 - run_cohort
 - ARGOS — panorama geral e estado atual do pipeline
-- openswisshcc_volumetric_inference.py
+- public_independent_v21_calibrator.py
 - properties
 - Plano de fechamento da meta de subtipo (75%)
-- build_review_gallery
+- run_slice_pairwise_scores
 - Plano de uso da coorte sintética
-- verify_holdout_v21_signal_context
+- record_candidate_volume_review
 - test_curation.py
 - test_openswisshcc_inference_batch.py
-- test_openswisshcc_axial_atlas_score.py
-- _write_json_atomic
-- test_openswisshcc_axial_atlas_rag_score.py
-- prepare_totalsegmentator_environment
-- test_openswisshcc_axial_atlas_rag_evaluation.py
-- build_openswisshcc_candidates.py
+- _individual_screening_config
+- study_fingerprint_sha256
+- openswisshcc_multiphase_localizer_audit.py
+- openswisshcc_v11_v13_complementarity.py
+- initialize_argos_docker.sh
+- Alterações implementadas
 - syncReferenceToClipping
 - measureSelectedStructure3d
-- _candidate
+- start_argos_docker_mac.sh
 - test_build_rag_corpus.py
-- openswisshcc_volume_score.py
+- sha256_of
 - test_rag_dataset_index.py
 - CertificateHandler
-- test_openswisshcc_axial_atlas_chunk_score.py
+- test_openswisshcc_v11_fusion.py
 - audit_liver_mask_geometry_quality.py
-- openswisshcc_holdout_panels.py
-- combine_candidate_masks
+- build_exam_panels
+- public_independent_v21_consolidation.py
 - _MarkdownExtractor
 - run_mac.sh
 - test_liverhccseg_labels.py
-- public_independent_v21_calibrator.py
-- openswisshcc_multisequence_evaluation.py
+- test_openswisshcc_lesion_localizer_chunks.py
+- Classificador visual no webapp — do DICOM à alteração identificada
 - test_rag_chunking.py
 - measure_liver_segments_mr_vs_total_mr_venous_lld.py
 - LLD-MMRI v23 — execução label-blind
 - Qualificação MedGemma 4B — MedSigLIP e OpenSwissHCC
 - OpenSwissHCC holdout — gate humano e executor cego v21
-- openswisshcc_v11_v13_complementarity.py
+- find_best_series
 - verify
 - Global Constraints
 - build_snapshot
@@ -267,27 +267,27 @@
 - v23_external_candidate_manifest.schema.json
 - test_download_http_ranges.py
 - test_graphify_integration.py
-- openswisshcc_highdimensional_inference.py
-- openswisshcc_remediation.py
+- validate_and_store_candidate
+- build_remediated_candidates
 - test_mrsegmentator_isolated.py
 - Relatório de validação Docker ponta a ponta do ARGOS/OREN
 - combine_final_liver_vessel_score.py
-- openswisshcc_multiphase_localizer_audit.py
+- verify_argos_docker_portable.sh
 - assemble_best_worst_case_folders.py
 - filter_liverhccseg_tumor_positive.py
 - rank_liver_integrity_candidates.py
 - digital-twin-cirurgico
 - A união de fases recupera fígado real — solução para a visualização
 - ARGOS/OREN em Docker — arquitetura e validação ponta a ponta
-- openswisshcc_volumetric_medsiglip.py
+- build
 - 119_PANORAMA_GERAL_ATUAL_ARGOS.md
 - OpenSwissHCC v16 — resultados e diagnóstico
-- test_openswisshcc_v11_fusion.py
+- bootstrap_argos_mac.sh
 - ARGOS — Relatório de conclusão de ciclo: classificador visual supervisionado
 - OpenSwissHCC v14 — protocolo de escore volumétrico contínuo
 - OpenSwissHCC v15 — protocolo de avaliação congelado
 - Etapa v21 — coorte pública independente
-- public_independent_v21_consolidation.py
+- test_openswisshcc_fallback.py
 - Implementação do classificador visual supervisionado — diário técnico
 - Plano para atingir a meta 75/75
 - 10 · Maturidade do Digital Twin
@@ -306,7 +306,6 @@
 - V21 — execução cega externa LiverHccSeg
 - ARGOS v21 — execução cega do braço negativo CHAOS
 - Componentes
-- openswisshcc_volumetric_batch.py
 - ARGOS — Plano de ação para evolução do classificador visual
 - Benchmark Patologia + Variação no frontend
 - Estado consolidado do ARGOS/OREN
@@ -334,13 +333,13 @@
 - OpenSwissHCC v17 — score cego e avaliação congelada
 - V21 — calibrador externo e gate visual LiverHccSeg
 - Preparar o Mac para rodar ARGOS e benchmarks
-- _localize_candidate
+- import_argos_portable.sh
 - properties
 - required
 - V23 retrospectiva multicohort — Fase 4
 - Etapa C — modelo de produção e benchmark visual em dados novos
 - Avaliação do lote cego de 100 casos + correção do guard in-sample
-- build_lld_mmri_v23_enhancement_panels.py
+- configure_isolated_totalsegmentator_runtime
 - A capacidade de subtipo é condicionada à coorte, não à lesão
 - Retirar a saída de escape não resolve — e o experimento não decide o que eu queria
 - Ingestão de DICOM bruto multifásico
@@ -422,7 +421,7 @@
 - Embedding da lesão recortada — discriminação sobe de 74,5% para 79,5%
 - Passo 2 — Medição honesta: 61,46% de ponta a ponta
 - Prompt pathology-target — separação entre variante benigna e patologia alvo
-- Fusão no endpoint binário completo — e a correção de uma premissa que eu inventei
+- openswisshcc_multisequence_quality_cohort.py
 - O maior modo de erro do ARGOS não tem explicação física
 - A coorte sintética não carrega nem o sinal de presença de lesão
 - Ingestão monofásica experimental no OREN
@@ -457,7 +456,7 @@
 - T2WI e DWI na discriminação — REPROVADO: +0,23 ponto
 - Subtipo com a melhor representação, medido honestamente — gate falha por meio caso
 - Schema v2 do relatório MedGemma
-- Validação pareada da organização automática de fases DICOM
+- Resultado do benchmark frontend — Patologia + Variação
 - O segmentador não está quebrado — o problema é a fase com contraste
 - OREN — segundo leitor monofásico implementável
 - Auditoria externa e cobertura axial monofásica
@@ -482,8 +481,8 @@
 - OpenSwissHCC v22 — fundação de realce multifásico
 - OpenSwissHCC v22 — orçamento temporal exact-top5
 - Roteiro de Apresentação (demo em ~5 min, sem GPU)
-- Classificador visual no webapp — do DICOM à alteração identificada
-- run
+- test_openswisshcc_axial_atlas_rag_score.py
+- setup_medgemma.py
 - spacing_mm
 - items
 - Rejeição técnica da galeria v1 e gate anatômico v2
@@ -500,7 +499,7 @@
 - Etapa C — ablação: o ganho é biologia ou calibração de domínio?
 - Fase 13 — Fine-tuning parcial do MedSigLIP
 - MedGemma zero-shot para subtipo — Resultado: recusa quase total
-- O número honesto de subtipo do caminho que está no ar
+- protocol.py
 - Visualizador 3D — composição realista como padrão fixo
 - Oclusão sólida dos segmentos de Couinaud
 - WebXR — estabilidade do fígado e painéis RGB
@@ -510,12 +509,12 @@
 - OpenSwissHCC v9 — preflight de revisão e inferência
 - OpenSwissHCC v9 — exclusão técnica cega
 - OpenSwissHCC v22 — localizador venoso + arterial registrada
-- test_openswisshcc_volumetric_gate.py
+- build_timing_selection_plan
 - Visualizador (modo Pesquisa)
 - enum
 - required
 - 11. O que mais funcionou
-- Resultado do benchmark frontend — Patologia + Variação
+- lld_mmri_v23_external.py
 - 5. Segmentação e visualizador 3D
 - Fase 6 — Radiômica e dinâmica multifásica
 - Fase 1 — Congelar o protocolo científico híbrido
@@ -529,7 +528,7 @@
 - Materiais orgânicos das estruturas do visualizador 3D
 - WebXR — seleção sem recoloração e legibilidade
 - OpenSwissHCC v22 — protocolo congelado do piloto exact-top5
-- _run_visual_benchmark_case
+- Fusão no endpoint binário completo — e a correção de uma premissa que eu inventei
 - 10. Definição de sucesso
 - 3. Restrições obrigatórias
 - Fase 10 — Robustez e validação retrospectiva multicohort
@@ -543,31 +542,52 @@
 - Fase 9 — Fusão tardia congelada com o v23
 - graphify
 - case_id
-- study_fingerprint_sha256
+- OREN Spatial — atualização UI/UX WebXR
 - case_id
 - study_fingerprint_sha256
 - Fase 15 — RAG e GraphRAG
 - Fase 5 — Classificador nested OOF implementado
 - Próximo gate
 - 41_OPENSWISSHCC_V10_PROTOCOLO_FULL87_CONGELADO.md
+- openswisshcc_slice_pairwise_evaluation.py
+- select_best_mr_series
 - test_public_independent_v21_calibrator.py
-- _run_delayed_medsiglip_advisory
-- 18. Artefatos principais
 - entrypoint.sh
-- _individual_screening_config
+- test_quest_dynamic_launcher.py
+- liverhccseg_v21_signals.py
+- run_openswisshcc_slice_pairwise.py
+- WebXR — Emerald Glass e legibilidade
+- combine_candidate_masks
+- Decisões implementadas
+- OREN Meta Quest em redes com IP dinâmico
+- test_openswisshcc_highdimensional_batch_inference.py
+- Validação pareada da organização automática de fases DICOM
+- test_chaos_download.py
+- Implementação — Realismo anatômico seguro no OREN/WebXR
+- test_openswisshcc_multisequence_chunks.py
+- download_ranged
+- O número honesto de subtipo do caminho que está no ar
+- run_internal_blind_visual_case.py
+- measure_three_phase_union_gain.py
+- run_multisequence_scores
+- meshCategory
+- verify_job
+- 18. Artefatos principais
 - source_dataset_id
+- build_lld_mmri_v23_enhancement_panels.py
+- test_openswisshcc_highdimensional_inference.py
 
 ## God Nodes (most connected - your core abstractions)
 1. `PipelineError` - 1903 edges
 2. `_sha256()` - 425 edges
 3. `_write_json_atomic()` - 207 edges
-4. `_publish_directory()` - 205 edges
-5. `sha256_of()` - 205 edges
+4. `sha256_of()` - 206 edges
+5. `_publish_directory()` - 205 edges
 6. `load_screening_config()` - 180 edges
 7. `sha256_file()` - 133 edges
 8. `canonical_sha256()` - 114 edges
 9. `Case` - 87 edges
-10. `read_image()` - 74 edges
+10. `read_image()` - 75 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `_clf` --uses--> `PipelineError`  [INFERRED]
@@ -584,71 +604,71 @@
 ## Import Cycles
 - None detected.
 
-## Communities (572 total, 9 thin omitted)
+## Communities (597 total, 14 thin omitted)
 
 ### Community 0 - "medsiglip_multiclass_classifier.py"
-Cohesion: 0.05
-Nodes (99): _aggregate(), _best_threshold(), build_multiclass_labels(), _case_class_probability_mass(), _case_scores(), _confusion(), _cross_validated_case_scores(), evaluate_oof_predictions() (+91 more)
+Cohesion: 0.08
+Nodes (68): _aggregate(), _best_threshold(), build_multiclass_labels(), _case_class_probability_mass(), _case_scores(), _confusion(), _cross_validated_case_scores(), evaluate_oof_predictions() (+60 more)
 
 ### Community 1 - "openswisshcc_axial_atlas.py"
 Cohesion: 0.06
 Nodes (93): audit_mask_array(), _canonical_sha(), freeze_protocol(), _jsonl(), _load_json(), _manual_mask_index_aligned(), _mask_bbox_2d(), _metric() (+85 more)
 
 ### Community 2 - "test_webapp.py"
-Cohesion: 0.03
-Nodes (79): test_modo_visual_e_reconhecido_no_exame_individual(), _mascara_de_teste(), Path, Starlette limita multipart a max_files=1000 por padrão; um dataset de benchmark…, Regressão: a segmentação do benchmark roda por um launcher com cwd=%TEMP%. Se o…, Cria os arquivos que _seg_done exige. O gate é decidido pelo stub., Uma máscara reprovada não pode virar resultado: os painéis saem dela., Regressão de docs/175. O gate existia só no exame individual, e o MESMO exame… (+71 more)
+Cohesion: 0.02
+Nodes (92): _mascara_de_teste(), Path, Starlette limita multipart a max_files=1000 por padrão; um dataset de benchmark…, Regressão: a segmentação do benchmark roda por um launcher com cwd=%TEMP%. Se o…, Cria os arquivos que _seg_done exige. O gate é decidido pelo stub., Uma máscara reprovada não pode virar resultado: os painéis saem dela., Regressão de docs/175. O gate existia só no exame individual, e o MESMO exame…, A recusa vem ANTES de gastar segmentação, não no meio da análise. (+84 more)
 
 ### Community 3 - "app.js"
 Cohesion: 0.02
-Nodes (86): ANATOMICAL_VIEWS, anatomicalViewsSection, anatomicalViewStatus, approvalDiv, approvalStatus, approveButton, AXIS_UP, camera (+78 more)
+Nodes (95): ANATOMICAL_VIEWS, anatomicalViewsSection, anatomicalViewStatus, approvalDiv, approvalStatus, approveButton, AXIS_UP, camera (+87 more)
 
-### Community 4 - "lld_mmri_v23_liver_enriched_timing.py"
-Cohesion: 0.07
-Nodes (79): _auc(), evaluate_liver_enriched_predictions(), freeze_liver_enriched_evaluation_protocol(), freeze_liver_enriched_predictions(), _jsonl(), _load(), Any, Path (+71 more)
+### Community 4 - "build_public_independent_cohort"
+Cohesion: 0.14
+Nodes (40): build_public_independent_cohort(), _canonical_bytes(), _canonical_hash(), _file_hash(), _forbidden_paths(), _jsonl_bytes(), load_public_cohort_config(), PublicSource (+32 more)
 
 ### Community 5 - "load_screening_config"
-Cohesion: 0.05
-Nodes (86): _all_text(), _bool(), _canonicalize_report(), _deep_merge(), _expand_compact_classification(), HTTPJSONMedGemmaClient, load_screening_config(), _parse_json_report() (+78 more)
+Cohesion: 0.09
+Nodes (49): HTTPJSONMedGemmaClient, load_screening_config(), Adaptador para um gateway HTTP local com contrato dtwin-medgemma-v1. O pipeline…, validate_medgemma_report(), _Context, parametrize, test_backend_not_configured_aborts_clearly(), test_compact_classification_expands_to_legacy_report_without_clinical_invention() (+41 more)
 
-### Community 6 - "candidate_dataset.py"
-Cohesion: 0.11
-Nodes (43): build_candidate_dataset(), _json(), _load_split_universe(), Any, Path, Build a label-blind global-panel dataset for supervised visual learning. The…, Materialize a verified manifest without opening protected labels., _relative() (+35 more)
+### Community 6 - "ProtectedTrainingCase"
+Cohesion: 0.06
+Nodes (71): build_candidate_dataset(), _json(), _load_split_universe(), Any, Path, Build a label-blind global-panel dataset for supervised visual learning. The…, Materialize a verified manifest without opening protected labels., _relative() (+63 more)
 
-### Community 7 - "load_protected_cases"
-Cohesion: 0.08
-Nodes (70): align_signals(), _auc(), _best_threshold(), _confusion(), evaluate_oof_predictions(), _feature_vector(), _fit_meta_model(), generate_oof_predictions() (+62 more)
+### Community 7 - "sha256_file"
+Cohesion: 0.07
+Nodes (76): align_signals(), _auc(), _best_threshold(), _confusion(), evaluate_oof_predictions(), _feature_vector(), _fit_meta_model(), generate_oof_predictions() (+68 more)
 
 ### Community 8 - "synthetic_external_stress_v1.py"
 Cohesion: 0.10
 Nodes (45): build_donor_library(), build_plan(), _canonical_sha(), _cycled_permutation(), download_required_masks(), _ellipsoid_mask(), generate_case(), _geometry() (+37 more)
 
 ### Community 9 - "server.py"
-Cohesion: 0.06
-Nodes (67): FormData, get, post, Rebaixar em silêncio faria o relatório nomear o modelo errado., test_backend_nao_registrado_e_recusado_em_vez_de_rebaixado(), test_completed_job_restore_fails_closed_after_asset_tampering(), test_completed_job_state_survives_process_restart(), test_endpoint_de_backends_so_reporta_o_que_respondeu() (+59 more)
+Cohesion: 0.05
+Nodes (80): get, Regressão do smoke real: timing_path é absoluto e WORKSPACE pode ser relativo., test_relative_workspace_still_exposes_operational_timing_artifact(), test_endpoint_de_backends_so_reporta_o_que_respondeu(), test_friendly_messages_are_human_and_nonclinical(), test_load_report_accepts_valid_report_regardless_of_returncode(), test_load_report_rejects_missing_or_incomplete(), _benchmark_csv() (+72 more)
 
 ### Community 10 - "now_utc"
 Cohesion: 0.06
 Nodes (76): now_utc(), FullFovPanelSetResult, generate_full_fov_panel_multiphase(), generate_full_fov_panel_set_multiphase(), Any, ndarray, Path, Mask-independent full-FOV multiphase MRI research panel. (+68 more)
 
-### Community 11 - "openswisshcc_multisequence_geometry.py"
-Cohesion: 0.15
-Nodes (24): audit_multisequence_inputs(), _coverage(), _image_record(), _physical_mask_points(), Any, Image, ndarray, Path (+16 more)
+### Community 11 - "openswisshcc_multisequence_panel.py"
+Cohesion: 0.16
+Nodes (24): _geometry_matches(), Image, _bbox(), _continuous_indices(), generate_multisequence_panel_set(), _inside(), _manifest_row(), _physical_points() (+16 more)
 
 ### Community 12 - "openswisshcc_localizer_roi_inference.py"
-Cohesion: 0.06
-Nodes (73): _canonical(), _config(), create_roi_freeze(), _load(), Any, Path, Immutable MedGemma 1.5 4B scoring freeze for paired v10 ROI galleries., _signature() (+65 more)
+Cohesion: 0.09
+Nodes (50): _canonical(), _config(), create_roi_freeze(), _load(), Any, Path, Immutable MedGemma 1.5 4B scoring freeze for paired v10 ROI galleries., _signature() (+42 more)
 
 ### Community 13 - "_load_json"
-Cohesion: 0.09
-Nodes (48): _load_json(), _load_labels_after_inference(), _quantile(), evaluate_slice_pairwise(), Any, Path, Exploratory post-inference evaluation for high-resolution axial slice scores., _rolling() (+40 more)
+Cohesion: 0.10
+Nodes (46): _load_json(), _case_result(), evaluate_reviewed_development_run(), _load_labels_after_inference(), Any, Path, _quantile(), Avaliação pós-inferência OpenSwissHCC com abertura tardia do ground truth. (+38 more)
 
 ### Community 14 - "openswisshcc_axial_atlas_evaluation.py"
-Cohesion: 0.12
-Nodes (41): evaluate_chunk_development(), _finite(), _json(), Any, Path, Avaliação protegida do scorer em blocos OpenSwissHCC v18., validate_chunk_scores(), _canonical_sha() (+33 more)
+Cohesion: 0.16
+Nodes (31): _canonical_sha(), _contains_forbidden_key(), evaluate_development(), _finite(), freeze_evaluation_protocol(), _load_json(), _loocv(), Any (+23 more)
 
-### Community 15 - "process_job"
-Cohesion: 0.07
-Nodes (37): Regressão do smoke real: timing_path é absoluto e WORKSPACE pode ser relativo., test_relative_workspace_still_exposes_operational_timing_artifact(), test_individual_dicom_flow_persists_early_failure_timing(), test_individual_dicom_flow_persists_success_timing(), test_find_best_series_empty_when_no_dicom(), test_find_best_series_empty_when_only_incompatible_modality(), test_friendly_messages_are_human_and_nonclinical(), test_load_report_accepts_valid_report_regardless_of_returncode() (+29 more)
+### Community 15 - "radiomics_classifier.py"
+Cohesion: 0.18
+Nodes (24): _atomic_joblib(), _best_threshold(), _confusion(), evaluate_oof_predictions(), _fit_model(), generate_oof_predictions(), _inner_oof_scores(), _json() (+16 more)
 
 ### Community 16 - "v24_liver_enriched_openswisshcc.py"
 Cohesion: 0.18
@@ -659,100 +679,100 @@ Cohesion: 0.06
 Nodes (50): dict, _jpeg_base64(), _png_base64(), test_local_gateway_forwards_balanced_semantic_choices(), test_local_gateway_forwards_restricted_json_response_prefix(), test_local_gateway_health_and_contract(), test_local_gateway_rejects_non_png_payload(), test_local_gateway_rejects_wrong_model() (+42 more)
 
 ### Community 18 - "_canonical_hash"
-Cohesion: 0.12
-Nodes (56): _chunk_query(), freeze_chunk_protocol(), _load_protocol(), Path, Scorer v18 do atlas axial em blocos sequenciais para o MedGemma 4B., run_chunk_batch(), _score_case(), _validate_context() (+48 more)
+Cohesion: 0.14
+Nodes (42): freeze_rag_protocol(), _load_protocol(), Any, Path, rag_fingerprint(), _rag_material(), Scorer cego v19: atlas axial v17 com contexto RAG textual congelado., Retém somente conteúdo determinístico e auditável do retrieval. (+34 more)
 
-### Community 19 - "array_from"
+### Community 19 - "read_image"
 Cohesion: 0.10
-Nodes (48): array_from(), array_to_image(), Image, ndarray, Array em ordem (z, y, x). Use SEMPRE a geometria da MESMA imagem., Constrói uma imagem herdando a geometria da referência (origin/spacing/dir)., Converte vértices em índice de array (z, y, x) para coordenadas físicas LPS.…, save_image() (+40 more)
+Nodes (60): array_from(), array_to_image(), Image, Array em ordem (z, y, x). Use SEMPRE a geometria da MESMA imagem., Constrói uma imagem herdando a geometria da referência (origin/spacing/dir)., read_image(), save_image(), _make_case_id() (+52 more)
 
 ### Community 20 - "test_graphrag_metadata.py"
 Cohesion: 0.07
 Nodes (39): GraphRagConfig, load_graphrag_config(), Neo4jConnectionConfig, Any, Path, Configuração do GraphRAG Neo4j., _read_yaml(), build_metadata_graphrag_context() (+31 more)
 
-### Community 21 - "medgemma_screening.py"
+### Community 21 - "test_medgemma_screening.py"
 Cohesion: 0.07
-Nodes (52): model_trace(), _aggregate_panel_reports(), _authoritative_panels(), build_parser(), build_report_envelope(), _clear_previous_inference_artifacts(), main(), _parse_phases() (+44 more)
+Nodes (49): _aggregate_panel_reports(), _authoritative_panels(), build_parser(), _clear_previous_inference_artifacts(), main(), _parse_phases(), _partial_prompt(), _persist_panel_failure() (+41 more)
 
 ### Community 22 - "monophase_complementary_candidates.py"
 Cohesion: 0.09
 Nodes (50): build_complementary_candidates(), _jsonl(), Any, Image, ndarray, Path, Label-blind T2/DWI/ADC candidates for single-dynamic-phase liver MRI., Rigid multimodal registration, returning a mask in reference geometry. (+42 more)
 
-### Community 23 - "stages.py"
+### Community 23 - "test_engine_finalize.py"
 Cohesion: 0.07
-Nodes (54): _anatomy_structures(), _campo_continuo(), _isolar_orgao_para_visualizacao(), _malha_do_campo(), _mesh_from_mask(), _nivel_por_volume(), ndarray, Deixa só o corpo principal do órgão, quando isso for seguro. Motivo (docs/188):… (+46 more)
+Nodes (50): _fonte_da_malha_do_orgao(), _isolar_orgao_para_visualizacao(), ndarray, Fonte da máscara do órgão para VISUALIZAÇÃO (a malha 3D), não para…, Deixa só o corpo principal do órgão, quando isso for seguro. Motivo (docs/188):…, _refine_mask(), stage5_refine(), Ilhas soltas viram objetos flutuando no visualizador (docs/188). (+42 more)
 
 ### Community 24 - "visual_inference.py"
 Cohesion: 0.05
-Nodes (77): infer_monophase_case_from_panels(), _json(), Any, Path, Strict inference contract for the dedicated single-phase MedSigLIP head., Fail closed if a triphasic bundle or synthetic phase reaches this path., validate_monophase_contract(), classify_one_case() (+69 more)
+Nodes (84): HuggingFaceMedSigLIPBackend, Vision-only pooled representation from the pinned MedSigLIP snapshot., infer_monophase_case_from_panels(), _json(), Any, Path, Strict inference contract for the dedicated single-phase MedSigLIP head., Fail closed if a triphasic bundle or synthetic phase reaches this path. (+76 more)
 
-### Community 25 - "sha256_file"
-Cohesion: 0.10
-Nodes (47): build_fused_localized_embeddings(), _json(), _jsonl(), localized_dynamic_features(), Any, ndarray, Path, Label-blind dynamic features fused with localized MedSigLIP embeddings. (+39 more)
+### Community 25 - "localized_candidate_supervision.py"
+Cohesion: 0.13
+Nodes (36): _axis_bounds(), _box_shape_zyx(), build_localized_candidate_geometry(), build_localized_image_dataset(), build_protected_localized_targets(), cover_component_with_boxes(), lesion_visibility_in_box(), _load_json() (+28 more)
 
 ### Community 26 - "ZipFile"
 Cohesion: 0.10
-Nodes (44): BinaryIO, _canonical_image_role(), _canonical_mask_role(), _copy_stream_atomic(), inspect_holdout_archive(), prepare_holdout_dataset_label_blind(), Path, Preparação estritamente label-blind do holdout OpenSwissHCC 045–088. Este… (+36 more)
+Nodes (45): BinaryIO, anonymized_case_id(), _canonical_image_role(), _canonical_mask_role(), _copy_stream_atomic(), inspect_holdout_archive(), prepare_holdout_dataset_label_blind(), Path (+37 more)
 
-### Community 27 - "_sha256"
-Cohesion: 0.07
-Nodes (65): Deterministic enhancement-candidate shape branch for LLD-MMRI v23., _publish_directory(), Publique um diretório atomicamente, tolerando locks transitórios do Windows., _sha256(), build_candidate_enhancement_cohort(), Path, Blind v22 enhancement features restricted to model-derived candidates. Only…, Publish blind candidate-restricted features for the frozen full87 order. (+57 more)
+### Community 27 - "_write_json_atomic"
+Cohesion: 0.04
+Nodes (98): Signed human-review gate for the label-blind LLD-MMRI full-FOV 3x9 pilot., build_lld_mmri_v23_shape_branch(), compute_lld_mmri_v23_candidate_shape(), Any, Image, Path, Deterministic enhancement-candidate shape branch for LLD-MMRI v23., Build all shape signals after the signed technical review, without labels. (+90 more)
 
-### Community 28 - "test_operational_timing.py"
-Cohesion: 0.18
-Nodes (15): build_operational_timing(), _clean_durations(), persist_operational_timing(), Path, Auditoria sanitizada de tempo do fluxo DICOM operacional do ARGOS. O artefato…, Grava atomicamente o manifesto operacional dentro do diretório do caso., Monta o manifesto v1 e aplica o gate de 180 s sem arredondar a decisão., parametrize (+7 more)
+### Community 28 - "monophase_external_failure_audit.py"
+Cohesion: 0.20
+Nodes (23): _atomic_json(), _atomic_jsonl(), build_monophase_external_failure_audit(), _candidate_indices(), _development_localizer(), _development_visibility(), _json(), _jsonl() (+15 more)
 
 ### Community 29 - "Case"
 Cohesion: 0.08
-Nodes (21): Case, Path, Aponta para os artefatos de um caso. Torna o pipeline resumível e testável…, Lê uma série DICOM preservando a geometria correta. O ImageSeriesReader já…, read_dicom_series(), _archive_for_training(), _first_dicom(), Path (+13 more)
+Nodes (20): Case, Path, Aponta para os artefatos de um caso. Torna o pipeline resumível e testável…, Lê uma série DICOM preservando a geometria correta. O ImageSeriesReader já…, read_dicom_series(), _archive_for_training(), _first_dicom(), Path (+12 more)
 
 ### Community 30 - "openswisshcc_v24_planarity_contrast.py"
-Cohesion: 0.14
-Nodes (40): _code_path(), evaluate_v24_planarity_contrast(), _finite(), freeze_v24_planarity_protocol(), _load_development_matrix(), _load_json(), _load_jsonl(), Path (+32 more)
+Cohesion: 0.08
+Nodes (74): _ecdf(), _candidate_scores(), _code_path(), evaluate_v24_planarity_contrast(), _finite(), freeze_v24_planarity_protocol(), _load_development_matrix(), _load_json() (+66 more)
 
-### Community 31 - "gd_eob_hbp_pilot.py"
-Cohesion: 0.09
-Nodes (66): build_hbp_pilot_gallery(), freeze_hbp_pilot_protocol(), _image_rows(), _load_json(), Any, Path, Deterministic label-blind HBP compatibility pilot for frozen ARGOS v23., Select three cases per center using case IDs only, never image contents. (+58 more)
+### Community 31 - "gd_eob_hcc_external.py"
+Cohesion: 0.12
+Nodes (43): build_label_blind_readiness(), _case_id(), _classify_archive_members(), extract_label_blind_images(), freeze_hcc_hbp_contract(), inventory_archive(), _json(), _jsonl() (+35 more)
 
 ### Community 32 - "lld_mmri_v23_full_fov_timing.py"
-Cohesion: 0.13
-Nodes (39): create_full_fov_human_review(), _inside(), _load(), Any, Path, Signed human-review gate for the label-blind LLD-MMRI full-FOV 3x9 pilot., validate_full_fov_review_sources(), verify_full_fov_human_review() (+31 more)
+Cohesion: 0.14
+Nodes (38): create_full_fov_human_review(), _inside(), _load(), Any, Path, validate_full_fov_review_sources(), verify_full_fov_human_review(), _existing_case_result() (+30 more)
 
-### Community 33 - "openswisshcc_localizer_enhancement_roi.py"
-Cohesion: 0.11
-Nodes (37): build_enhancement_roi_pilot(), _components(), _inputs(), _liver_fallback_center(), _placeholder(), Path, Dynamic-contrast ROI panels paired with v10 model-derived candidates., _registered() (+29 more)
+### Community 33 - "test_openswisshcc_localizer_enhancement_roi.py"
+Cohesion: 0.46
+Nodes (7): build(), fixture(), save(), test_enhancement_roi_contains_four_dynamic_phases_without_ground_truth(), test_enhancement_roi_fallback_uses_liver_mask_centroid(), test_panel_aborts_atomically_without_minimum_evidence(), test_zero_registered_phase_is_explicitly_unavailable_not_fabricated()
 
 ### Community 34 - "canonical_sha256"
-Cohesion: 0.13
-Nodes (33): filter_candidate_embedding_dataset(), _json(), _jsonl(), Any, Path, Create immutable, hash-bound modality subsets without recomputing embeddings., Reuse embeddings only when candidate keys and image hashes are identical., rebind_embedding_dataset() (+25 more)
+Cohesion: 0.17
+Nodes (26): filter_candidate_embedding_dataset(), _json(), _jsonl(), Any, Path, Create immutable, hash-bound modality subsets without recomputing embeddings., Reuse embeddings only when candidate keys and image hashes are identical., rebind_embedding_dataset() (+18 more)
 
 ### Community 35 - "medsiglip_classifier.py"
 Cohesion: 0.11
 Nodes (39): _aggregate(), _best_threshold(), _case_scores(), _confusion(), evaluate_oof_predictions(), _fit_model(), generate_oof_predictions(), _inner_oof_scores() (+31 more)
 
-### Community 36 - "lld_mmri_v23_liver_enriched_pilot.py"
-Cohesion: 0.17
-Nodes (28): build_full_fov_gallery(), build_full_fov_pilot(), _phase_paths(), Any, Path, Label-blind mask-independent full-FOV pilot for LLD-MMRI v23., _rows(), build_liver_enriched_full_cohort() (+20 more)
+### Community 36 - "_sha256"
+Cohesion: 0.11
+Nodes (40): build_full_fov_gallery(), build_full_fov_pilot(), _phase_paths(), Any, Path, Label-blind mask-independent full-FOV pilot for LLD-MMRI v23., _rows(), build_liver_enriched_full_cohort() (+32 more)
 
-### Community 37 - "openswisshcc_v23_shape_fusion.py"
-Cohesion: 0.17
-Nodes (24): evaluate_shape_fusion_development(), freeze_shape_fusion_calibrator(), _fusion_scores(), _load_json(), _load_shape_bundle(), _loocv(), Any, Path (+16 more)
+### Community 37 - "openswisshcc_v20_fusion.py"
+Cohesion: 0.09
+Nodes (49): freeze_lld_mmri_v23_predictions(), _json(), _jsonl(), Any, Path, Freeze label-blind LLD-MMRI predictions with the development-frozen v23…, Score every case without labels and atomically freeze the predictions., build_blind_fusion_bundle() (+41 more)
 
-### Community 38 - "protocol.py"
-Cohesion: 0.21
-Nodes (23): atomic_write_json(), freeze_protocol(), _load_cases(), _load_jsonl(), load_protected_label_rows(), Any, Path, Freeze and verify the hybrid supervised-training protocol. (+15 more)
+### Community 38 - "lld_mmri_v23_evaluation.py"
+Cohesion: 0.12
+Nodes (38): DirectCaseRunner, _load_checkpoint(), measure_lld_mmri_v23_direct_reproduction(), Any, Path, Direct wall-clock reproduction gate for frozen LLD-MMRI v23 predictions., Time one continuous raw-to-prediction callback for every frozen case., _valid_checkpoint() (+30 more)
 
 ### Community 39 - "openswisshcc_v15_fusion.py"
 Cohesion: 0.12
 Nodes (40): build_blind_fusion_bundle(), _canonical_sha(), _contains_forbidden_key(), create_fusion_protocol(), _ecdf(), evaluate_fusion_development(), _finite(), _fold_scores() (+32 more)
 
-### Community 40 - "lld_mmri_v23_preparation.py"
-Cohesion: 0.08
-Nodes (37): _checkpoint_payload(), isolated_total_mr_liver_segmenter(), _link_or_copy(), _load_jsonl_checkpoint(), Any, Path, Label-blind NIfTI preparation for the frozen LLD-MMRI v23 cohort., Run one NIfTI segmentation in a killable process with a hard timeout. (+29 more)
+### Community 40 - "core.py"
+Cohesion: 0.04
+Nodes (125): Fail-closed image-only downloader for the frozen LLD-MMRI v23 cohort., Verify the complete image-only download before any image may be processed., validate_lld_mmri_v23_download(), audit_lld_mmri_v23_geometry(), Any, Path, Label-blind readability and geometry audit for the frozen LLD-MMRI v23 cohort., Fail closed unless the signed all-case audit still matches the download. (+117 more)
 
 ### Community 41 - "openswisshcc_alignment.py"
-Cohesion: 0.11
-Nodes (40): _align_case(), align_development_case(), align_holdout_case_label_blind(), AlignmentGateError, _cache_signature(), dice_coefficient(), _geometry_compatible(), _identity_resample_mask() (+32 more)
+Cohesion: 0.05
+Nodes (83): _align_case(), align_development_case(), align_holdout_case_label_blind(), AlignmentGateError, _cache_signature(), dice_coefficient(), _geometry_compatible(), _identity_resample_mask() (+75 more)
 
 ### Community 42 - "openswisshcc_candidate_localization_audit.py"
 Cohesion: 0.13
@@ -762,37 +782,37 @@ Nodes (41): _actual_venous_visibility(), _canonical_sha(), _case_subject_map(), 
 Cohesion: 0.19
 Nodes (26): build_blind_signal_bundle(), _canonical_sha(), create_fusion_protocol(), evaluate_fusion_development(), _finite(), _fold_scores(), _load_json(), _load_jsonl() (+18 more)
 
-### Community 44 - "build_public_independent_cohort"
-Cohesion: 0.05
-Nodes (100): ChaosDownloadSpec, _liver_mask_from_ground(), _load_jsonl(), _load_object(), _ordered_dicom_files(), prepare_chaos_v21_blind_inputs(), Any, Image (+92 more)
+### Community 44 - "chaos_v21_preparation.py"
+Cohesion: 0.11
+Nodes (49): _liver_mask_from_ground(), _load_jsonl(), _load_object(), _ordered_dicom_files(), prepare_chaos_v21_blind_inputs(), Any, Image, Path (+41 more)
 
 ### Community 45 - "build_volumetry_manifest"
 Cohesion: 0.13
 Nodes (41): _as_3d(), _border_contact(), build_volumetry_manifest(), _component_metrics(), _couinaud_partition(), _finite_geometry(), _load_segmentation_quality(), _lps_dimensions_mm() (+33 more)
 
 ### Community 46 - "runner.py"
-Cohesion: 0.13
-Nodes (37): datetime, DatasetCase, build_run_manifest(), _case_workspace_slug(), classify_screening_failure(), _environment(), ExperimentConfig, load_experiment_config() (+29 more)
+Cohesion: 0.16
+Nodes (31): attach_ground_truth(), DatasetCase, Chamado pelo avaliador somente depois que a resposta já foi persistida., build_run_manifest(), _case_workspace_slug(), classify_screening_failure(), _environment(), ExperimentConfig (+23 more)
 
-### Community 47 - "liverhccseg_v21_signals.py"
-Cohesion: 0.11
-Nodes (33): assemble_v21_raw_signals(), build_v21_localizer_input_manifest(), _component_rows(), _finite(), _jsonl(), MedGemmaChoiceScorer, MedSigLIPPanelScorer, Any (+25 more)
+### Community 47 - "synthetic_external_stress_v1_eval.py"
+Cohesion: 0.16
+Nodes (29): _append_record(), _atomic_json(), _atomic_jsonl(), _binary_metrics(), _canonicalize_identical_checkpoint_duplicates(), _case_paths(), evaluate_synthetic_stress(), _evaluate_synthetic_stress_locked() (+21 more)
 
-### Community 48 - "openswisshcc_candidate_volume.py"
-Cohesion: 0.07
-Nodes (69): build_candidate_volume_case(), build_candidate_volume_pilot(), _canonical(), centered_slice_indices(), _component_records(), build_candidate_volume_fallback_gallery(), _gallery_candidates(), Any (+61 more)
+### Community 48 - "_mesh_from_mask"
+Cohesion: 0.10
+Nodes (27): ndarray, Converte vértices em índice de array (z, y, x) para coordenadas físicas LPS.…, world_vertices_from_index(), _campo_continuo(), _malha_do_campo(), _mesh_from_mask(), _nivel_por_volume(), Máscara binária -> campo de distância isotrópico e suavizado. O marching cubes… (+19 more)
 
-### Community 49 - "PipelineError"
-Cohesion: 0.17
+### Community 49 - "openswisshcc_candidate_volume_score.py"
+Cohesion: 0.16
 Nodes (39): aggregate_candidate_scores(), candidate_log_odds(), candidate_query(), _ensure_run_context(), freeze_candidate_volume_score_protocol(), _load_json(), _load_protocol(), Path (+31 more)
 
 ### Community 50 - "openswisshcc_v27_nested_recalibration.py"
 Cohesion: 0.15
 Nodes (37): _code_path(), evaluate_predictions(), _feature_matrix(), _finite_probability(), _fit_logistic(), _fit_outer(), _fit_scaler(), freeze_predictions() (+29 more)
 
-### Community 51 - "build_lld_mmri_v23_shape_branch"
-Cohesion: 0.25
-Nodes (13): build_lld_mmri_v23_shape_branch(), compute_lld_mmri_v23_candidate_shape(), Any, Image, Path, Build all shape signals after the signed technical review, without labels., Create the frozen t3/top-5 candidate and its physical shape features., _write_mask_atomic() (+5 more)
+### Community 51 - "medgemma_client.py"
+Cohesion: 0.15
+Nodes (21): _all_text(), _bool(), _canonicalize_report(), create_medgemma_client(), _deep_merge(), _expand_compact_classification(), _parse_json_report(), Any (+13 more)
 
 ### Community 52 - "v23_retrospective_multicohort_phase2.py"
 Cohesion: 0.13
@@ -804,79 +824,79 @@ Nodes (37): _alignment_contract(), build_phase3_exact_v23_signals(), _holdout_in
 
 ### Community 54 - "multiphase_ingest.py"
 Cohesion: 0.11
-Nodes (36): build_multiphase_case(), discover_phase_folders(), MultiphaseCase, normalize_phase_name(), Image, Path, Multiphase DICOM ingestion for the Etapa C visual benchmark. The webapp…, Collapse a trailing singleton 4th dimension, preserving geometry. Some DICOM… (+28 more)
+Nodes (38): build_multiphase_case(), discover_phase_folders(), harmonize_to_reference(), MultiphaseCase, normalize_phase_name(), Image, Path, Multiphase DICOM ingestion for the Etapa C visual benchmark. The webapp… (+30 more)
 
-### Community 55 - "chaos_v21_panels.py"
-Cohesion: 0.10
-Nodes (37): build_chaos_uniform9_gallery(), build_chaos_uniform9_panels(), _canonical_sha(), _case_files(), _load(), Any, Path, Render the label-blind CHAOS v21 uniform-9 technical gallery. (+29 more)
+### Community 55 - "test_openswisshcc_enhancement_score_preflight.py"
+Cohesion: 0.23
+Nodes (18): _load(), Any, Path, Write an immutable evidence record; still does not authorize inference., Validate exact-top5 visual inputs without opening labels or masks., _refuse_holdout(), validate_enhancement_top5_bundle(), write_enhancement_top5_preflight() (+10 more)
 
 ### Community 56 - "openswisshcc_volumetric_gate.py"
-Cohesion: 0.21
-Nodes (24): _atomic_json(), _canonical_sha256(), _config_records(), create_volumetric_freeze(), create_volumetric_review(), Any, Path, Immutable review and experiment freeze for OpenSwissHCC volumetric panels. The… (+16 more)
+Cohesion: 0.06
+Nodes (79): _atomic_json(), _canonical_sha256(), _config_records(), create_volumetric_freeze(), create_volumetric_review(), Any, Path, Immutable review and experiment freeze for OpenSwissHCC volumetric panels. The… (+71 more)
 
 ### Community 57 - "v23_retrospective_multicohort_phase4.py"
 Cohesion: 0.16
 Nodes (36): _bootstrap(), _confusion(), evaluate_phase4_predictions(), _fit_threshold(), _fold_rows(), freeze_phase4_oof_predictions(), _index(), _load() (+28 more)
 
 ### Community 58 - "verify_embeddings"
-Cohesion: 0.08
-Nodes (42): _append_fsync(), _atomic_npy(), _checkpoint_rows(), extract_embeddings(), HuggingFaceMedSigLIPBackend, ImageEmbeddingBackend, _json(), _jsonl() (+34 more)
+Cohesion: 0.09
+Nodes (34): build_fused_localized_embeddings(), _json(), _jsonl(), localized_dynamic_features(), Any, ndarray, Path, Label-blind dynamic features fused with localized MedSigLIP embeddings. (+26 more)
 
 ### Community 59 - "test_rag_retrieval_eval.py"
 Cohesion: 0.16
 Nodes (37): _build_index(), _chunk(), Path, test_eval_cli_no_fail_returns_zero_when_acceptance_fails(), test_eval_cli_rejects_invalid_top_k(), test_eval_cli_returns_nonzero_when_acceptance_fails(), test_eval_cli_writes_json_and_markdown_reports(), test_real_retrieval_eval_references_existing_manifest_categories_and_docs() (+29 more)
 
 ### Community 60 - "compute_benchmark_metrics"
-Cohesion: 0.22
-Nodes (20): Núcleo auditável do benchmark MedGemma do ARGOS., _coerce(), compute_benchmark_metrics(), _negative_subtype_metrics(), _phenotype_tag_metrics(), _positive_subtype_metrics(), Any, _ratio() (+12 more)
+Cohesion: 0.24
+Nodes (19): _coerce(), compute_benchmark_metrics(), _negative_subtype_metrics(), _phenotype_tag_metrics(), _positive_subtype_metrics(), Any, _ratio(), Métricas puras do benchmark, sem dependência do webapp ou do modelo. (+11 more)
 
-### Community 61 - "ProtectedTrainingCase"
-Cohesion: 0.07
-Nodes (62): Supervised visual-learning foundations for ARGOS research workflows. This…, _auc(), bootstrap_confidence_interval(), clinical_subtype_metrics(), evaluate_robustness(), _json(), _jsonl(), leave_one_dataset_out() (+54 more)
+### Community 61 - "robustness.py"
+Cohesion: 0.13
+Nodes (37): _auc(), bootstrap_confidence_interval(), clinical_subtype_map(), clinical_subtype_metrics(), evaluate_robustness(), _json(), _jsonl(), leave_one_dataset_out() (+29 more)
 
 ### Community 62 - "liver_segmentation_comparison.py"
 Cohesion: 0.14
 Nodes (34): _atomic_json(), build_gallery(), _case_gallery_image(), _contour(), evaluate(), _load_binary(), load_config(), _model_specs() (+26 more)
 
 ### Community 63 - "run_lld_mmri_v23_segmentation_pilot"
-Cohesion: 0.19
-Nodes (26): _checkpoint_payload(), _mask_gate(), Any, Image, Path, Measure the first N protocol cases without producing inference inputs., Durably replace a checkpoint while retaining the last valid generation., Return the exact label-blind geometry/size gate used by the audit. (+18 more)
+Cohesion: 0.25
+Nodes (21): _checkpoint_payload(), Any, Measure the first N protocol cases without producing inference inputs., Durably replace a checkpoint while retaining the last valid generation., run_lld_mmri_v23_segmentation_pilot(), _write_checkpoint_rows_atomic(), Progress, Segmenter (+13 more)
 
-### Community 64 - "openswisshcc_volumetric.py"
+### Community 64 - "openswisshcc_candidate_volume.py"
+Cohesion: 0.04
+Nodes (134): build_candidate_volume_case(), build_candidate_volume_pilot(), _canonical(), centered_slice_indices(), _component_records(), build_candidate_volume_fallback_gallery(), _gallery_candidates(), Any (+126 more)
+
+### Community 65 - "run_openswisshcc_volumetric_pairwise.py"
+Cohesion: 0.23
+Nodes (7): main(), Run reviewed, frozen multisequence v9 scores with local MedGemma 1.5 4B., LocalPairwiseScorer, main(), Any, Path, Run blind natural-language pairwise scoring with the local MedGemma 1.5 4B.
+
+### Community 66 - "resolve_monophase_sequence_contract"
 Cohesion: 0.14
-Nodes (30): _aligned_outputs(), Any, Path, Adapter do candidato multifásico OpenSwissHCC para o renderizador ARGOS., Renderize um único painel RGB, preservando o gate visual antes da inferência., render_aligned_multiphase_candidate(), _reuse_panel(), _signature() (+22 more)
+Nodes (31): build_hierarchical_screening_result(), Any, Fail-closed contracts for single-phase liver MRI screening. This module does…, Separate target pathology, observed finding and subtype. The binary endpoint…, Return a sanitized capability contract for the selected real MR series., resolve_monophase_sequence_contract(), aggregate_balanced_choice_reads(), build_balanced_choice_prompts() (+23 more)
 
-### Community 65 - "openswisshcc_multisequence_freeze.py"
-Cohesion: 0.10
-Nodes (31): _canonical(), _config(), create_multisequence_freeze(), _load(), Any, Path, Immutable experiment freeze for reviewed OpenSwissHCC multisequence v9 panels., _signature() (+23 more)
-
-### Community 66 - "process_monophase_medsiglip_job"
-Cohesion: 0.13
-Nodes (33): build_hierarchical_screening_result(), Any, Fail-closed contracts for single-phase liver MRI screening. This module does…, Separate target pathology, observed finding and subtype. The binary endpoint…, Return a sanitized capability contract for the selected real MR series., resolve_monophase_sequence_contract(), aggregate_balanced_choice_reads(), build_balanced_choice_prompts() (+25 more)
-
-### Community 67 - "run_raw_phase_equivalence_benchmark.py"
-Cohesion: 0.20
-Nodes (18): panel_hashes(), positive_arm_metrics(), Any, Path, Auditable helpers for raw-vs-explicit phase pathway equivalence tests., selection_key(), verified_review(), _wilson() (+10 more)
+### Community 67 - "Plano — Realismo anatômico seguro no visualizador OREN e WebXR"
+Cohesion: 0.09
+Nodes (21): 10. Rollback, 1. Baseline protegido antes do desenvolvimento, 2. Problema visual identificado, 3. Limite científico obrigatório, 4. Resultado funcional desejado, 5.1 Perfis de material, 5.2 Pacote de texturas original e local, 5.3 Microtextura sem alterar anatomia (+13 more)
 
 ### Community 68 - "test_medgemma_volumetric.py"
 Cohesion: 0.13
 Nodes (34): effective_screening_timeout(), _empty_tile(), estimate_panel_count(), _notice_tile(), Image, ndarray, Path, Planejamento e composição auditável de painéis com cobertura hepática integral. (+26 more)
 
 ### Community 69 - "openswisshcc_inference_batch.py"
-Cohesion: 0.13
-Nodes (27): authorized_config_paths(), parse_extra_configs(), Any, Path, Registro fechado de variantes de configuração da qualificação OpenSwissHCC., Converta argumentos KEY=PATH, rejeitando chaves ambíguas ou duplicadas., Retorne somente as configurações pré-declaradas e com chaves fechadas., Selecione por tipo e hash bruto, nunca por caminho vindo do candidato. (+19 more)
-
-### Community 70 - "_nested_loocv"
 Cohesion: 0.11
-Nodes (33): _candidate_scores(), _nested_loocv(), _nested_repeated_stratified(), planarity_contrast(), Any, Return the single predeclared v24 feature without labels., Select weight by inner LOOCV using training indices only., _select_weight_nested() (+25 more)
+Nodes (29): authorized_config_paths(), parse_extra_configs(), Any, Path, Registro fechado de variantes de configuração da qualificação OpenSwissHCC., Converta argumentos KEY=PATH, rejeitando chaves ambíguas ou duplicadas., Retorne somente as configurações pré-declaradas e com chaves fechadas., Selecione por tipo e hash bruto, nunca por caminho vindo do candidato. (+21 more)
+
+### Community 70 - "medsiglip_partial_finetune.py"
+Cohesion: 0.18
+Nodes (27): aggregate_probabilities(), _atomic_json(), _atomic_torch_save(), _candidate_paths(), _case_logit(), _close_runtime(), _evaluate_loss(), generate_partial_oof() (+19 more)
 
 ### Community 71 - "test_rag_index_hardening.py"
 Cohesion: 0.13
 Nodes (26): _build_index(), _chunk(), parametrize, Path, test_rag_hardening_04_build_rejects_non_positive_k1(), test_rag_hardening_05_build_rejects_negative_b(), test_rag_hardening_06_build_rejects_b_above_one(), test_rag_hardening_08_build_rejects_invalid_corpus_schema() (+18 more)
 
-### Community 72 - "sha256_of"
-Cohesion: 0.13
-Nodes (34): freeze_highdimensional_batch_protocol(), _infer_case(), _load_batch_protocol(), Path, Runner resumível das predições cegas high-dimensional v13., run_highdimensional_blind_batch(), _validate_existing_prediction(), _write_progress() (+26 more)
+### Community 72 - "ensure_certificate"
+Cohesion: 0.21
+Nodes (25): _legacy_certificate(), _load(), Certificate, Path, test_invalid_lan_addresses_are_rejected(), test_legacy_trusted_certificate_is_migrated_as_same_ca(), test_stable_ca_survives_ip_change_and_leaf_is_reissued(), _verify() (+17 more)
 
 ### Community 73 - "segmentation_contract.py"
 Cohesion: 0.15
@@ -891,48 +911,48 @@ Cohesion: 0.13
 Nodes (30): build_highdimensional_stack(), _geometry_equal(), _load_case_record(), _orient_pair_lps(), _publish_staging_directory(), Image, ndarray, Path (+22 more)
 
 ### Community 76 - "openswisshcc_holdout_signals.py"
-Cohesion: 0.13
-Nodes (31): assemble_holdout_v21_raw_signals(), build_holdout_v21_localizer_input_manifest(), context_preflight_summary(), freeze_holdout_v21_predictions(), _input_rows(), _jsonl(), _load(), MedGemmaChoiceScorer (+23 more)
-
-### Community 77 - "make_sphere_mask"
-Cohesion: 0.09
-Nodes (33): _fonte_da_malha_do_orgao(), Fonte da máscara do órgão para VISUALIZAÇÃO (a malha 3D), não para…, stage5_refine(), make_sphere_mask(), Binary sphere in (z, y, x) array order., Anatomia interna é publicada com metadados para o viewer, sem atlas externo., Ilhas soltas viram objetos flutuando no visualizador (docs/188)., A guarda existe para não apagar anatomia: dois pedaços grandes ficam. (+25 more)
-
-### Community 78 - "block_optional_module_for_spawn"
 Cohesion: 0.12
-Nodes (24): liver_segments_mr_union_segmenter(), Image, Run only the automatic TotalSegmentator MRI liver class., Run the dedicated MRI Couinaud model and union its eight liver segments., _same_geometry(), total_mr_liver_segmenter(), block_optional_module_for_spawn(), Runtime guards for optional packages that break Windows spawn workers. (+16 more)
+Nodes (32): assemble_holdout_v21_raw_signals(), build_holdout_v21_localizer_input_manifest(), context_preflight_summary(), freeze_holdout_v21_predictions(), _input_rows(), _jsonl(), _load(), MedGemmaChoiceScorer (+24 more)
+
+### Community 77 - "write_run_outputs"
+Cohesion: 0.30
+Nodes (13): _atomic_text(), build_summary(), _fmt(), _json(), Any, Path, Persistência atômica e relatório humano das execuções de benchmark., _subtype_table() (+5 more)
+
+### Community 78 - "total_mr_liver_vessels_segmenter"
+Cohesion: 0.53
+Nodes (5): main(), Any, Path, total_mr_liver_vessels_segmenter(), _write_json_atomic()
 
 ### Community 79 - "openswisshcc_holdout_evaluation.py"
 Cohesion: 0.18
 Nodes (27): _auc(), evaluate_holdout_v21_same_domain(), _jsonl(), _load(), materialize_holdout_v21_labels_after_freeze(), _provenance_mapping(), Any, Path (+19 more)
 
-### Community 80 - "core.py"
-Cohesion: 0.09
-Nodes (30): load_profile(), Any, Engine, Path, Motor órgão-agnóstico. O comportamento por órgão vem do perfil (config)., test_load_profile_accepts_str_path(), test_missing_file_aborts(), test_missing_required_key_aborts() (+22 more)
+### Community 80 - "Engine"
+Cohesion: 0.11
+Nodes (23): Engine, Path, Motor órgão-agnóstico. O comportamento por órgão vem do perfil (config)., Re-running finalize with --no-lesion after a lesion run must not keep the stale…, test_finalize_no_lesion_flag(), test_finalize_produces_stls_and_manifest(), test_refinalize_no_lesion_drops_prior_lesion(), _fake_segment() (+15 more)
 
 ### Community 81 - "external_bundle_evaluation.py"
 Cohesion: 0.10
 Nodes (41): _atomic_json(), _auc(), evaluate_external_bundle(), _json(), _jsonl(), _metrics(), predict_external_bundle(), Any (+33 more)
 
 ### Community 82 - "medsiglip_zero_shot.py"
-Cohesion: 0.11
-Nodes (25): adjacent_axial_evidence(), extract_panel_views(), load_medsiglip_config(), MedSigLIPConfig, MedSigLIPScorer, normalize_prompt_ensemble_scores(), PanelViews, Any (+17 more)
+Cohesion: 0.09
+Nodes (30): adjacent_axial_evidence(), extract_panel_views(), load_medsiglip_config(), MedSigLIPConfig, MedSigLIPScorer, normalize_prompt_ensemble_scores(), PanelViews, Any (+22 more)
 
 ### Community 83 - "run_phase_aware_shadow"
 Cohesion: 0.16
 Nodes (29): same_geometry(), mask_agreement(), _mask_array_on_reference(), mask_quality_metrics(), protected_adaptive_fusion(), _publish_mask(), Any, Image (+21 more)
 
-### Community 84 - "lld_mmri_v23_signals.py"
-Cohesion: 0.14
-Nodes (21): assemble_lld_mmri_v23_raw_signals(), build_lld_mmri_v23_localizer_input_manifest(), _prepared_rows(), Any, Path, Review-gated v11 signal generation for the LLD-MMRI v23 cohort., Publish only venous MRI and automatic liver mask after human approval., Assemble the exact three raw v11 signals without labels or decisions. (+13 more)
+### Community 84 - "run_raw_phase_equivalence_benchmark.py"
+Cohesion: 0.09
+Nodes (38): candidate_error(), CompletedProcess, Path, Isolated Windows launcher for candidate localization., run_candidate_subprocess(), panel_hashes(), positive_arm_metrics(), Any (+30 more)
 
 ### Community 85 - "openswisshcc_freeze.py"
-Cohesion: 0.15
-Nodes (26): _candidate_records(), _config_records(), create_experiment_freeze(), Any, Path, Congelamento reproduzível do experimento OpenSwissHCC antes da inferência., Congele bytes dos painéis e configurações resolvidas sem abrir labels., Recalcule a coorte e os hashes efetivos imediatamente antes da execução. (+18 more)
+Cohesion: 0.18
+Nodes (21): _candidate_records(), _config_records(), create_experiment_freeze(), Any, Path, Congelamento reproduzível do experimento OpenSwissHCC antes da inferência., Congele bytes dos painéis e configurações resolvidas sem abrir labels., Recalcule a coorte e os hashes efetivos imediatamente antes da execução. (+13 more)
 
 ### Community 86 - "openswisshcc_lesion_localizer.py"
-Cohesion: 0.08
-Nodes (42): candidate_features(), index_inputs(), _load_jsonl(), Localizer, Any, ndarray, Path, Protocol (+34 more)
+Cohesion: 0.10
+Nodes (33): candidate_features(), index_inputs(), _load_jsonl(), Localizer, Any, ndarray, Path, Protocol (+25 more)
 
 ### Community 87 - "v23_external_validation.py"
 Cohesion: 0.18
@@ -946,33 +966,33 @@ Nodes (28): _append_fsync(), build_radiomics_features(), _distribution_features(
 Cohesion: 0.20
 Nodes (28): Counter, build(), _canonical_hash(), _direction_vectors(), _ds(), _json(), _jsonl(), _lld_cases() (+20 more)
 
-### Community 90 - "openswisshcc_candidate_volume_evaluation.py"
-Cohesion: 0.17
-Nodes (26): _canonical_sha(), _contains_forbidden_key(), create_evaluation_protocol(), evaluate_development(), _finite(), _load_json(), _loocv(), Any (+18 more)
+### Community 90 - "openswisshcc_axial_atlas_chunk_score.py"
+Cohesion: 0.18
+Nodes (21): _chunk_query(), freeze_chunk_protocol(), _load_protocol(), partition_frame_indices(), Path, Scorer v18 do atlas axial em blocos sequenciais para o MedGemma 4B., run_chunk_batch(), _score_case() (+13 more)
 
 ### Community 91 - "freeze_retrospective_multicohort_contract"
 Cohesion: 0.17
 Nodes (27): build_phase1_readiness(), _contract_body(), freeze_retrospective_multicohort_contract(), _load_object(), Any, Path, Pre-registration for the retrospective multicohort evaluation of ARGOS v23.…, Freeze the phase-1 methodological contract without reading cohort data. (+19 more)
 
 ### Community 92 - "resolve_authorized_blind_phase_folders"
-Cohesion: 0.14
-Nodes (31): AuthorizedPhaseResolution, _expected_hash(), _find_series_directory(), _load_audit(), Any, Path, Authorized phase resolver for ``ARGOS_INTERNAL_BLIND_BENCHMARK_120_V1``. The…, Return a label-free cohort preflight from the authorized phase index. (+23 more)
+Cohesion: 0.17
+Nodes (27): AuthorizedPhaseResolution, _expected_hash(), _find_series_directory(), _load_audit(), Any, Path, Authorized phase resolver for ``ARGOS_INTERNAL_BLIND_BENCHMARK_120_V1``. The…, Return a label-free cohort preflight from the authorized phase index. (+19 more)
 
-### Community 93 - "medsiglip_partial_finetune.py"
-Cohesion: 0.18
-Nodes (27): aggregate_probabilities(), _atomic_json(), _atomic_torch_save(), _candidate_paths(), _case_logit(), _close_runtime(), _evaluate_loss(), generate_partial_oof() (+19 more)
+### Community 93 - "medsiglip_pairwise_subtype.py"
+Cohesion: 0.19
+Nodes (25): _case_masses(), class_pairs(), evaluate_pairwise_oof_predictions(), _fit_pair_models(), generate_pairwise_oof_predictions(), _inner_oof_masses(), load_pairwise_config(), _macro_recall() (+17 more)
 
 ### Community 94 - "test_visual_subtype.py"
-Cohesion: 0.13
-Nodes (23): Name the lesion subtype, or refuse to when the evidence is not there. The model…, resolve_subtype(), Guarda de subtipo e roteamento do modo visual no exame individual. O ponto…, Fígado pequeno existe de verdade -- cirrose avançada, hepatectomia prévia,…, Triagem negativa NÃO é fígado sem lesão: só o CHC é positivo aqui. Caso real…, Se a triagem diz negativo mas a classe mais provável é CHC, as duas leituras…, test_aviso_de_volume_nao_reprova_o_caso(), test_limiar_e_uma_fronteira_estrita() (+15 more)
+Cohesion: 0.12
+Nodes (26): Name the lesion subtype, or refuse to when the evidence is not there. The model…, resolve_subtype(), Guarda de subtipo e roteamento do modo visual no exame individual. O ponto…, Fígado pequeno existe de verdade -- cirrose avançada, hepatectomia prévia,…, Triagem negativa NÃO é fígado sem lesão: só o CHC é positivo aqui. Caso real…, Se a triagem diz negativo mas a classe mais provável é CHC, as duas leituras…, test_aviso_de_volume_nao_reprova_o_caso(), test_limiar_e_uma_fronteira_estrita() (+18 more)
 
-### Community 95 - "viewer_artifacts.py"
-Cohesion: 0.16
-Nodes (29): stage7_export_publish(), acquisition_summary(), _as_3d(), _canonical_reference_pair(), compute_mesh_metrics(), generate_reference_images(), lesion_segment_overlap(), nearest_surface_relationships() (+21 more)
+### Community 95 - "stages.py"
+Cohesion: 0.15
+Nodes (30): _anatomy_structures(), Lê estruturas internas opcionais do perfil de modo estritamente local. O…, stage6_mesh(), stage7_export_publish(), acquisition_summary(), _as_3d(), _canonical_reference_pair(), compute_mesh_metrics() (+22 more)
 
 ### Community 96 - "importers.py"
-Cohesion: 0.12
-Nodes (47): attach_ground_truth(), _candidate_sanitized_manifest(), _float_lists_close(), _forbidden_manifest_paths(), _geometry_signature(), InferenceSource, _inside(), load_dataset_manifest() (+39 more)
+Cohesion: 0.19
+Nodes (21): _candidate_sanitized_manifest(), _float_lists_close(), _forbidden_manifest_paths(), InferenceSource, _inside(), _normalized_key(), _optional_token(), ProtectedGroundTruth (+13 more)
 
 ### Community 97 - "Como transferir e executar o ARGOS/OREN Docker em outro PC"
 Cohesion: 0.06
@@ -982,57 +1002,57 @@ Nodes (32): 10. Acessar o OREN, 11. Smoke test real no novo PC, 12. O que não t
 Cohesion: 0.17
 Nodes (25): _atomic_json(), _checkpoint(), cuda_preflight(), extract_liver_label(), gpu_memory_used_mb(), _publish_directory(), Any, Path (+17 more)
 
-### Community 99 - "openswisshcc_lesion_localizer_chunks.py"
-Cohesion: 0.15
-Nodes (25): _copy_tree_with_hardlinks(), _load_json(), load_verified_selection_plan(), merge_localizer_chunks(), planned_chunk(), Any, Path, Atomic chunk execution support for the blind OpenSwissHCC v10 localizer run. (+17 more)
+### Community 99 - "merge_localizer_chunks"
+Cohesion: 0.20
+Nodes (16): _copy_tree_with_hardlinks(), _load_json(), load_verified_selection_plan(), merge_localizer_chunks(), planned_chunk(), Any, Path, Validate every planned chunk and atomically publish one authoritative run. (+8 more)
 
 ### Community 100 - "patch25d_classifier.py"
 Cohesion: 0.19
 Nodes (26): _aggregate(), _atomic_model(), _auc(), _best_threshold(), _confusion(), evaluate_oof(), _filtered_folds(), _fit() (+18 more)
 
-### Community 101 - "openswisshcc_volumetric_pairwise.py"
-Cohesion: 0.17
-Nodes (18): _axial_indices(), _existing_case(), _json_sha256(), PairwiseScorer, _panel_prompt(), Any, Path, Protocol (+10 more)
+### Community 101 - "gd_eob_hbp_pilot.py"
+Cohesion: 0.26
+Nodes (23): build_hbp_pilot_gallery(), freeze_hbp_pilot_protocol(), _image_rows(), _load_json(), Any, Path, Deterministic label-blind HBP compatibility pilot for frozen ARGOS v23., Select three cases per center using case IDs only, never image contents. (+15 more)
 
 ### Community 102 - "dataset_audit.py"
 Cohesion: 0.21
 Nodes (26): _accumulate_series(), audit_case(), classify_sequence(), describe_selected_series(), _dicom_files(), _digest(), _discover_series(), _echo_bucket() (+18 more)
 
-### Community 103 - "openswisshcc_slice_pairwise.py"
-Cohesion: 0.12
-Nodes (21): crop_axial_tiles(), _png_sha256(), Any, Image, Path, Protocol, High-resolution axial-tile pairwise scoring from signed volumetric panels., run_slice_pairwise_scores() (+13 more)
+### Community 103 - "test_openswisshcc_volume_score.py"
+Cohesion: 0.42
+Nodes (13): _fixture(), _patch_context(), parametrize, Path, _response(), test_batch_rejects_nonpositive_chunk_and_nonlocal_endpoint(), test_blind_batch_is_resumable_and_never_sends_labels(), test_blind_batch_refuses_tampered_existing_score() (+5 more)
 
 ### Community 104 - "Runbook — Rodar o projeto no MAC"
 Cohesion: 0.05
 Nodes (36): Benchmark MedGemma — Etapa 0, Dry-run, Execução completa, Isolamento do ground truth, Manifestos, OpenSwissHCC, Política estatística, Saídas (+28 more)
 
 ### Community 105 - "RuntimeError"
-Cohesion: 0.07
-Nodes (24): RuntimeError, Session, test_balanced_choice_rotates_every_label_through_every_code(), _download_part(), download_ranged(), main(), Path, split_ranges() (+16 more)
+Cohesion: 0.09
+Nodes (15): RuntimeError, test_balanced_choice_rotates_every_label_through_every_code(), MedGemmaRuntime, OllamaRuntime, Gera uma resposta única a partir de 5–85 cortes axiais ordenados., Pontua continuações fechadas sem gerar raciocínio livre., Contrabalança classe, código e posição por um quadrado latino 3x3., Runtime que delega a inferência a um daemon Ollama local (GGUF/Metal). Expõe a… (+7 more)
 
 ### Community 106 - "restoreSavedView"
-Cohesion: 0.15
-Nodes (28): anatomicalTargetRoles(), anatomicalViewAvailable(), animateElementFeedback(), animateMeshVisibility(), applyAnatomicalView(), applyInitialPreset(), applyPreset(), applyView() (+20 more)
+Cohesion: 0.13
+Nodes (33): anatomicalTargetRoles(), anatomicalViewAvailable(), animateElementFeedback(), animateMeshVisibility(), applyAnatomicalView(), applyMaterialProfile(), applyPreset(), applyView() (+25 more)
 
-### Community 107 - "test_lld_mmri_v23_preparation.py"
-Cohesion: 0.26
-Nodes (26): prepare_lld_mmri_v23_blind_inputs(), Materialize anonymous eight-phase inputs plus an automatic liver mask., Verify every prepared NIfTI and safety invariant before panel generation., verify_lld_mmri_v23_blind_inputs(), LiverSegmenter, _audit(), _download(), _protocol() (+18 more)
+### Community 107 - "openswisshcc_multisequence_batch.py"
+Cohesion: 0.18
+Nodes (20): build_multisequence_cohort(), build_multisequence_gallery(), _canonical(), _load(), Any, Path, Atomic cohort and blind review gallery for OpenSwissHCC multisequence v9., input_manifest() (+12 more)
 
 ### Community 108 - "openswisshcc_lesion_localizer_evaluation.py"
 Cohesion: 0.18
 Nodes (23): _canonical(), create_evaluation_protocol(), evaluate_full_development(), _load(), _load_development_labels(), Any, Path, Pre-declared development evaluation for the OpenSwissHCC v10 lesion localizer. (+15 more)
 
 ### Community 109 - "extract_development_registration_transforms"
-Cohesion: 0.15
-Nodes (24): anonymized_case_id(), _copy_atomic(), extract_development_registration_transforms(), extract_holdout_registration_transforms_label_blind(), Path, PurePosixPath, ZipInfo, Extração segura dos transforms T1 permitidos do OpenSwissHCC. Somente… (+16 more)
-
-### Community 110 - "radiomics_classifier.py"
-Cohesion: 0.18
-Nodes (24): _atomic_joblib(), _best_threshold(), _confusion(), evaluate_oof_predictions(), _fit_model(), generate_oof_predictions(), _inner_oof_scores(), _json() (+16 more)
-
-### Community 111 - "synthetic_external_stress_v1_eval.py"
 Cohesion: 0.16
-Nodes (29): _append_record(), _atomic_json(), _atomic_jsonl(), _binary_metrics(), _canonicalize_identical_checkpoint_duplicates(), _case_paths(), evaluate_synthetic_stress(), _evaluate_synthetic_stress_locked() (+21 more)
+Nodes (23): _copy_atomic(), extract_development_registration_transforms(), extract_holdout_registration_transforms_label_blind(), Path, PurePosixPath, ZipInfo, Extração segura dos transforms T1 permitidos do OpenSwissHCC. Somente…, Extract only T1 registration parameters for subjects 045–088. (+15 more)
+
+### Community 110 - "openswisshcc_candidate_volume_evaluation.py"
+Cohesion: 0.17
+Nodes (26): _canonical_sha(), _contains_forbidden_key(), create_evaluation_protocol(), evaluate_development(), _finite(), _load_json(), _loocv(), Any (+18 more)
+
+### Community 111 - "public_independent_v21_evaluation.py"
+Cohesion: 0.22
+Nodes (20): evaluate_liverhccseg_v21_positive_arm(), freeze_liverhccseg_v21_evaluation_protocol(), _jsonl(), _load(), Any, Path, Protected positive-only external evaluation for LiverHccSeg v21., Evaluate sensitivity only after predictions are complete and frozen. (+12 more)
 
 ### Community 112 - "openswisshcc_holdout_review.py"
 Cohesion: 0.23
@@ -1040,19 +1060,19 @@ Nodes (23): _canonical_sha(), create_holdout_uniform9_review(), _load(), Any, Pa
 
 ### Community 113 - "openswisshcc_review.py"
 Cohesion: 0.21
-Nodes (23): create_panel_review(), Any, Path, Revisão humana imutável dos painéis públicos OpenSwissHCC., Crie uma aprovação separada, vinculada aos hashes dos painéis existentes., Revalide assinatura e bytes aprovados imediatamente antes da inferência., Liste somente diretórios candidatos pseudonimizados e completos., ready_case_ids() (+15 more)
+Nodes (24): _candidate(), create_panel_review(), Any, Path, Revisão humana imutável dos painéis públicos OpenSwissHCC., Crie uma aprovação separada, vinculada aos hashes dos painéis existentes., Revalide assinatura e bytes aprovados imediatamente antes da inferência., Liste somente diretórios candidatos pseudonimizados e completos. (+16 more)
 
-### Community 114 - "public_independent_v21_evaluation.py"
-Cohesion: 0.22
-Nodes (20): evaluate_liverhccseg_v21_positive_arm(), freeze_liverhccseg_v21_evaluation_protocol(), _jsonl(), _load(), Any, Path, Protected positive-only external evaluation for LiverHccSeg v21., Evaluate sensitivity only after predictions are complete and frozen. (+12 more)
+### Community 114 - "build_xr_render_asset"
+Cohesion: 0.18
+Nodes (19): build_xr_render_asset(), Any, Path, PolyData, Auditable, optional render assets for the OREN WebXR client. The source STL…, Create a LOD without allowing it to become measurement authority., _source_asset(), xr_triangle_budget() (+11 more)
 
-### Community 115 - "openswisshcc_candidate_volume_timing_run.py"
-Cohesion: 0.17
-Nodes (21): Any, _selected_timing_cases(), _fresh_case_descriptor(), _load_static_context(), _prepare_sources(), projected_pipeline_seconds(), Any, Path (+13 more)
+### Community 115 - "openswisshcc_holdout_panels.py"
+Cohesion: 0.25
+Nodes (18): _aligned_paths(), build_holdout_uniform9_gallery(), build_holdout_uniform9_panels(), _canonical_sha(), _files(), _input_rows(), _load(), Any (+10 more)
 
-### Community 116 - "monophase_external_failure_audit.py"
-Cohesion: 0.20
-Nodes (23): _atomic_json(), _atomic_jsonl(), build_monophase_external_failure_audit(), _candidate_indices(), _development_localizer(), _development_visibility(), _json(), _jsonl() (+15 more)
+### Community 116 - "openswisshcc_enhancement_timing_projection.py"
+Cohesion: 0.23
+Nodes (16): _finite_positive(), _load(), project_enhancement_top5_timing(), Any, Path, _quantile(), Label-free timing projection for the v22 exact-top5 4B pilot., Project timing from frozen measurements; never call the model. (+8 more)
 
 ### Community 117 - "properties"
 Cohesion: 0.06
@@ -1067,40 +1087,40 @@ Cohesion: 0.06
 Nodes (31): 1. Resumo executivo, 2. O que o benchmark realmente demonstrou, 3.1. O baseline mostra poucos cortes do fígado, 3.2. A tarefa depende de exame multiparamétrico, não de uma única série, 3.3. Alguns casos tinham estrutura DICOM difícil, 3.4. O benchmark local usou MedGemma 4B, não o 27B externo, 3.5. O RAG textual piorou a aderência ao schema, 3.6. Falhas técnicas entram como erro na métrica principal (+23 more)
 
 ### Community 120 - "openswisshcc_multisequence_chunks.py"
-Cohesion: 0.19
-Nodes (18): _canonical(), create_chunk_plan(), _link_case(), _load(), merge_chunk_runs(), Any, Path, Signed blind chunk plan and atomic merger for long multisequence v9 inference. (+10 more)
+Cohesion: 0.20
+Nodes (15): _canonical(), create_chunk_plan(), _link_case(), _load(), merge_chunk_runs(), Any, Path, Signed blind chunk plan and atomic merger for long multisequence v9 inference. (+7 more)
 
-### Community 121 - "openswisshcc_v20_fusion.py"
-Cohesion: 0.21
-Nodes (21): build_blind_fusion_bundle(), create_fusion_protocol(), evaluate_fusion_development(), _fold_scores(), _load_json(), _load_jsonl(), _loocv(), Any (+13 more)
+### Community 121 - "openswisshcc_multisequence_freeze.py"
+Cohesion: 0.22
+Nodes (15): _canonical(), _config(), create_multisequence_freeze(), _load(), Any, Path, Immutable experiment freeze for reviewed OpenSwissHCC multisequence v9 panels., _signature() (+7 more)
 
-### Community 122 - "lld_mmri_v23_evaluation.py"
-Cohesion: 0.24
-Nodes (20): _auc(), evaluate_lld_mmri_v23_after_prediction_freeze(), _jsonl(), _load(), Any, Path, Protected post-freeze evaluation for the independent LLD-MMRI v23 cohort., Open public labels only after predictions are frozen and calculate final… (+12 more)
+### Community 122 - "lld_mmri_v23_liver_enriched_timing.py"
+Cohesion: 0.06
+Nodes (96): download_lld_mmri_v23_images(), _load_and_validate_protocol(), Any, Path, select_subject_image_files(), _auc(), evaluate_liver_enriched_predictions(), freeze_liver_enriched_evaluation_protocol() (+88 more)
 
 ### Community 123 - "174_CONSOLIDADO_ESTADO_ATUAL.md"
 Cohesion: 0.14
 Nodes (7): Contrato e gates, Convenção visual, Limitações atuais, Objetivo, Ordem operacional, Região candidata 3D pós-inferência, Revisão e persistência
 
-### Community 124 - "v24_liver_enriched_evaluation.py"
-Cohesion: 0.21
-Nodes (22): _ecdf(), _combined_references(), _combined_score(), evaluate_v24_oof_predictions(), _fit(), freeze_v24_oof_predictions(), _jsonl(), _load() (+14 more)
+### Community 124 - "load_profile"
+Cohesion: 0.19
+Nodes (19): load_profile(), Any, test_load_profile_accepts_str_path(), test_missing_file_aborts(), test_missing_required_key_aborts(), test_missing_rotulo_alvo_aborts(), test_real_figado_profile_loads(), test_valid_profile_loads() (+11 more)
 
-### Community 125 - "read_image"
-Cohesion: 0.14
-Nodes (26): _atomic_json(), generate_candidate_region(), Any, Path, Post-inference localization of unconfirmed focal liver regions. The output of…, Run TotalSegmentator in a staging directory and publish only on success., Validate geometry/binarity, clip to liver and publish an auditable mask., _same_geometry() (+18 more)
+### Community 125 - "test_operational_timing.py"
+Cohesion: 0.16
+Nodes (17): build_operational_timing(), _clean_durations(), persist_operational_timing(), Path, Auditoria sanitizada de tempo do fluxo DICOM operacional do ARGOS. O artefato…, Grava atomicamente o manifesto operacional dentro do diretório do caso., Monta o manifesto v1 e aplica o gate de 180 s sem arredondar a decisão., parametrize (+9 more)
 
 ### Community 126 - "write_dicom_series"
-Cohesion: 0.14
-Nodes (23): _image(), Path, _records(), test_chaos_config_is_negative_control_not_absolute_normal(), test_dicom_ct_only_dataset_fails_closed_for_mr_registry(), test_dicom_mr_dataset_generates_registry_record_without_raw_uid(), test_lld_mmri_nifti_never_marks_dicom_original_and_links_annotation(), test_nifti_corrupted_file_fails() (+15 more)
+Cohesion: 0.23
+Nodes (17): _image(), Path, _records(), test_chaos_config_is_negative_control_not_absolute_normal(), test_dicom_ct_only_dataset_fails_closed_for_mr_registry(), test_dicom_mr_dataset_generates_registry_record_without_raw_uid(), test_lld_mmri_nifti_never_marks_dicom_original_and_links_annotation(), test_nifti_corrupted_file_fails() (+9 more)
 
 ### Community 127 - "V21 — preparação real do LiverHccSeg"
 Cohesion: 0.06
 Nodes (25): 1. Não há coleta de dados de pacientes novos, 2. O que o pipeline faz com os dados, independente da origem, 3. Por que datasets diferentes, e o que isso custou, 4. Por que MedSigLIP, e não outro encoder, 5. O que continua sem resposta escrita, Procedência dos dados — de onde vêm e sob que termos, Critério para avançar, Estratégia de memória (+17 more)
 
-### Community 128 - "lld_mmri_v23_download.py"
-Cohesion: 0.24
-Nodes (21): download_lld_mmri_v23_images(), _load_and_validate_protocol(), Any, Path, Fail-closed image-only downloader for the frozen LLD-MMRI v23 cohort., Verify the complete image-only download before any image may be processed., select_subject_image_files(), validate_lld_mmri_v23_download() (+13 more)
+### Community 128 - "openswisshcc_multisequence_quality.py"
+Cohesion: 0.25
+Nodes (16): _canonical(), create_quality_review(), _load(), Any, Path, Blind technical-quality decisions for the OpenSwissHCC multisequence v9 cohort., _records(), _signature() (+8 more)
 
 ### Community 129 - "Plano para atingir 75% na identificação do subtipo"
 Cohesion: 0.07
@@ -1126,65 +1146,65 @@ Nodes (22): build(), _case_record(), _entropy(), _find_cases(), _link_case(), ma
 Cohesion: 0.25
 Nodes (22): _article_doc_id(), build_corpus(), build_parser(), _decode_bytes(), _doc_metadata(), extract_markdown(), _fetch_url(), _front_matter() (+14 more)
 
-### Community 135 - "chaos_v21_review.py"
-Cohesion: 0.26
-Nodes (19): _canonical_sha(), create_chaos_v21_review(), _load(), Any, Path, Signed human technical-review gate for the CHAOS v21 panels., Persist an explicit all-case technical approval; partial approval is rejected., Fail closed before model loading or any inference call. (+11 more)
+### Community 135 - "chaos_v21_panels.py"
+Cohesion: 0.13
+Nodes (32): build_chaos_uniform9_gallery(), build_chaos_uniform9_panels(), _canonical_sha(), _case_files(), _load(), Any, Path, Render the label-blind CHAOS v21 uniform-9 technical gallery. (+24 more)
 
 ### Community 136 - "liverhccseg_v21_review.py"
 Cohesion: 0.26
 Nodes (19): _canonical_sha(), create_liverhccseg_v21_review(), _load(), Any, Path, Signed human technical review gate for LiverHccSeg v21 panels., Persist an explicit all-case approval; partial approval is not accepted., Fail closed before model loading or any inference call. (+11 more)
 
-### Community 137 - "lld_mmri_v23_harmonization.py"
-Cohesion: 0.19
-Nodes (22): dynamic_liver_support_fractions(), _harmonize(), harmonize_lld_mmri_v23_dynamic_t1(), _json(), _jsonl(), _materialize(), Any, Image (+14 more)
+### Community 137 - "test_viewer_presets.py"
+Cohesion: 0.13
+Nodes (7): test_anatomical_quick_views_are_fixed_and_do_not_request_new_inference(), test_saved_views_support_local_ab_comparison_without_persisting_pixels(), test_selected_structure_has_contextual_focus_isolation_and_restore_actions(), test_viewer_state_accepts_only_known_visual_presets(), test_viewer_state_validates_reference_sync_fields(), test_viewer_state_validates_selected_structure_role(), ViewerStatePayload
 
 ### Community 138 - "Passo 3 — Múltiplas instâncias: REPROVADO, e o oráculo é inacessível"
 Cohesion: 0.07
 Nodes (25): 1. Aviso antes dos números, 2. O que é válido: a comparação interna, 3. Consequência estrutural, 4. Estado das metas, 5. Nota sobre o endpoint de subtipo, Onde a fusão mais rende, Passo 1 — Fusão de representações: ganho real, mas o gate não vale, 1. Resultado bruto (+17 more)
 
-### Community 139 - "openswisshcc_inference.py"
-Cohesion: 0.21
-Nodes (18): _candidate_files(), infer_reviewed_candidate(), Any, Path, Inferência MedGemma 4B sobre candidatos OpenSwissHCC previamente revisados., Execute um caso aprovado; não persista relatório se qualquer gate falhar., _reviewed_entry(), _validated_config() (+10 more)
+### Community 139 - "infer_reviewed_candidate"
+Cohesion: 0.18
+Nodes (20): _candidate_files(), infer_reviewed_candidate(), Any, Path, Execute um caso aprovado; não persista relatório se qualquer gate falhar., _reviewed_entry(), _validated_config(), _candidate() (+12 more)
 
 ### Community 140 - "loadRemoteManifestProgressively"
-Cohesion: 0.13
-Nodes (22): addMesh(), applyAnatomicalOverlayAppearance(), applyHepaticTissueAppearance(), applyMaterialProfile(), applyOrganicVertexTone(), applySegmentAtlasAppearance(), fetchBuffer(), fetchMeshBuffersBounded() (+14 more)
+Cohesion: 0.21
+Nodes (13): addMesh(), fetchBuffer(), fetchMeshBuffersBounded(), loadRemoteManifestProgressively(), mergeVerticesByPosition(), nextAnimationFrame(), prepareIncrementalMesh(), presetMeshState() (+5 more)
 
 ### Community 141 - "adjudicate_hcc_vs_benign_mimic"
 Cohesion: 0.24
 Nodes (18): adjudicate_hcc_vs_benign_mimic(), _canonical_sha(), Any, Path, Auditável second-stage adjudication for HCC versus benign liver mimics. This…, Apply the frozen conservative rule to two reports of the same panel set. A…, _read_envelope(), _report() (+10 more)
 
-### Community 142 - "openswisshcc_multisequence_batch.py"
-Cohesion: 0.18
-Nodes (20): build_multisequence_cohort(), build_multisequence_gallery(), _canonical(), _load(), Any, Path, Atomic cohort and blind review gallery for OpenSwissHCC multisequence v9., input_manifest() (+12 more)
+### Community 142 - "evaluate_fusion_development"
+Cohesion: 0.31
+Nodes (9): evaluate_fusion_development(), _fold_scores(), _loocv(), _repeated(), _rows(), test_fold_scores_fit_ecdf_only_on_training_indices(), test_invalid_empty_ecdf_reference_fails_closed(), test_loocv_ordered_signal_is_strong_and_deterministic() (+1 more)
 
-### Community 143 - "lld_mmri_v23_segmentation_pilot.py"
-Cohesion: 0.16
-Nodes (22): anatomically_gated_segmenter(), _component_metrics(), evaluate_liver_mask_quality(), Any, Image, Path, Label-blind anatomical plausibility gate for automatic LLD-MMRI liver masks., Run a segmenter, reject implausible masks and retain only the liver component. (+14 more)
+### Community 143 - "evaluate_liver_mask_quality"
+Cohesion: 0.24
+Nodes (16): anatomically_gated_segmenter(), _component_metrics(), evaluate_liver_mask_quality(), Any, Image, Path, Run a segmenter, reject implausible masks and retain only the liver component., Evaluate geometry and conservative adult-liver plausibility without labels. (+8 more)
 
 ### Community 144 - "lld_mmri_v23_technical_amendment.py"
 Cohesion: 0.22
 Nodes (18): _audit_supports(), freeze_lld_mmri_v23_technical_amendment(), Any, Path, Freeze the label-blind LLD-MMRI v23 partial-FOV handling contract., Bind the partial-FOV policy to the complete blind segmentation audit., Recompute the sources and integrity of a frozen partial-FOV amendment., Validate valid masks and bind explicit technical failures separately. (+10 more)
 
-### Community 145 - "build_timing_selection_plan"
-Cohesion: 0.38
-Nodes (10): build_timing_selection_plan(), _case(), _cohort(), Path, test_plan_aborts_when_a_required_scenario_is_absent(), test_plan_is_reproducible_and_refuses_divergent_overwrite(), test_plan_records_missing_alignment_without_selecting_or_hiding_case(), test_plan_selects_slowest_blind_case_for_each_frozen_scenario() (+2 more)
+### Community 145 - "v24_liver_enriched_evaluation.py"
+Cohesion: 0.22
+Nodes (21): _combined_references(), _combined_score(), evaluate_v24_oof_predictions(), _fit(), freeze_v24_oof_predictions(), _jsonl(), _load(), _new_signals() (+13 more)
 
-### Community 146 - "test_openswisshcc_multisequence_inference.py"
-Cohesion: 0.42
-Nodes (7): case_root(), Fake, gates(), sha(), test_invalid_review_blocks_before_scoring(), test_scores_only_runner_is_blind_atomic_and_records_missing_modality(), test_timeout_aborts_without_publishing_partial_run()
+### Community 146 - "verify_holdout_v21_signal_context"
+Cohesion: 0.31
+Nodes (14): Validate all non-model gates before any model object may be constructed., verify_holdout_v21_signal_context(), _context_fixture(), _FailingScorer, Path, _Scorer, test_context_fails_closed_before_model_creation_without_review(), test_context_preflight_stays_label_blind() (+6 more)
 
 ### Community 147 - "late_fusion.py"
 Cohesion: 0.27
 Nodes (18): _auc(), build_frozen_fusion(), evaluate_fusion(), _json(), _jsonl(), load_fusion_config(), _metrics(), Any (+10 more)
 
 ### Community 148 - "raw_phase_review.py"
-Cohesion: 0.16
-Nodes (20): harmonize_to_reference(), Resample ``moving`` onto ``reference``'s grid with an identity physical…, build_raw_phase_review_gallery(), _gallery_html(), Any, Image, ndarray, Path (+12 more)
+Cohesion: 0.18
+Nodes (18): build_raw_phase_review_gallery(), _gallery_html(), Any, Image, ndarray, Path, Build a label-blind review gallery for automatically resolved DICOM phases. The…, Resolve raw studies and atomically publish a pseudonymized review gallery.… (+10 more)
 
 ### Community 149 - "xr.js"
-Cohesion: 0.23
-Nodes (20): apiCameraWorldPosition(), controllerRay(), createExitButton(), createReferencePanel(), createReferencePanelAssembly(), createSpatialPanel(), createTabletAssembly(), directPlaneHit() (+12 more)
+Cohesion: 0.17
+Nodes (28): apiCameraWorldPosition(), canvasFont(), controllerRay(), createExitButton(), createReferencePanel(), createReferencePanelAssembly(), createSpatialPanel(), createSpatialPanelV2() (+20 more)
 
 ### Community 150 - "required"
 Cohesion: 0.11
@@ -1194,29 +1214,29 @@ Nodes (17): additionalProperties, case_id, clinical_use_allowed, ground_truth_re
 Cohesion: 0.18
 Nodes (11): const, const, const, properties, clinical_use_allowed, ground_truth_read, lesion_masks_used, research_only (+3 more)
 
-### Community 152 - "lld_mmri_v23_direct_timing.py"
-Cohesion: 0.25
-Nodes (18): DirectCaseRunner, _load_checkpoint(), measure_lld_mmri_v23_direct_reproduction(), Any, Path, Direct wall-clock reproduction gate for frozen LLD-MMRI v23 predictions., Time one continuous raw-to-prediction callback for every frozen case., _valid_checkpoint() (+10 more)
+### Community 152 - "evaluate_highdimensional_development"
+Cohesion: 0.17
+Nodes (25): evaluate_highdimensional_development(), _load_development_labels(), _load_json(), Any, Path, _quantile(), Abra labels uma única vez, somente após validar o run v13 completo., Valide toda a evidência cega antes de permitir a leitura do ground truth. (+17 more)
 
-### Community 153 - "liverhccseg_v21_panels.py"
-Cohesion: 0.24
-Nodes (18): build_liverhccseg_uniform9_gallery(), build_liverhccseg_uniform9_panels(), _canonical_sha(), _case_files(), _load(), Any, Path, Render the label-blind LiverHccSeg v21 uniform-9 technical gallery. (+10 more)
+### Community 153 - "openswisshcc_volumetric_medsiglip.py"
+Cohesion: 0.20
+Nodes (13): _atomic_json(), _prompt_bank_sha256(), Any, Path, Blinded MedSigLIP scoring of every panel in a frozen volumetric cohort., Score or resume all panels; never attach labels or emit a diagnosis., run_volumetric_medsiglip_scores(), _verify_existing() (+5 more)
 
 ### Community 154 - "lld_mmri_v23_panels.py"
-Cohesion: 0.14
-Nodes (31): build_lld_mmri_v23_uniform9_gallery(), build_lld_mmri_v23_uniform9_panels(), _case_files(), _load(), _prepared_rows(), Any, Path, Uniform-9 technical panels for the frozen LLD-MMRI v23 cohort. (+23 more)
+Cohesion: 0.09
+Nodes (46): build_lld_mmri_v23_uniform9_gallery(), build_lld_mmri_v23_uniform9_panels(), _case_files(), _load(), _prepared_rows(), Any, Path, Uniform-9 technical panels for the frozen LLD-MMRI v23 cohort. (+38 more)
 
 ### Community 155 - "openswisshcc_localizer_roi_evaluation.py"
 Cohesion: 0.24
 Nodes (17): _case_features(), evaluate_roi_pilot(), _load(), _load_selected_labels(), Any, Path, Post-inference development evaluation for frozen v10 localizer ROI scores., _top() (+9 more)
 
-### Community 156 - "medgemma_server_base.py"
-Cohesion: 0.21
-Nodes (14): _build_runtime(), create_app(), GeneratePayload, GenerationPayload, ImagePayload, main(), BaseModel, Path (+6 more)
+### Community 156 - "PipelineError"
+Cohesion: 0.12
+Nodes (26): PipelineError, Erro de gate. REGRA DE OURO Nº 1 (contexto/05_PIPELINE.md): ao encontrar um…, parametrize, test_case_ids_read_only_neutral_manifest(), test_case_ids_reject_duplicate_or_nonanonymous(), test_case_ids_reject_ground_truth_fields(), _case_ids(), main() (+18 more)
 
-### Community 157 - "build_exam_panels"
-Cohesion: 0.25
-Nodes (13): anonymous_manifest_case_id(), _atomic_write_json(), build_exam_panels(), build_monophase_exam_panels(), ExamPanelResult, Any, Path, Generic 'one exam -> liver-enriched multiphase panels' orchestrator. The Etapa… (+5 more)
+### Community 157 - "chaos_v21_review.py"
+Cohesion: 0.26
+Nodes (19): _canonical_sha(), create_chaos_v21_review(), _load(), Any, Path, Signed human technical-review gate for the CHAOS v21 panels., Persist an explicit all-case technical approval; partial approval is rejected., Fail closed before model loading or any inference call. (+11 more)
 
 ### Community 158 - "openswiss_monophase_atlas_candidates.py"
 Cohesion: 0.22
@@ -1226,37 +1246,37 @@ Nodes (17): build_openswiss_monophase_atlas_candidates(), _extract_case(), _json
 Cohesion: 0.24
 Nodes (15): check_doctor(), check_organ_label(), check_python_version(), ensure_venv(), _final(), install_seg(), main(), CompletedProcess (+7 more)
 
-### Community 160 - "test_openswisshcc_enhancement_maps.py"
-Cohesion: 0.35
-Nodes (11): compute_enhancement_features(), Calculate label-free dynamic enhancement features in venous geometry., _image(), ndarray, Path, _synthetic(), test_cohort_builder_is_label_free_and_declares_unregistered_fallback(), test_constant_phase_is_rejected() (+3 more)
+### Community 160 - "verify_v23_baseline_lock"
+Cohesion: 0.22
+Nodes (17): _load_json(), Any, Path, Fail-closed verification of the frozen OpenSwissHCC v23 baseline., Verify code, inputs, outputs, metrics and safety flags of frozen v23., _resolve_locked_path(), _sha256(), verify_v23_baseline_lock() (+9 more)
 
 ### Community 161 - "audit_enhancement_localizer"
-Cohesion: 0.06
-Nodes (65): audit_enhancement_localizer(), _distribution(), _geometry_equal(), _load_json(), _load_jsonl(), Any, Image, ndarray (+57 more)
+Cohesion: 0.14
+Nodes (30): audit_enhancement_localizer(), _distribution(), _geometry_equal(), _load_json(), _load_jsonl(), Any, Image, ndarray (+22 more)
 
-### Community 162 - "openswisshcc_evaluation.py"
+### Community 162 - "test_openswisshcc_evaluation.py"
+Cohesion: 0.41
+Nodes (12): _candidate(), _evaluate(), _foundation(), _inference(), _labels(), Path, _report(), _sha() (+4 more)
+
+### Community 163 - "models.py"
 Cohesion: 0.24
-Nodes (19): _case_result(), evaluate_reviewed_development_run(), Any, Path, Avaliação pós-inferência OpenSwissHCC com abertura tardia do ground truth., Valide toda a inferência antes de abrir os labels e produzir métricas., _validate_inference_before_truth(), _candidate() (+11 more)
-
-### Community 163 - "openswisshcc_fallback.py"
-Cohesion: 0.20
-Nodes (16): Any, Path, Fallback venoso pré-declarado para candidatos OpenSwissHCC., Renderize um painel venoso sem acessar alinhamento, lesão ou ground truth., render_venous_fallback_candidate(), _reuse(), _signature(), _write_json() (+8 more)
+Nodes (10): Núcleo auditável do benchmark MedGemma do ARGOS., BenchmarkStatus, GroundTruthLabel, InferenceCase, ModelResult, Any, Tipos que separam entradas de inferência e ground truth protegido., Entrada sanitizada. Deliberadamente não possui label nem lesão. (+2 more)
 
 ### Community 164 - "test_openswisshcc_holdout.py"
 Cohesion: 0.22
 Nodes (16): audit_prepared_holdout_label_blind(), Verify completeness, hashes and absence of protected content in inputs., _configure(), _prepared_fixture(), Path, test_archive_rejects_subject_outside_holdout(), test_archive_rejects_unsafe_member(), test_audit_proves_complete_label_blind_tree() (+8 more)
 
-### Community 165 - "openswisshcc_multisequence_quality.py"
-Cohesion: 0.25
-Nodes (16): _canonical(), create_quality_review(), _load(), Any, Path, Blind technical-quality decisions for the OpenSwissHCC multisequence v9 cohort., _records(), _signature() (+8 more)
+### Community 165 - "openswisshcc_multisequence_evaluation.py"
+Cohesion: 0.18
+Nodes (21): _derive_class_counts(), evaluate_multisequence_scores(), _features(), _load(), _load_labels_with_quality_exclusion(), _load_quality_review(), Path, Post-inference development evaluation for blind multisequence v9 pairwise… (+13 more)
 
-### Community 166 - "openswisshcc_multisequence_panel.py"
-Cohesion: 0.21
-Nodes (18): _bbox(), _continuous_indices(), generate_multisequence_panel_set(), _inside(), _manifest_row(), _physical_points(), Any, Image (+10 more)
+### Community 166 - "openswisshcc_localizer_roi_timing.py"
+Cohesion: 0.26
+Nodes (14): _assert_regeneration_matches(), compose_case_timing(), _load(), profile_approved_roi_path(), Any, Path, Label-free timing audit for the exact approved OpenSwissHCC v10 ROI path., Regenerate approved panels and conservatively compose all measured stage times. (+6 more)
 
-### Community 167 - "verify_v23_baseline_lock"
-Cohesion: 0.23
-Nodes (16): _load_json(), Any, Path, Fail-closed verification of the frozen OpenSwissHCC v23 baseline., Verify code, inputs, outputs, metrics and safety flags of frozen v23., _resolve_locked_path(), _sha256(), verify_v23_baseline_lock() (+8 more)
+### Community 167 - "ARGOS/OREN Docker portátil — Mac Apple Silicon e outros computadores"
+Cohesion: 0.20
+Nodes (9): 1. No Windows de origem, 2. Pesos no Mac, 3. No Mac de destino, ARGOS/OREN Docker portátil — Mac Apple Silicon e outros computadores, Arquivos implementados, Gates antes de usar exames, Outro computador, Resultado da auditoria (+1 more)
 
 ### Community 168 - "raw_dicom_phase_resolver.py"
 Cohesion: 0.20
@@ -1266,16 +1286,16 @@ Nodes (15): _explicit_role(), _geometry_compatible(), _hash(), _materialize(), _
 Cohesion: 0.17
 Nodes (12): minimum, type, items, maxItems, minItems, type, orientation, shape (+4 more)
 
-### Community 170 - "openswisshcc_candidate_volume_full87.py"
-Cohesion: 0.29
-Nodes (15): build_candidate_volume_full87_gallery(), _contact_sheet(), _gallery_pages(), Any, Path, Build the v16 full87 reviewed-input bundle after the signed timing gate., _validate_contact_sheet_file(), validate_full87_audit_gallery() (+7 more)
+### Community 170 - "validate_atlas_bundle"
+Cohesion: 0.32
+Nodes (17): validate_atlas_bundle(), _protocol(), MonkeyPatch, Path, _response(), test_bundle_accepts_native_640_and_768(), test_bundle_rejects_tampered_frame(), test_existing_prediction_revalidates_log_odds_and_hashes() (+9 more)
 
 ### Community 171 - "Visualizador 3D — de onde vem a "quadradice" e o que resolve"
 Cohesion: 0.08
 Nodes (26): 10. A investigação da segmentação — onde o problema realmente está, 11. O que resta, em ordem, 1. O que já está certo, 2. A causa real, medida, 3. O que a literatura recomenda, 4. Plano proposto, em ordem de retorno, 5. O limite honesto, que precisa ser dito, 6. Um achado colateral que afeta mais a fidelidade que qualquer render (+18 more)
 
 ### Community 172 - "test_docker_integration.py"
-Cohesion: 0.15
+Cohesion: 0.13
 Nodes (8): MonkeyPatch, test_container_path_override_preserves_windows_default(), test_docker_contract_is_safe_and_complete(), main(), Path, Fail-closed static verification of the ARGOS container contract., _read(), verify()
 
 ### Community 173 - "openswisshcc_enhancement_pilot_evaluation.py"
@@ -1286,9 +1306,9 @@ Nodes (22): _case_decision(), evaluate_enhancement_pilot(), freeze_enhancement_p
 Cohesion: 0.29
 Nodes (15): _canonical(), create_multisequence_review(), _load(), Any, Path, Signed human-review gate for the OpenSwissHCC multisequence v9 cohort., _signature(), validate_multisequence_cohort() (+7 more)
 
-### Community 175 - "openswisshcc_multisequence_quality_cohort.py"
-Cohesion: 0.22
-Nodes (15): build_quality_bundle(), _canonical(), _link_tree(), _load(), Any, Path, Atomic primary/stress cohort bundle derived from blind v9 quality decisions., _submanifest() (+7 more)
+### Community 175 - "scan_multisequence_geometry"
+Cohesion: 0.19
+Nodes (16): audit_multisequence_inputs(), _coverage(), _image_record(), _physical_mask_points(), Any, Image, ndarray, Path (+8 more)
 
 ### Community 176 - "public_independent_v21_negative_evaluation.py"
 Cohesion: 0.22
@@ -1310,25 +1330,25 @@ Nodes (22): _existing_case(), freeze_v24_liver_enriched_inference_protocol(), _p
 Cohesion: 0.24
 Nodes (14): _auc(), evaluate_enhancement_features_development(), _frontier(), _jsonl(), _load(), Any, Path, Exploratory development-only evaluation of blind v22 enhancement features. (+6 more)
 
-### Community 181 - "test_openswisshcc_highdimensional_evaluation.py"
-Cohesion: 0.29
-Nodes (16): _load_development_labels(), _blind_values(), _label(), _prepare_inference(), Path, test_excluded_case_cannot_still_belong_to_bundle(), test_existing_output_is_never_overwritten(), test_explicit_authorization_is_required_before_any_validation() (+8 more)
+### Community 181 - "medgemma_benchmark.py"
+Cohesion: 0.20
+Nodes (14): git_state(), input_hashes(), Path, Hashes e identificação do estado do código para reprodução do benchmark., Hash estável de nomes relativos/ordenados e conteúdo de vários arquivos., sha256_paths(), _geometry_signature(), Image (+6 more)
 
-### Community 182 - "write_run_outputs"
-Cohesion: 0.21
-Nodes (17): git_state(), input_hashes(), Path, Hashes e identificação do estado do código para reprodução do benchmark., Hash estável de nomes relativos/ordenados e conteúdo de vários arquivos., sha256_paths(), _atomic_text(), build_summary() (+9 more)
+### Community 182 - "build_volumetric_candidate_cohort"
+Cohesion: 0.24
+Nodes (9): build_volumetric_candidate_cohort(), _canonical_sha256(), Any, Path, Build all cases in staging and publish only a complete validated cohort., test_batch_publishes_only_complete_reviewed_cohort(), test_batch_rejects_existing_destination(), main() (+1 more)
 
 ### Community 183 - "environment.py"
 Cohesion: 0.24
 Nodes (13): build_environment_report(), GpuStatus, module_versions(), Any, Path, query_gpu(), Read-only environment preflight for supervised ARGOS experiments., require_training_ready() (+5 more)
 
-### Community 184 - "build_xr_render_asset"
-Cohesion: 0.22
-Nodes (15): build_xr_render_asset(), Any, Path, PolyData, Auditable, optional render assets for the OREN WebXR client. The source STL…, Create a LOD without allowing it to become measurement authority., _source_asset(), xr_triangle_budget() (+7 more)
+### Community 184 - "test_medgemma_panel_multiphase.py"
+Cohesion: 0.24
+Nodes (12): _gen(), test_config_rejects_multiphase_without_channel_map(), test_default_multiphase_still_rejects_short_liver(), test_lld_short_liver_uses_blank_tiles_without_duplicating_slices(), test_lld_v23_config_enables_only_explicit_partial_fov_fallback(), test_multiphase_config_validates_and_is_fusion_mode(), test_multiphase_fails_on_incompatible_phase_geometry(), test_multiphase_fails_when_a_required_phase_is_missing() (+4 more)
 
-### Community 185 - "lld_mmri_v23_predictions.py"
-Cohesion: 0.30
-Nodes (13): freeze_lld_mmri_v23_predictions(), _json(), _jsonl(), Any, Path, Freeze label-blind LLD-MMRI predictions with the development-frozen v23…, Score every case without labels and atomically freeze the predictions., requer_calibrador_local (+5 more)
+### Community 185 - "openswisshcc_axial_atlas_rag_evaluation.py"
+Cohesion: 0.21
+Nodes (22): evaluate_development(), freeze_evaluation_protocol(), _load_json(), Any, Path, Avaliação protegida do scorer OpenSwissHCC v19 atlas + RAG., validate_blind_scores(), verify_evaluation_protocol() (+14 more)
 
 ### Community 186 - "build_relatorio_consolidado_docx.js"
 Cohesion: 0.12
@@ -1340,20 +1360,20 @@ Nodes (5): doc, {
 }, fs, T(), table()
 
 ### Community 187 - "finalizeManifestPresentation"
-Cohesion: 0.14
-Nodes (17): animateModelEntrance(), finalizeManifestPresentation(), frameScene(), markReferenceSyncManual(), metric(), renderCandidate(), renderMetadata(), renderQuality() (+9 more)
+Cohesion: 0.15
+Nodes (14): animateModelEntrance(), finalizeManifestPresentation(), frameScene(), isWorldPointVisibleByClipping(), markReferenceSyncManual(), refreshClippingPlaneWorld(), renderCandidate(), renderMetadata() (+6 more)
 
 ### Community 188 - "required"
 Cohesion: 0.20
 Nodes (10): additionalProperties, required, type, bytes, relative_path, sha256, image, orientation (+2 more)
 
-### Community 189 - "select_best_mr_series"
-Cohesion: 0.24
-Nodes (16): audit_dataset_roots(), Seleciona uma série MR de forma determinística e retorna auditoria sanitizada.…, Audita raízes `positive`/`negative` sem copiar imagens ou labels à inferência., select_best_mr_series(), Materializa somente a série MR escolhida e apaga os DICOMs ao terminar., _selected_dicom_series(), Path, test_audit_flags_nonuniform_spacing_and_non_mr() (+8 more)
+### Community 189 - "prepare_inference_case"
+Cohesion: 0.29
+Nodes (21): load_dataset_manifest(), prepare_inference_case(), Carrega datasets e labels separados sem fazer qualquer inferência., Materializa somente os arquivos permitidos em um workspace sanitizado., validate_geometry(), _image(), _manifests(), Path (+13 more)
 
-### Community 190 - "lld_mmri_v23_geometry_audit.py"
-Cohesion: 0.22
-Nodes (13): audit_lld_mmri_v23_geometry(), Any, Path, Label-blind readability and geometry audit for the frozen LLD-MMRI v23 cohort., Fail closed unless the signed all-case audit still matches the download., Read all selected images and freeze the pre-segmentation geometry gate., verify_lld_mmri_v23_geometry_audit(), _image() (+5 more)
+### Community 190 - "test_lld_mmri_v23_geometry_audit.py"
+Cohesion: 0.67
+Nodes (5): _image(), _manifest(), Path, test_geometry_audit_freezes_failure_before_segmentation(), test_geometry_audit_passes_complete_label_blind_case()
 
 ### Community 191 - "compute_candidate_enhancement_features"
 Cohesion: 0.23
@@ -1367,25 +1387,25 @@ Nodes (22): _component_shape(), compute_candidate_shape_features(), _empty_featu
 Cohesion: 0.08
 Nodes (25): 1. A pergunta, e por que ela tem duas respostas possíveis, 2. O diagnóstico: é uma síndrome, não quatro defeitos, 3. O defeito concreto no código, e por que é seguro corrigir, 4. O limite honesto de "perfeita e fidedigna", 5. Plano, 6. Ordem recomendada, 7. Passo 1 executado — o que chega de fato à tela, 8. A1 + A2 + A5 implementados e verificados (+17 more)
 
-### Community 194 - "openswisshcc_volumetric_gallery.py"
+### Community 194 - "openswisshcc_axial_atlas_chunk_evaluation.py"
 Cohesion: 0.24
-Nodes (13): build_volumetric_review_gallery(), _canonical_sha256(), Path, Local, non-authoritative review gallery for volumetric candidate sets., _validated_case(), _canonical(), _cohort(), Path (+5 more)
+Nodes (13): evaluate_chunk_development(), _finite(), _json(), Any, Path, Avaliação protegida do scorer em blocos OpenSwissHCC v18., validate_chunk_scores(), _roc_auc() (+5 more)
 
-### Community 195 - "test_openswisshcc_volumetric_inference.py"
-Cohesion: 0.23
-Nodes (11): FakeClient, _frozen(), Path, _report(), test_batch_summary_is_blinded_and_reusable(), test_case_calls_every_panel_and_aggregates_any_positive(), test_intermediate_failure_publishes_no_final_report(), _write() (+3 more)
+### Community 195 - "run"
+Cohesion: 0.50
+Nodes (7): main(), Any, Path, Submit a real multiphase DICOM exam through the Docker HTTP boundary., run(), _select_phases(), _series()
 
 ### Community 196 - "process_visual_job"
 Cohesion: 0.08
-Nodes (24): A raw study could not be mapped safely onto three dynamic phases. The machine-…, RawPhaseResolutionError, test_anatomical_quick_views_are_fixed_and_do_not_request_new_inference(), test_saved_review_views_capture_reproducible_visual_state(), test_saved_views_support_local_ab_comparison_without_persisting_pixels(), test_selected_mesh_can_be_measured_in_three_lps_dimensions(), test_selected_structure_has_contextual_focus_isolation_and_restore_actions(), test_viewer_state_accepts_only_known_visual_presets() (+16 more)
+Nodes (39): A raw study could not be mapped safely onto three dynamic phases. The machine-…, RawPhaseResolutionError, FormData, post, test_reference_sync_restores_previous_manual_clipping_state(), test_saved_review_views_capture_reproducible_visual_state(), Rebaixar em silêncio faria o relatório nomear o modelo errado., test_backend_nao_registrado_e_recusado_em_vez_de_rebaixado() (+31 more)
 
 ### Community 197 - "compute_subtype_metrics"
 Cohesion: 0.26
 Nodes (13): binary_label_for_subtype(), compute_subtype_metrics(), _predicted_subtype(), Any, Métricas multiclasse para o benchmark de patologia e variação hepática. O…, Retorna o endpoint patológico binário, recusando vocabulário aberto., Calcula top-1, recall macro e matriz 4×5 com penalização integral., _row() (+5 more)
 
-### Community 198 - "test_openswisshcc_axial_atlas_evaluation.py"
-Cohesion: 0.33
-Nodes (14): _blind_bundle(), _frozen(), _labels(), _probabilities(), Path, _score_protocol(), test_evaluation_rejects_holdout_even_when_flag_is_true(), test_evaluation_requires_explicit_authorization() (+6 more)
+### Community 198 - "build_volumetric_review_gallery"
+Cohesion: 0.25
+Nodes (12): build_volumetric_review_gallery(), _canonical_sha256(), Path, _validated_case(), _canonical(), _cohort(), Path, _sha() (+4 more)
 
 ### Community 199 - "test_rag_index.py"
 Cohesion: 0.23
@@ -1403,13 +1423,13 @@ Nodes (22): 1.1 Pré-requisitos, 1.2 Criar o ambiente virtual e instalar, 1.3 Co
 Cohesion: 0.23
 Nodes (11): _attach_file_log(), _banner(), build_parser(), main(), ArgumentParser, Grava um run.log no diretório do caso (trilha de auditoria do run real). O…, run_doctor(), test_cli_bad_profile_returns_one() (+3 more)
 
-### Community 203 - "record_candidate_volume_review"
-Cohesion: 0.30
-Nodes (11): Path, Signed human technical review records for OpenSwissHCC v16 candidate stacks., Persist an explicit, bundle-bound review; never infer approval from defaults., record_candidate_volume_review(), _bundle(), _confirmations(), test_approved_review_is_signed_and_bound_to_exact_gallery(), test_approved_review_requires_every_explicit_confirmation() (+3 more)
+### Community 203 - "selectStructure"
+Cohesion: 0.18
+Nodes (12): applyWireframeState(), meshTriangleCount(), metric(), renderStructureDimensionSummary(), renderVolumetry(), restoreSelectedContext(), selectStructure(), settleViewerTransitionsForXR() (+4 more)
 
-### Community 204 - "openswisshcc_highdimensional_evaluation.py"
-Cohesion: 0.19
-Nodes (15): BenchmarkStatus, GroundTruthLabel, ModelResult, Any, Tipos que separam entradas de inferência e ground truth protegido., evaluate_highdimensional_development(), _load_json(), Any (+7 more)
+### Community 204 - "build_review_gallery"
+Cohesion: 0.23
+Nodes (11): build_review_gallery(), _html(), Any, Path, Crie HTML local a partir do experimento congelado, sem aprovar qualquer caso., _candidate(), Path, _sha() (+3 more)
 
 ### Community 205 - "run_cohort"
 Cohesion: 0.25
@@ -1419,9 +1439,9 @@ Nodes (12): _atomic_json(), Any, Path, run_case(), run_cohort(), verify_run(), n
 Cohesion: 0.09
 Nodes (23): 13. Segurança, privacidade e metodologia já implementadas, 14. O que pode e o que não pode ser afirmado, 16. Pendências de engenharia, 19. Critério de sucesso ainda pendente, 1. Resumo executivo, 20. Conclusão, 2. Estado geral por área, 3. Objetivo clínico-experimental atual (+15 more)
 
-### Community 207 - "openswisshcc_volumetric_inference.py"
-Cohesion: 0.19
-Nodes (19): _candidate_from_freeze(), _config_map(), _current_case(), _existing_case(), _failure_payload(), infer_frozen_volumetric_case(), Any, Exception (+11 more)
+### Community 207 - "public_independent_v21_calibrator.py"
+Cohesion: 0.31
+Nodes (13): _ecdf(), _canonical_sha(), _contains_protected_key(), _finite(), freeze_v11_external_calibrator(), _load_calibrator(), Any, Path (+5 more)
 
 ### Community 208 - "properties"
 Cohesion: 0.15
@@ -1431,17 +1451,17 @@ Nodes (13): minimum, type, properties, bytes, relative_path, role, sha256, minLe
 Cohesion: 0.10
 Nodes (19): 1. Princípio: nada do que foi alcançado é tocado, 2.1 As ROIs preditas sub-segmentam — isso é oportunidade, não só problema, 2.2 O gargalo tem nome: FNH, 2.3 Restam 67 perdas de localização após a união, 2. O que os dados dizem sobre onde investir, 3. Plano em quatro passos, ordenados por custo/benefício, 4. Aritmética: 75% é alcançável?, 5. Ordem de execução (+11 more)
 
-### Community 210 - "build_review_gallery"
-Cohesion: 0.22
-Nodes (12): build_review_gallery(), _html(), Any, Path, Galeria local, não autoritativa, para revisão humana dos painéis OpenSwissHCC., Crie HTML local a partir do experimento congelado, sem aprovar qualquer caso., _candidate(), Path (+4 more)
+### Community 210 - "run_slice_pairwise_scores"
+Cohesion: 0.20
+Nodes (14): crop_axial_tiles(), _png_sha256(), Any, Image, Path, Protocol, run_slice_pairwise_scores(), _slice_prompt() (+6 more)
 
 ### Community 211 - "Plano de uso da coorte sintética"
 Cohesion: 0.10
 Nodes (21): 10. O que preciso de você junto com os dados, 1.1 Probe de domínio, 1.2 Comparação de distribuições, 1.3 Revisão visual, 1. O que dado sintético não pode fazer, 2. O risco que o plano precisa conter, 3. Princípios inegociáveis, 4. Fase 0 — Auditoria de procedência (antes de qualquer uso) (+13 more)
 
-### Community 212 - "verify_holdout_v21_signal_context"
-Cohesion: 0.31
-Nodes (14): Validate all non-model gates before any model object may be constructed., verify_holdout_v21_signal_context(), _context_fixture(), _FailingScorer, Path, _Scorer, test_context_fails_closed_before_model_creation_without_review(), test_context_preflight_stays_label_blind() (+6 more)
+### Community 212 - "record_candidate_volume_review"
+Cohesion: 0.30
+Nodes (11): Path, Signed human technical review records for OpenSwissHCC v16 candidate stacks., Persist an explicit, bundle-bound review; never infer approval from defaults., record_candidate_volume_review(), _bundle(), _confirmations(), test_approved_review_is_signed_and_bound_to_exact_gallery(), test_approved_review_requires_every_explicit_confirmation() (+3 more)
 
 ### Community 213 - "test_curation.py"
 Cohesion: 0.27
@@ -1451,69 +1471,61 @@ Nodes (11): Testes da curadoria de negativos difíceis (hard negatives)., _revie
 Cohesion: 0.36
 Nodes (11): _candidate(), FakeHealthClient, Path, _run(), _setup(), _sha(), _successful_runner(), test_batch_records_external_timeout_and_continues() (+3 more)
 
-### Community 215 - "test_openswisshcc_axial_atlas_score.py"
-Cohesion: 0.33
-Nodes (15): _protocol(), MonkeyPatch, Path, _response(), test_bundle_accepts_native_640_and_768(), test_bundle_rejects_tampered_frame(), test_existing_prediction_revalidates_log_odds_and_hashes(), test_frozen_protocol_declares_one_call_no_retry_and_180s() (+7 more)
+### Community 215 - "_individual_screening_config"
+Cohesion: 0.50
+Nodes (4): A resolução de config segue existindo para benchmark e linha de comando, onde…, test_individual_screening_config_recusa_caminho_arbitrario(), _individual_screening_config(), Resolve um modo autorizado da tela de exame individual.
 
-### Community 216 - "_write_json_atomic"
+### Community 216 - "study_fingerprint_sha256"
+Cohesion: 0.67
+Nodes (3): study_fingerprint_sha256, pattern, type
+
+### Community 217 - "openswisshcc_multiphase_localizer_audit.py"
 Cohesion: 0.26
-Nodes (11): _atomic_jsonl(), _case_id(), freeze_lld_mmri_v23_external_protocol(), Any, Path, Freeze the independent LLD-MMRI v23 external-validation cohort. The public…, _subject_category(), Persiste artefatos de auditoria sem deixar JSON parcial em caso de crash. (+3 more)
+Nodes (12): audit_arterial_union_pilot(), _geometry_equal(), _load(), _mask(), Any, Image, ndarray, Path (+4 more)
 
-### Community 217 - "test_openswisshcc_axial_atlas_rag_score.py"
-Cohesion: 0.27
-Nodes (10): Any, rag_fingerprint(), Retém somente conteúdo determinístico e auditável do retrieval., _case(), _context(), _protocol(), test_existing_prediction_rejects_rag_hash_tampering(), test_rag_fingerprint_is_deterministic_and_excludes_timestamp() (+2 more)
+### Community 218 - "openswisshcc_v11_v13_complementarity.py"
+Cohesion: 0.23
+Nodes (11): analyze_v11_v13_complementarity(), compare_predictions(), Any, Path, Diagnóstico exploratório de complementaridade entre v11 LOOCV e v13., parametrize, test_complementarity_and_oracle_are_counted_without_selecting_rule(), test_inconclusive_is_never_counted_as_correct() (+3 more)
 
-### Community 218 - "prepare_totalsegmentator_environment"
-Cohesion: 0.28
-Nodes (13): _atomic_json(), prepare_totalsegmentator_environment(), CompletedProcess, Path, Execução compartilhada da segmentação isolada do cwd transacional no Windows., Return a crash-resilient, isolated TotalSegmentator environment.…, run_segmentation_subprocess(), segmentation_error() (+5 more)
-
-### Community 219 - "test_openswisshcc_axial_atlas_rag_evaluation.py"
-Cohesion: 0.38
-Nodes (11): _bundle(), _frozen(), _labels(), _probabilities(), Path, test_evaluation_rejects_holdout_even_with_flag(), test_evaluation_requires_new_explicit_authorization(), test_freeze_binds_rag_context_and_score_vector() (+3 more)
-
-### Community 220 - "build_openswisshcc_candidates.py"
-Cohesion: 0.30
-Nodes (10): parametrize, test_case_ids_read_only_neutral_manifest(), test_case_ids_reject_duplicate_or_nonanonymous(), test_case_ids_reject_ground_truth_fields(), _case_ids(), main(), Path, Constrói em lote candidatos OpenSwissHCC sem abrir o ground truth. (+2 more)
+### Community 220 - "Alterações implementadas"
+Cohesion: 0.13
+Nodes (14): Alterações implementadas, Critério de conclusão, Estruturas, Gate que depende do Meta Quest físico, Gates executados, Inicialização Docker, Malha técnica, Medição (+6 more)
 
 ### Community 221 - "syncReferenceToClipping"
-Cohesion: 0.21
-Nodes (12): alignReferenceToStructure(), currentReferenceFrame(), getReferenceState(), referenceFrameUrl(), renderReferenceFrame(), selectReferenceView(), setReferenceSyncEnabled(), setReferenceViewForXR() (+4 more)
+Cohesion: 0.19
+Nodes (13): alignReferenceToStructure(), currentReferenceFrame(), getClippingState(), getReferenceState(), referenceFrameUrl(), renderReferenceFrame(), selectReferenceView(), setReferenceSyncEnabled() (+5 more)
 
 ### Community 222 - "measureSelectedStructure3d"
 Cohesion: 0.23
 Nodes (12): clearMeasurements(), clearScene(), clearStructureDimensionObjects(), dimensionGuide(), disposeObject(), handleMeasurementPoint(), marker(), measureSelectedStructure3d() (+4 more)
 
-### Community 223 - "_candidate"
-Cohesion: 0.31
-Nodes (9): finalize_candidate_variant(), Any, Path, Finalização atômica de uma variante técnica aprovada do OpenSwissHCC., Preserve a coorte e substitua exatamente uma variante aprovada., _validated_replacement(), _candidate(), main() (+1 more)
-
 ### Community 224 - "test_build_rag_corpus.py"
 Cohesion: 0.35
 Nodes (10): _html(), _manifest(), _multi_manifest(), Path, test_build_corpus_from_local_html_generates_auditable_outputs(), test_build_corpus_multiple_articles_preserves_categories_and_hashes(), test_build_corpus_no_download_requires_local_source(), test_build_rag_corpus_cli_completes_with_local_sources() (+2 more)
 
-### Community 225 - "openswisshcc_volume_score.py"
-Cohesion: 0.15
-Nodes (29): freeze_volume_score_protocol(), _infer_case(), _load_protocol(), Path, Protocolo congelado e inferência cega do escore volumétrico v14., Executa duas pontuações planejadas do mesmo caso e exige estabilidade., Executa o v14 de modo resumível, sem ler labels ou métricas., Congela o protocolo antes de qualquer pontuação v14. (+21 more)
+### Community 225 - "sha256_of"
+Cohesion: 0.09
+Nodes (53): freeze_highdimensional_batch_protocol(), _infer_case(), _load_batch_protocol(), Path, Runner resumível das predições cegas high-dimensional v13., run_highdimensional_blind_batch(), _validate_existing_prediction(), _write_progress() (+45 more)
 
 ### Community 226 - "test_rag_dataset_index.py"
 Cohesion: 0.33
 Nodes (10): Testes do gerador de documentos RAG derivados do dataset registry., _record(), test_benign_anatomic_variant_is_flagged_as_non_positive(), test_build_documents_rejects_duplicate_doc_id(), test_chaos_document_never_claims_absolute_normality(), test_cli_writes_documents_jsonl(), test_document_metadata_excludes_raw_paths_and_uids(), test_hcc_datasets_are_positive_target_examples() (+2 more)
 
-### Community 228 - "test_openswisshcc_axial_atlas_chunk_score.py"
-Cohesion: 0.33
-Nodes (9): partition_frame_indices(), _case(), _protocol(), parametrize, test_full_atlas_fits_frozen_request_budget(), test_intermediate_chunk_failure_invalidates_case(), test_partition_is_deterministic_and_exact(), test_partition_rejects_invalid_counts() (+1 more)
+### Community 228 - "test_openswisshcc_v11_fusion.py"
+Cohesion: 0.30
+Nodes (13): _bundle_and_protocol(), _labels(), Path, _sha(), _sources(), test_authorized_synthetic_evaluation_is_nested_atomic_and_holdout_closed(), test_blind_bundle_has_three_signals_no_decision_and_conservative_time(), test_bundle_rejects_label_contamination_before_publication() (+5 more)
 
 ### Community 229 - "audit_liver_mask_geometry_quality.py"
 Cohesion: 0.33
 Nodes (9): dice(), features(), features_from_array(), main(), percentis(), ndarray, Path, Atributos geométricos a partir de um arquivo de máscara. (+1 more)
 
-### Community 230 - "openswisshcc_holdout_panels.py"
-Cohesion: 0.25
-Nodes (18): _aligned_paths(), build_holdout_uniform9_gallery(), build_holdout_uniform9_panels(), _canonical_sha(), _files(), _input_rows(), _load(), Any (+10 more)
+### Community 230 - "build_exam_panels"
+Cohesion: 0.16
+Nodes (18): anonymous_manifest_case_id(), _atomic_write_json(), build_exam_panels(), build_monophase_exam_panels(), ExamPanelResult, Any, Path, Generic 'one exam -> liver-enriched multiphase panels' orchestrator. The Etapa… (+10 more)
 
-### Community 231 - "combine_candidate_masks"
-Cohesion: 0.39
-Nodes (8): combine_candidate_masks(), Path, Create an exact binary union after validating NIfTI geometry., ndarray, Path, test_candidate_union_is_exact_and_reports_new_arterial_voxels(), test_candidate_union_rejects_geometry_mismatch(), _write()
+### Community 231 - "public_independent_v21_consolidation.py"
+Cohesion: 0.28
+Nodes (13): consolidate_v21_external_arms(), _load(), Any, Path, Consolidate v21 single-class external arms without fabricating a combined…, Report both arms side by side and explicitly refuse a pooled matrix., _fixture(), Path (+5 more)
 
 ### Community 232 - "_MarkdownExtractor"
 Cohesion: 0.28
@@ -1527,13 +1539,13 @@ Nodes (8): cleanup(), die(), ok(), say(), run_mac.sh script, start_gateway(), wa
 Cohesion: 0.42
 Nodes (8): _metadata(), Path, _registry(), test_filter_excludes_non_tumor_without_calling_it_negative(), test_metadata_hash_and_counts_fail_closed(), test_reads_subject_level_tumor_status_without_openpyxl(), test_registry_unknown_subject_fails_and_outputs_are_atomic(), _xlsx()
 
-### Community 235 - "public_independent_v21_calibrator.py"
-Cohesion: 0.31
-Nodes (13): _ecdf(), _canonical_sha(), _contains_protected_key(), _finite(), freeze_v11_external_calibrator(), _load_calibrator(), Any, Path (+5 more)
+### Community 235 - "test_openswisshcc_lesion_localizer_chunks.py"
+Cohesion: 0.47
+Nodes (8): _materialize(), _plan(), MonkeyPatch, Path, _sha(), test_merge_is_complete_atomic_and_preserves_nested_masks(), test_missing_case_aborts_without_partial_publication(), test_tampered_mask_aborts()
 
-### Community 236 - "openswisshcc_multisequence_evaluation.py"
-Cohesion: 0.18
-Nodes (21): _derive_class_counts(), evaluate_multisequence_scores(), _features(), _load(), _load_labels_with_quality_exclusion(), _load_quality_review(), Path, Post-inference development evaluation for blind multisequence v9 pairwise… (+13 more)
+### Community 236 - "Classificador visual no webapp — do DICOM à alteração identificada"
+Cohesion: 0.25
+Nodes (8): 1. O que mudou, 2. A guarda de subtipo, que é o cerne, 3. Um erro que o teste ponta a ponta revelou, 4. Verificação ponta a ponta, 5. A limitação que define o produto, 6. Caminho único (atualização), 7. O que continua valendo, Classificador visual no webapp — do DICOM à alteração identificada
 
 ### Community 237 - "test_rag_chunking.py"
 Cohesion: 0.39
@@ -1555,9 +1567,9 @@ Nodes (20): 1. Objetivo desta etapa, 2.1 Snapshot local, 2.2 Dependência de run
 Cohesion: 0.10
 Nodes (19): Atualização posterior ao gate, Avaliação same-domain preparada, mas não executada, Estado, Executor cego em estágios, Execução dos três sinais, Fusão, tempo e freeze final, Gate atual, Gate humano assinado (+11 more)
 
-### Community 242 - "openswisshcc_v11_v13_complementarity.py"
-Cohesion: 0.23
-Nodes (11): analyze_v11_v13_complementarity(), compare_predictions(), Any, Path, Diagnóstico exploratório de complementaridade entre v11 LOOCV e v13., parametrize, test_complementarity_and_oracle_are_counted_without_selecting_rule(), test_inconclusive_is_never_counted_as_correct() (+3 more)
+### Community 242 - "find_best_series"
+Cohesion: 0.14
+Nodes (14): test_find_best_series_empty_when_no_dicom(), test_find_best_series_empty_when_only_incompatible_modality(), test_find_best_series_prefers_profile_modality(), test_series_selection_metadata_is_sanitized(), _expected_modalities(), find_best_series(), _find_largest_compatible_series_legacy(), _modality_of() (+6 more)
 
 ### Community 243 - "verify"
 Cohesion: 0.46
@@ -1591,13 +1603,13 @@ Nodes (4): additionalProperties, $schema, title, type
 Cohesion: 0.18
 Nodes (11): parametrize, Path, test_graphify_verifier_allows_clinical_graphrag_source_code(), test_graphify_verifier_blocks_protected_sources(), is_blocked_source(), main(), normalize_source_path(), Any (+3 more)
 
-### Community 252 - "openswisshcc_highdimensional_inference.py"
-Cohesion: 0.18
-Nodes (14): freeze_highdimensional_protocol(), _load_protocol(), Path, Congelamento e inferência cega do piloto high-dimensional MedGemma 1.5., run_highdimensional_pilot(), _config(), Path, _Response (+6 more)
+### Community 252 - "validate_and_store_candidate"
+Cohesion: 0.26
+Nodes (11): _atomic_json(), generate_candidate_region(), Any, Path, Post-inference localization of unconfirmed focal liver regions. The output of…, Run TotalSegmentator in a staging directory and publish only on success., Validate geometry/binarity, clip to liver and publish an auditable mask., _same_geometry() (+3 more)
 
-### Community 253 - "openswisshcc_remediation.py"
-Cohesion: 0.20
-Nodes (16): _action(), build_remediated_candidates(), load_review_triage(), Any, Path, Remediação técnica pré-inferência dos candidatos OpenSwissHCC., Crie uma coorte v2 atômica, sem excluir casos e sem abrir labels., Valide a declaração técnica humana sem aceitar informação diagnóstica. (+8 more)
+### Community 253 - "build_remediated_candidates"
+Cohesion: 0.21
+Nodes (15): _action(), build_remediated_candidates(), load_review_triage(), Any, Path, Crie uma coorte v2 atômica, sem excluir casos e sem abrir labels., Valide a declaração técnica humana sem aceitar informação diagnóstica., _payload() (+7 more)
 
 ### Community 254 - "test_mrsegmentator_isolated.py"
 Cohesion: 0.70
@@ -1611,10 +1623,6 @@ Nodes (13): Ambiente validado, Conclusão executiva, Critério de aceite obtido,
 Cohesion: 0.83
 Nodes (3): main(), percentil(), score_vaso()
 
-### Community 258 - "openswisshcc_multiphase_localizer_audit.py"
-Cohesion: 0.26
-Nodes (12): audit_arterial_union_pilot(), _geometry_equal(), _load(), _mask(), Any, Image, ndarray, Path (+4 more)
-
 ### Community 283 - "A união de fases recupera fígado real — solução para a visualização"
 Cohesion: 0.11
 Nodes (18): 1. A pergunta que abriu esta rodada, 2. As fases perdem pedaços DIFERENTES — medido no LLD, 3. Mas união sempre cresce — crescer não é acertar, 4. O que já foi descartado por medição, 5.1 Máscara de visualização pela união das três fases dinâmicas, 5.2 A objeção de rastreabilidade se resolve por contenção, 5.3 O custo cabe, porque a união não entra no caminho da decisão, 5.4 O que fica igual, e é essencial que fique (+10 more)
@@ -1623,9 +1631,9 @@ Nodes (18): 1. A pergunta que abriu esta rodada, 2. As fases perdem pedaços DIF
 Cohesion: 0.17
 Nodes (11): ARGOS/OREN em Docker — arquitetura e validação ponta a ponta, Dados externos, Decisão técnica, Desligamento, Graphify no Docker, Inicialização recomendada, Instalação Windows, Limites (+3 more)
 
-### Community 285 - "openswisshcc_volumetric_medsiglip.py"
-Cohesion: 0.32
-Nodes (10): _atomic_json(), _prompt_bank_sha256(), Any, Path, Blinded MedSigLIP scoring of every panel in a frozen volumetric cohort., Score or resume all panels; never attach labels or emit a diagnosis., run_volumetric_medsiglip_scores(), _verify_existing() (+2 more)
+### Community 285 - "build"
+Cohesion: 0.16
+Nodes (16): parametrize, Path, _sha256(), test_material_builder_is_deterministic_tile_safe_and_geometry_neutral(), test_versioned_repository_material_manifest_matches_every_runtime_asset(), build(), main(), _mirrored_tile() (+8 more)
 
 ### Community 286 - "119_PANORAMA_GERAL_ATUAL_ARGOS.md"
 Cohesion: 0.12
@@ -1634,10 +1642,6 @@ Nodes (12): Avaliação LOOCV, Comparação com o v23 puro, Conclusão, Execuç�
 ### Community 287 - "OpenSwissHCC v16 — resultados e diagnóstico"
 Cohesion: 0.12
 Nodes (16): 10. Artefatos, 1. Autorização e integridade, 2. Resultado primário, 3. Robustez, 4. Diagnósticos secundários predefinidos, 5. Tempo, 6. Análise exploratória pós-hoc, 7. Relação com a v11 (+8 more)
-
-### Community 288 - "test_openswisshcc_v11_fusion.py"
-Cohesion: 0.30
-Nodes (13): _bundle_and_protocol(), _labels(), Path, _sha(), _sources(), test_authorized_synthetic_evaluation_is_nested_atomic_and_holdout_closed(), test_blind_bundle_has_three_signals_no_decision_and_conservative_time(), test_bundle_rejects_label_contamination_before_publication() (+5 more)
 
 ### Community 289 - "ARGOS — Relatório de conclusão de ciclo: classificador visual supervisionado"
 Cohesion: 0.12
@@ -1655,9 +1659,9 @@ Nodes (15): Artefatos autoritativos, Avaliação pré-especificada, Candidato pr
 Cohesion: 0.12
 Nodes (16): Artefatos implementados, Avaliação futura, Construção e verificação, Correção metodológica após auditoria das sequências, Desenho inicial, Estado e propósito, Etapa v21 — coorte pública independente, Gates antes da inferência 4B (+8 more)
 
-### Community 293 - "public_independent_v21_consolidation.py"
-Cohesion: 0.28
-Nodes (13): consolidate_v21_external_arms(), _load(), Any, Path, Consolidate v21 single-class external arms without fabricating a combined…, Report both arms side by side and explicitly refuse a pooled matrix., _fixture(), Path (+5 more)
+### Community 293 - "test_openswisshcc_fallback.py"
+Cohesion: 0.52
+Nodes (6): _inputs(), Path, _sha(), test_fallback_config_is_single_panel_low_latency_pathology_target(), test_fallback_rejects_ground_truth_in_neutral_manifest(), test_fallback_renders_without_alignment_or_truth()
 
 ### Community 294 - "Implementação do classificador visual supervisionado — diário técnico"
 Cohesion: 0.13
@@ -1730,10 +1734,6 @@ Nodes (12): ARGOS v21 — execução cega do braço negativo CHAOS, Avaliação 
 ### Community 311 - "Componentes"
 Cohesion: 0.15
 Nodes (12): A. Repo + packaging, B. Testes (`tests/`, pytest) — sem GPU/Slicer/DICOM real, C. Fixture sintético + smoke (`tools/make_synthetic_case.py`), Componentes, Critérios de sucesso, D. Execução em dados reais (máquina GPU do usuário), Digital Twin Cirúrgico — Produção-Ready (Nível 1, modo Pesquisa), E. Visualizador web (`viewer/`) — HTML estático + Three.js (+4 more)
-
-### Community 312 - "openswisshcc_volumetric_batch.py"
-Cohesion: 0.23
-Nodes (10): build_volumetric_candidate_cohort(), _canonical_sha256(), Any, Path, Atomic cohort builder for reviewed OpenSwissHCC volumetric candidates., Build all cases in staging and publish only a complete validated cohort., test_batch_publishes_only_complete_reviewed_cohort(), test_batch_rejects_existing_destination() (+2 more)
 
 ### Community 313 - "ARGOS — Plano de ação para evolução do classificador visual"
 Cohesion: 0.17
@@ -1843,10 +1843,6 @@ Nodes (10): Avaliação protegida do braço positivo, Calibrador externo congela
 Cohesion: 0.18
 Nodes (10): 1. O que vai por Git e o que vai por fora, 2. Atualizar o código no Mac, 3. Criar ou atualizar o ambiente Python, 4. Preparar o Ollama e o MedGemma 27B, 5. Restaurar artefatos enviados por fora, 6. Subir ARGOS no Mac, 7. Rodar benchmark por CLI, 8. Conferências obrigatórias antes do benchmark real (+2 more)
 
-### Community 340 - "_localize_candidate"
-Cohesion: 0.23
-Nodes (10): candidate_error(), CompletedProcess, Path, Isolated Windows launcher for candidate localization., run_candidate_subprocess(), Path, test_candidate_subprocess_uses_crash_resilient_totalsegmentator_runtime(), test_candidate_localizer_is_not_requested_without_focal_finding() (+2 more)
-
 ### Community 341 - "properties"
 Cohesion: 0.20
 Nodes (10): minimum, type, properties, bytes, relative_path, sha256, minLength, type (+2 more)
@@ -1867,9 +1863,9 @@ Nodes (9): 1. Enquadramento honesto, 2. Modelo de produção (bundle), 3. Contra
 Cohesion: 0.20
 Nodes (9): 1. Resposta curta, 2.1 A coleção cega usa um endpoint diferente do treino, 2.2 O guard in-sample dava falso negativo — defeito real, agora corrigido, 2. Dois achados que precedem qualquer número, 3. Resultado sob o endpoint do treino, 4. A correção do guard, 5. O que pode e o que não pode ser afirmado, 6. Consequência prática (+1 more)
 
-### Community 346 - "build_lld_mmri_v23_enhancement_panels.py"
-Cohesion: 0.29
-Nodes (9): build_case(), _load_axial_groups(), main(), Any, ndarray, Path, (post - pre) / (pre + eps), zerado fora do suporte de pre-contraste., Le os grupos de cortes do painel EXISTENTE, para ablacao controlada. (+1 more)
+### Community 346 - "configure_isolated_totalsegmentator_runtime"
+Cohesion: 0.27
+Nodes (13): _atomic_json(), configure_isolated_totalsegmentator_runtime(), Any, Path, Isolated TotalSegmentator runtime configuration for reproducible benchmarks., Avoid the mutable global config while reusing installed weights read-only., Path, test_isolated_runtime_never_uses_global_config() (+5 more)
 
 ### Community 347 - "A capacidade de subtipo é condicionada à coorte, não à lesão"
 Cohesion: 0.20
@@ -2195,9 +2191,9 @@ Nodes (8): 1. O número, 2. Por que o modelo multiplicativo errou por 5 pontos, 
 Cohesion: 0.25
 Nodes (7): Como comparar, Configs novas, O que ainda não muda, O que muda na decisão, Objetivo, Prompt pathology-target — separação entre variante benigna e patologia alvo, Webapp
 
-### Community 428 - "Fusão no endpoint binário completo — e a correção de uma premissa que eu inventei"
-Cohesion: 0.25
-Nodes (8): 1. A correção, 2. Antes de comparar: o estimador certo, 3. A fusão no endpoint binário completo, 4. O confundidor que explica a assimetria, 5. Estado das metas, 6. Próximo passo, agora bem definido, Fusão no endpoint binário completo — e a correção de uma premissa que eu inventei, O que muda no gate 75/75
+### Community 428 - "openswisshcc_multisequence_quality_cohort.py"
+Cohesion: 0.22
+Nodes (15): build_quality_bundle(), _canonical(), _link_tree(), _load(), Any, Path, Atomic primary/stress cohort bundle derived from blind v9 quality decisions., _submanifest() (+7 more)
 
 ### Community 429 - "O maior modo de erro do ARGOS não tem explicação física"
 Cohesion: 0.25
@@ -2335,9 +2331,9 @@ Nodes (7): 1. A lacuna que este documento fecha, 2. Resultado, 3. O padrão que 
 Cohesion: 0.29
 Nodes (6): Agregação volumétrica, Campos antigos obrigatórios, Campos v2 opcionais, Regras de consistência, Retry, Schema v2 do relatório MedGemma
 
-### Community 463 - "Validação pareada da organização automática de fases DICOM"
+### Community 463 - "Resultado do benchmark frontend — Patologia + Variação"
 Cohesion: 0.29
-Nodes (6): Artefatos, Interpretação, Pergunta, Protocolo, Resultado, Validação pareada da organização automática de fases DICOM
+Nodes (7): Artefatos, Execução, Interpretação metodológica obrigatória, Resultado binário — patologia-alvo, Resultado do benchmark frontend — Patologia + Variação, Resultado multiclasse — identificação da variação, Tempo operacional
 
 ### Community 464 - "O segmentador não está quebrado — o problema é a fase com contraste"
 Cohesion: 0.29
@@ -2435,13 +2431,13 @@ Nodes (6): Artefato autoritativo, Decisão, Evidência histórica, Objetivo, Ope
 Cohesion: 0.29
 Nodes (6): Antes (uma vez, com internet, na máquina da apresentação), Durante a apresentação, Ensaio (faça pelo menos uma vez), Plano B (se a demo ao vivo falhar), Preparar o caso da demo (regenerável a qualquer momento), Roteiro de Apresentação (demo em ~5 min, sem GPU)
 
-### Community 488 - "Classificador visual no webapp — do DICOM à alteração identificada"
-Cohesion: 0.25
-Nodes (8): 1. O que mudou, 2. A guarda de subtipo, que é o cerne, 3. Um erro que o teste ponta a ponta revelou, 4. Verificação ponta a ponta, 5. A limitação que define o produto, 6. Caminho único (atualização), 7. O que continua valendo, Classificador visual no webapp — do DICOM à alteração identificada
+### Community 488 - "test_openswisshcc_axial_atlas_rag_score.py"
+Cohesion: 0.39
+Nodes (7): _case(), _context(), _protocol(), test_existing_prediction_rejects_rag_hash_tampering(), test_rag_fingerprint_is_deterministic_and_excludes_timestamp(), test_rag_fingerprint_rejects_disabled_or_empty_context(), test_score_case_uses_frozen_rag_once_without_labels()
 
-### Community 489 - "run"
-Cohesion: 0.50
-Nodes (7): main(), Any, Path, Submit a real multiphase DICOM exam through the Docker HTTP boundary., run(), _select_phases(), _series()
+### Community 489 - "setup_medgemma.py"
+Cohesion: 0.53
+Nodes (5): main(), Path, Confirma processor/config e todos os shards sem carregar o modelo na GPU., _runtime_preflight(), _verify_local_snapshot()
 
 ### Community 490 - "spacing_mm"
 Cohesion: 0.33
@@ -2507,9 +2503,9 @@ Nodes (6): Decisão da Fase 13, Estágio 1 — Cabeça não linear, encoder cong
 Cohesion: 0.33
 Nodes (6): 1. Conclusão, 2. Correção de implementação (documentada porque quase produziu um número falso), 3. Matriz, 4. Ressalva importante sobre o alcance desta conclusão, 5. Consequência, MedGemma zero-shot para subtipo — Resultado: recusa quase total
 
-### Community 507 - "O número honesto de subtipo do caminho que está no ar"
-Cohesion: 0.33
-Nodes (6): 1. Por que este documento existe, 2. Método, 3. Resultado, 4. O que isso revelou, 5. Por que a cascata ainda não subiu, O número honesto de subtipo do caminho que está no ar
+### Community 507 - "protocol.py"
+Cohesion: 0.10
+Nodes (41): atomic_write_json(), freeze_protocol(), _load_cases(), _load_jsonl(), load_protected_cases(), load_protected_label_rows(), Any, Path (+33 more)
 
 ### Community 508 - "Visualizador 3D — composição realista como padrão fixo"
 Cohesion: 0.33
@@ -2547,9 +2543,9 @@ Nodes (5): Caso sinalizado, Estado, OpenSwissHCC v9 — exclusão técnica cega,
 Cohesion: 0.33
 Nodes (5): Contrato, Gate piloto, Hipótese, OpenSwissHCC v22 — localizador venoso + arterial registrada, Resultado do piloto arterial
 
-### Community 517 - "test_openswisshcc_volumetric_gate.py"
-Cohesion: 0.50
-Nodes (11): _foundation(), Path, _review(), test_candidate_rejects_incomplete_coverage(), test_candidate_rejects_missing_panel(), test_freeze_binds_configs_collection_and_aggregation_rule(), test_freeze_detects_config_change_by_hash(), test_review_binds_every_panel_manifest_and_exact_coverage() (+3 more)
+### Community 517 - "build_timing_selection_plan"
+Cohesion: 0.38
+Nodes (10): build_timing_selection_plan(), _case(), _cohort(), Path, test_plan_aborts_when_a_required_scenario_is_absent(), test_plan_is_reproducible_and_refuses_divergent_overwrite(), test_plan_records_missing_alignment_without_selecting_or_hiding_case(), test_plan_selects_slowest_blind_case_for_each_frozen_scenario() (+2 more)
 
 ### Community 518 - "Visualizador (modo Pesquisa)"
 Cohesion: 0.33
@@ -2567,9 +2563,9 @@ Nodes (5): required, bytes, relative_path, sha256, role
 Cohesion: 0.40
 Nodes (5): 11.1 Em desenvolvimento, 11.2 Em coorte mista ampliada, 11.3 Em braços externos separados, 11.4 Em mimetizadores benignos, 11. O que mais funcionou
 
-### Community 522 - "Resultado do benchmark frontend — Patologia + Variação"
-Cohesion: 0.29
-Nodes (7): Artefatos, Execução, Interpretação metodológica obrigatória, Resultado binário — patologia-alvo, Resultado do benchmark frontend — Patologia + Variação, Resultado multiclasse — identificação da variação, Tempo operacional
+### Community 522 - "lld_mmri_v23_external.py"
+Cohesion: 0.32
+Nodes (9): _atomic_jsonl(), _case_id(), freeze_lld_mmri_v23_external_protocol(), Any, Path, Freeze the independent LLD-MMRI v23 external-validation cohort. The public…, _subject_category(), test_lld_case_id_is_deterministic_and_anonymous() (+1 more)
 
 ### Community 523 - "5. Segmentação e visualizador 3D"
 Cohesion: 0.40
@@ -2623,9 +2619,9 @@ Nodes (4): Interface espacial, Seleção anatômica, Validação, WebXR — sele
 Cohesion: 0.40
 Nodes (4): Estado, Limites metodológicos, OpenSwissHCC v22 — protocolo congelado do piloto exact-top5, Regra de decisão predeclarada
 
-### Community 536 - "_run_visual_benchmark_case"
-Cohesion: 0.17
-Nodes (12): test_authorized_visual_phase_resolution_ignores_regular_case(), test_authorized_visual_phase_resolution_uses_only_server_config(), test_visual_scenario_rejects_unauthorized_key(), test_visual_scenario_requires_trained_bundle(), _authorized_visual_phase_resolution(), Resolve o bundle do classificador visual, sem aceitar caminho do navegador., Identidade do classificador visual, com o enquadramento honesto embutido., Resolve séries opacas apenas para IDs do benchmark cego autorizado. Casos… (+4 more)
+### Community 536 - "Fusão no endpoint binário completo — e a correção de uma premissa que eu inventei"
+Cohesion: 0.25
+Nodes (8): 1. A correção, 2. Antes de comparar: o estimador certo, 3. A fusão no endpoint binário completo, 4. O confundidor que explica a assimetria, 5. Estado das metas, 6. Próximo passo, agora bem definido, Fusão no endpoint binário completo — e a correção de uma premissa que eu inventei, O que muda no gate 75/75
 
 ### Community 537 - "10. Definição de sucesso"
 Cohesion: 0.50
@@ -2675,9 +2671,9 @@ Nodes (4): Decisão, Fase 9 — Fusão tardia congelada com o v23, Implementaç�
 Cohesion: 0.67
 Nodes (3): pattern, type, case_id
 
-### Community 551 - "study_fingerprint_sha256"
-Cohesion: 0.67
-Nodes (3): study_fingerprint_sha256, pattern, type
+### Community 551 - "OREN Spatial — atualização UI/UX WebXR"
+Cohesion: 0.14
+Nodes (13): Cache busting, Estado, Fluidez e orçamento do Quest 3S, Gate físico no Meta Quest, Implementação, Linguagem visual, OREN Spatial — atualização UI/UX WebXR, Preservação funcional (+5 more)
 
 ### Community 552 - "case_id"
 Cohesion: 0.67
@@ -2699,45 +2695,129 @@ Nodes (3): Decisão do gate, Fase 5 — Classificador nested OOF implementado, R
 Cohesion: 0.67
 Nodes (3): Freeze real concluído, Próximo gate, Testes focados
 
-### Community 558 - "test_public_independent_v21_calibrator.py"
+### Community 558 - "openswisshcc_slice_pairwise_evaluation.py"
+Cohesion: 0.35
+Nodes (9): evaluate_slice_pairwise(), Any, Path, Exploratory post-inference evaluation for high-resolution axial slice scores., _rolling(), _strict_labels(), _verify_case(), main() (+1 more)
+
+### Community 559 - "select_best_mr_series"
+Cohesion: 0.29
+Nodes (14): audit_dataset_roots(), Seleciona uma série MR de forma determinística e retorna auditoria sanitizada.…, Audita raízes `positive`/`negative` sem copiar imagens ou labels à inferência., select_best_mr_series(), Path, test_audit_flags_nonuniform_spacing_and_non_mr(), test_audit_is_phi_safe_and_classifies_sequences(), test_audit_splits_shared_uid_by_echo_time() (+6 more)
+
+### Community 560 - "test_public_independent_v21_calibrator.py"
 Cohesion: 0.56
 Nodes (10): _calibrator(), Path, _signals(), test_freeze_uses_existing_threshold_without_reading_labels(), test_score_external_signals_accepts_canonical_sorted_signal_keys(), test_score_external_signals_enforces_time_gate(), test_score_external_signals_is_deterministic_and_label_blind(), test_score_external_signals_rejects_calibrator_tampering() (+2 more)
 
-### Community 559 - "_run_delayed_medsiglip_advisory"
-Cohesion: 0.40
-Nodes (5): test_delayed_medsiglip_runs_only_as_persisted_advisory(), test_medsiglip_advisory_rejects_non_delayed_sequence_without_inference(), main(), Run the delayed MedSigLIP head strictly as a non-decisional reader. The head…, _run_delayed_medsiglip_advisory()
+### Community 570 - "test_quest_dynamic_launcher.py"
+Cohesion: 0.27
+Nodes (3): test_access_qr_has_short_url_but_no_session_token_or_remote_asset(), build_page(), main()
 
-### Community 560 - "18. Artefatos principais"
+### Community 571 - "liverhccseg_v21_signals.py"
+Cohesion: 0.09
+Nodes (51): build_liverhccseg_uniform9_gallery(), build_liverhccseg_uniform9_panels(), _canonical_sha(), _case_files(), _load(), Any, Path, Render the label-blind LiverHccSeg v21 uniform-9 technical gallery. (+43 more)
+
+### Community 572 - "run_openswisshcc_slice_pairwise.py"
+Cohesion: 0.22
+Nodes (6): LocalSliceScorer, main(), Any, Image, Path, Score signed volumetric axial tiles one-by-one with local MedGemma 1.5 4B.
+
+### Community 573 - "WebXR — Emerald Glass e legibilidade"
+Cohesion: 0.33
+Nodes (5): Alterações, Compatibilidade, Objetivo, Validação, WebXR — Emerald Glass e legibilidade
+
+### Community 574 - "combine_candidate_masks"
+Cohesion: 0.39
+Nodes (8): combine_candidate_masks(), Path, Create an exact binary union after validating NIfTI geometry., ndarray, Path, test_candidate_union_is_exact_and_reports_new_arterial_voxels(), test_candidate_union_rejects_geometry_mismatch(), _write()
+
+### Community 575 - "Decisões implementadas"
+Cohesion: 0.20
+Nodes (9): Calibração pelo headset, Compatibilidade, Decisões implementadas, Fluidez, Objetivo, Paleta, Tipografia, Validação (+1 more)
+
+### Community 576 - "OREN Meta Quest em redes com IP dinâmico"
+Cohesion: 0.25
+Nodes (7): Certificado instalado uma única vez, Como iniciar, Componentes, Limitações da rede, Objetivo, OREN Meta Quest em redes com IP dinâmico, Verificação
+
+### Community 577 - "test_openswisshcc_highdimensional_batch_inference.py"
+Cohesion: 0.71
+Nodes (6): _fixture(), _patch_runtime(), Path, test_batch_runner_is_resumable_and_never_repeats_completed_case(), test_batch_runner_refuses_nonpositive_chunk_size(), test_batch_runner_refuses_protocol_tampering()
+
+### Community 578 - "Validação pareada da organização automática de fases DICOM"
+Cohesion: 0.29
+Nodes (6): Artefatos, Interpretação, Pergunta, Protocolo, Resultado, Validação pareada da organização automática de fases DICOM
+
+### Community 579 - "test_chaos_download.py"
+Cohesion: 0.48
+Nodes (11): ChaosDownloadSpec, _archive_bytes(), Path, _spec(), test_download_failure_cleans_staging(), test_download_is_atomic_verified_and_records_license(), test_download_refuses_before_network_without_explicit_license(), test_extraction_preflight_rehashes_masks_and_dicoms() (+3 more)
+
+### Community 580 - "Implementação — Realismo anatômico seguro no OREN/WebXR"
+Cohesion: 0.15
+Nodes (12): 1. Segurança e rollback, 2. O que foi implementado, 3. Auditabilidade, 4. Evidências visuais, 5. Validação automatizada, 6. Gate físico restante, 7. Correção de opacidade anatômica — build v1-3, Anatomia secundária (+4 more)
+
+### Community 581 - "test_openswisshcc_multisequence_chunks.py"
+Cohesion: 0.67
+Nodes (5): materialize(), plan(), sha(), test_missing_planned_case_aborts_without_partial_merge(), test_signed_plan_partitions_and_merge_is_complete()
+
+### Community 582 - "download_ranged"
+Cohesion: 0.60
+Nodes (5): _download_part(), download_ranged(), main(), Path, split_ranges()
+
+### Community 583 - "O número honesto de subtipo do caminho que está no ar"
+Cohesion: 0.33
+Nodes (6): 1. Por que este documento existe, 2. Método, 3. Resultado, 4. O que isso revelou, 5. Por que a cascata ainda não subiu, O número honesto de subtipo do caminho que está no ar
+
+### Community 584 - "run_internal_blind_visual_case.py"
+Cohesion: 0.60
+Nodes (4): main(), Path, Run one label-blind internal DICOM case through the visual Etapa C flow. This…, _write_json_atomic()
+
+### Community 585 - "measure_three_phase_union_gain.py"
+Cohesion: 0.53
+Nodes (5): descreve(), main(), ndarray, Path, segmentar()
+
+### Community 586 - "run_multisequence_scores"
+Cohesion: 0.19
+Nodes (15): _load(), _prompt(), Any, Path, Protocol, run_multisequence_scores(), Scorer, _verify_score() (+7 more)
+
+### Community 587 - "meshCategory"
+Cohesion: 0.21
+Nodes (12): applyAnatomicalOverlayAppearance(), applyAnatomicRealisticAppearance(), applyHepaticTissueAppearance(), applyInitialPreset(), applyOrganicVertexTone(), applyScientificCurrentAppearance(), applySegmentAtlasAppearance(), ensureSphericalTextureCoordinates() (+4 more)
+
+### Community 588 - "verify_job"
+Cohesion: 0.39
+Nodes (8): Session, _asset_specs(), _get_json(), main(), Any, Independent, fail-closed validation of a completed Docker webapp job., _sha256(), verify_job()
+
+### Community 589 - "18. Artefatos principais"
 Cohesion: 0.40
 Nodes (5): 18. Artefatos principais, Avaliações recentes, Código central, RAG e datasets, Resultados recentes
 
-### Community 570 - "_individual_screening_config"
-Cohesion: 0.50
-Nodes (4): A resolução de config segue existindo para benchmark e linha de comando, onde…, test_individual_screening_config_recusa_caminho_arbitrario(), _individual_screening_config(), Resolve um modo autorizado da tela de exame individual.
-
-### Community 571 - "source_dataset_id"
+### Community 590 - "source_dataset_id"
 Cohesion: 0.67
 Nodes (3): source_dataset_id, minLength, type
 
+### Community 592 - "build_lld_mmri_v23_enhancement_panels.py"
+Cohesion: 0.29
+Nodes (9): build_case(), _load_axial_groups(), main(), Any, ndarray, Path, (post - pre) / (pre + eps), zerado fora do suporte de pre-contraste., Le os grupos de cortes do painel EXISTENTE, para ablacao controlada. (+1 more)
+
+### Community 598 - "test_openswisshcc_highdimensional_inference.py"
+Cohesion: 0.30
+Nodes (7): _config(), Path, _Response, _stack(), test_freeze_is_signed_idempotent_and_local_only(), test_run_pilot_validates_health_payload_and_output(), test_run_refuses_protocol_tampering()
+
 ## Knowledge Gaps
-- **2218 isolated node(s):** `$schema`, `title`, `type`, `schema`, `case_id` (+2213 more)
+- **2308 isolated node(s):** `$schema`, `title`, `type`, `schema`, `case_id` (+2303 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PipelineError` connect `PipelineError` to `medsiglip_multiclass_classifier.py`, `openswisshcc_axial_atlas.py`, `test_webapp.py`, `lld_mmri_v23_liver_enriched_timing.py`, `load_screening_config`, `candidate_dataset.py`, `load_protected_cases`, `synthetic_external_stress_v1.py`, `test_openswisshcc_volumetric_gate.py`, `now_utc`, `openswisshcc_multisequence_geometry.py`, `openswisshcc_localizer_roi_inference.py`, `_load_json`, `openswisshcc_axial_atlas_evaluation.py`, `process_job`, `v24_liver_enriched_openswisshcc.py`, `create_app`, `_canonical_hash`, `array_from`, `test_graphrag_metadata.py`, `medgemma_screening.py`, `monophase_complementary_candidates.py`, `stages.py`, `visual_inference.py`, `sha256_file`, `ZipFile`, `_sha256`, `_run_visual_benchmark_case`, `Case`, `openswisshcc_v24_planarity_contrast.py`, `gd_eob_hbp_pilot.py`, `lld_mmri_v23_full_fov_timing.py`, `openswisshcc_localizer_enhancement_roi.py`, `canonical_sha256`, `medsiglip_classifier.py`, `lld_mmri_v23_liver_enriched_pilot.py`, `openswisshcc_v23_shape_fusion.py`, `protocol.py`, `openswisshcc_v15_fusion.py`, `lld_mmri_v23_preparation.py`, `openswisshcc_alignment.py`, `openswisshcc_candidate_localization_audit.py`, `openswisshcc_v11_fusion.py`, `build_public_independent_cohort`, `build_volumetry_manifest`, `runner.py`, `liverhccseg_v21_signals.py`, `openswisshcc_candidate_volume.py`, `test_public_independent_v21_calibrator.py`, `openswisshcc_v27_nested_recalibration.py`, `build_lld_mmri_v23_shape_branch`, `v23_retrospective_multicohort_phase2.py`, `v23_retrospective_multicohort_phase3.py`, `multiphase_ingest.py`, `chaos_v21_panels.py`, `openswisshcc_volumetric_gate.py`, `v23_retrospective_multicohort_phase4.py`, `verify_embeddings`, `test_rag_retrieval_eval.py`, `_individual_screening_config`, `ProtectedTrainingCase`, `liver_segmentation_comparison.py`, `run_lld_mmri_v23_segmentation_pilot`, `openswisshcc_volumetric.py`, `openswisshcc_multisequence_freeze.py`, `process_monophase_medsiglip_job`, `run_raw_phase_equivalence_benchmark.py`, `test_medgemma_volumetric.py`, `openswisshcc_inference_batch.py`, `_nested_loocv`, `test_rag_index_hardening.py`, `sha256_of`, `segmentation_contract.py`, `build_highdimensional_stack`, `openswisshcc_holdout_signals.py`, `make_sphere_mask`, `block_optional_module_for_spawn`, `openswisshcc_holdout_evaluation.py`, `core.py`, `external_bundle_evaluation.py`, `medsiglip_zero_shot.py`, `run_phase_aware_shadow`, `lld_mmri_v23_signals.py`, `openswisshcc_freeze.py`, `openswisshcc_lesion_localizer.py`, `v23_external_validation.py`, `radiomics_features.py`, `openswisshcc_candidate_volume_evaluation.py`, `freeze_retrospective_multicohort_contract`, `resolve_authorized_blind_phase_folders`, `medsiglip_partial_finetune.py`, `viewer_artifacts.py`, `importers.py`, `mrsegmentator_chaos_runner.py`, `openswisshcc_lesion_localizer_chunks.py`, `patch25d_classifier.py`, `openswisshcc_volumetric_pairwise.py`, `openswisshcc_slice_pairwise.py`, `RuntimeError`, `test_lld_mmri_v23_preparation.py`, `openswisshcc_lesion_localizer_evaluation.py`, `extract_development_registration_transforms`, `radiomics_classifier.py`, `synthetic_external_stress_v1_eval.py`, `openswisshcc_holdout_review.py`, `openswisshcc_review.py`, `public_independent_v21_evaluation.py`, `openswisshcc_candidate_volume_timing_run.py`, `monophase_external_failure_audit.py`, `liver_mask_phase_fusion.py`, `openswisshcc_multisequence_chunks.py`, `openswisshcc_v20_fusion.py`, `lld_mmri_v23_evaluation.py`, `v24_liver_enriched_evaluation.py`, `read_image`, `write_dicom_series`, `lld_mmri_v23_download.py`, `openswisshcc_v23_error_audit.py`, `patch25d_dataset.py`, `build_rag_corpus.py`, `chaos_v21_review.py`, `liverhccseg_v21_review.py`, `lld_mmri_v23_harmonization.py`, `openswisshcc_inference.py`, `adjudicate_hcc_vs_benign_mimic`, `openswisshcc_multisequence_batch.py`, `lld_mmri_v23_segmentation_pilot.py`, `lld_mmri_v23_technical_amendment.py`, `build_timing_selection_plan`, `test_openswisshcc_multisequence_inference.py`, `late_fusion.py`, `raw_phase_review.py`, `lld_mmri_v23_direct_timing.py`, `liverhccseg_v21_panels.py`, `lld_mmri_v23_panels.py`, `openswisshcc_localizer_roi_evaluation.py`, `medgemma_server_base.py`, `build_exam_panels`, `openswiss_monophase_atlas_candidates.py`, `test_openswisshcc_enhancement_maps.py`, `audit_enhancement_localizer`, `openswisshcc_evaluation.py`, `openswisshcc_fallback.py`, `test_openswisshcc_holdout.py`, `openswisshcc_multisequence_quality.py`, `openswisshcc_multisequence_panel.py`, `verify_v23_baseline_lock`, `raw_dicom_phase_resolver.py`, `openswisshcc_candidate_volume_full87.py`, `openswisshcc_enhancement_pilot_evaluation.py`, `openswisshcc_multisequence_gate.py`, `openswisshcc_multisequence_quality_cohort.py`, `public_independent_v21_negative_evaluation.py`, `resolve_raw_dicom_phases`, `v24_liver_enriched_inference.py`, `evaluate_enhancement_features_development`, `test_openswisshcc_highdimensional_evaluation.py`, `environment.py`, `lld_mmri_v23_predictions.py`, `lld_mmri_v23_geometry_audit.py`, `compute_candidate_enhancement_features`, `compute_candidate_shape_features`, `openswisshcc_volumetric_gallery.py`, `test_openswisshcc_volumetric_inference.py`, `process_visual_job`, `test_openswisshcc_axial_atlas_evaluation.py`, `test_rag_index.py`, `test_rag_sidecar.py`, `main`, `record_candidate_volume_review`, `openswisshcc_highdimensional_evaluation.py`, `run_cohort`, `openswisshcc_volumetric_inference.py`, `build_review_gallery`, `verify_holdout_v21_signal_context`, `test_curation.py`, `test_openswisshcc_inference_batch.py`, `test_openswisshcc_axial_atlas_score.py`, `_write_json_atomic`, `test_openswisshcc_axial_atlas_rag_score.py`, `test_openswisshcc_axial_atlas_rag_evaluation.py`, `build_openswisshcc_candidates.py`, `_candidate`, `test_build_rag_corpus.py`, `openswisshcc_volume_score.py`, `test_rag_dataset_index.py`, `test_openswisshcc_axial_atlas_chunk_score.py`, `openswisshcc_holdout_panels.py`, `combine_candidate_masks`, `_MarkdownExtractor`, `server.py`, `test_liverhccseg_labels.py`, `public_independent_v21_calibrator.py`, `openswisshcc_multisequence_evaluation.py`, `test_rag_chunking.py`, `openswisshcc_v11_v13_complementarity.py`, `openswisshcc_highdimensional_inference.py`, `openswisshcc_remediation.py`, `openswisshcc_multiphase_localizer_audit.py`, `openswisshcc_volumetric_medsiglip.py`, `test_openswisshcc_v11_fusion.py`, `public_independent_v21_consolidation.py`, `openswisshcc_volumetric_batch.py`, `_localize_candidate`, `build_lld_mmri_v23_enhancement_panels.py`?**
-  _High betweenness centrality (0.415) - this node is a cross-community bridge._
-- **Why does `load_screening_config()` connect `load_screening_config` to `test_webapp.py`, `lld_mmri_v23_liver_enriched_timing.py`, `server.py`, `now_utc`, `openswisshcc_inference.py`, `openswisshcc_localizer_roi_inference.py`, `process_job`, `lld_mmri_v23_technical_amendment.py`, `v24_liver_enriched_openswisshcc.py`, `_canonical_hash`, `create_app`, `medgemma_screening.py`, `liverhccseg_v21_panels.py`, `medgemma_server_base.py`, `build_exam_panels`, `gd_eob_hbp_pilot.py`, `lld_mmri_v23_full_fov_timing.py`, `openswisshcc_fallback.py`, `lld_mmri_v23_liver_enriched_pilot.py`, `runner.py`, `liverhccseg_v21_signals.py`, `PipelineError`, `v24_liver_enriched_inference.py`, `chaos_v21_panels.py`, `openswisshcc_volumetric_gate.py`, `openswisshcc_volumetric.py`, `openswisshcc_multisequence_freeze.py`, `process_monophase_medsiglip_job`, `openswisshcc_inference_batch.py`, `sha256_of`, `openswisshcc_volumetric_inference.py`, `openswisshcc_freeze.py`, `openswisshcc_volume_score.py`, `openswisshcc_holdout_panels.py`, `openswisshcc_slice_pairwise.py`, `openswisshcc_candidate_volume_timing_run.py`, `openswisshcc_highdimensional_inference.py`, `read_image`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
-- **Why does `_sha256()` connect `_sha256` to `lld_mmri_v23_liver_enriched_timing.py`, `test_openswisshcc_volumetric_gate.py`, `openswisshcc_multisequence_geometry.py`, `openswisshcc_localizer_roi_inference.py`, `_load_json`, `openswisshcc_axial_atlas_evaluation.py`, `lld_mmri_v23_full_fov_timing.py`, `openswisshcc_localizer_enhancement_roi.py`, `lld_mmri_v23_liver_enriched_pilot.py`, `openswisshcc_v23_shape_fusion.py`, `openswisshcc_v15_fusion.py`, `lld_mmri_v23_preparation.py`, `openswisshcc_alignment.py`, `openswisshcc_v11_fusion.py`, `liverhccseg_v21_signals.py`, `openswisshcc_candidate_volume.py`, `build_lld_mmri_v23_shape_branch`, `chaos_v21_panels.py`, `openswisshcc_volumetric_gate.py`, `run_lld_mmri_v23_segmentation_pilot`, `openswisshcc_volumetric.py`, `openswisshcc_multisequence_freeze.py`, `openswisshcc_inference_batch.py`, `openswisshcc_holdout_signals.py`, `openswisshcc_holdout_evaluation.py`, `lld_mmri_v23_signals.py`, `openswisshcc_freeze.py`, `openswisshcc_lesion_localizer.py`, `openswisshcc_candidate_volume_evaluation.py`, `openswisshcc_lesion_localizer_chunks.py`, `openswisshcc_volumetric_pairwise.py`, `openswisshcc_slice_pairwise.py`, `test_lld_mmri_v23_preparation.py`, `openswisshcc_lesion_localizer_evaluation.py`, `openswisshcc_holdout_review.py`, `openswisshcc_review.py`, `public_independent_v21_evaluation.py`, `openswisshcc_candidate_volume_timing_run.py`, `openswisshcc_multisequence_chunks.py`, `openswisshcc_v20_fusion.py`, `lld_mmri_v23_evaluation.py`, `lld_mmri_v23_download.py`, `chaos_v21_review.py`, `liverhccseg_v21_review.py`, `lld_mmri_v23_harmonization.py`, `openswisshcc_inference.py`, `openswisshcc_multisequence_batch.py`, `lld_mmri_v23_segmentation_pilot.py`, `lld_mmri_v23_technical_amendment.py`, `build_timing_selection_plan`, `lld_mmri_v23_direct_timing.py`, `liverhccseg_v21_panels.py`, `lld_mmri_v23_panels.py`, `openswisshcc_localizer_roi_evaluation.py`, `test_openswisshcc_enhancement_maps.py`, `audit_enhancement_localizer`, `openswisshcc_evaluation.py`, `openswisshcc_fallback.py`, `openswisshcc_multisequence_panel.py`, `openswisshcc_candidate_volume_full87.py`, `openswisshcc_enhancement_pilot_evaluation.py`, `openswisshcc_multisequence_gate.py`, `public_independent_v21_negative_evaluation.py`, `evaluate_enhancement_features_development`, `lld_mmri_v23_predictions.py`, `lld_mmri_v23_geometry_audit.py`, `compute_candidate_shape_features`, `openswisshcc_volumetric_gallery.py`, `test_openswisshcc_volumetric_inference.py`, `openswisshcc_volumetric_inference.py`, `verify_holdout_v21_signal_context`, `_candidate`, `openswisshcc_holdout_panels.py`, `public_independent_v21_calibrator.py`, `openswisshcc_multisequence_evaluation.py`, `openswisshcc_remediation.py`, `openswisshcc_multiphase_localizer_audit.py`, `openswisshcc_volumetric_medsiglip.py`, `public_independent_v21_consolidation.py`?**
+- **Why does `PipelineError` connect `PipelineError` to `medsiglip_multiclass_classifier.py`, `openswisshcc_axial_atlas.py`, `test_webapp.py`, `build_public_independent_cohort`, `build_timing_selection_plan`, `ProtectedTrainingCase`, `sha256_file`, `synthetic_external_stress_v1.py`, `load_screening_config`, `lld_mmri_v23_external.py`, `openswisshcc_multisequence_panel.py`, `openswisshcc_localizer_roi_inference.py`, `_load_json`, `openswisshcc_axial_atlas_evaluation.py`, `radiomics_classifier.py`, `v24_liver_enriched_openswisshcc.py`, `now_utc`, `_canonical_hash`, `read_image`, `test_graphrag_metadata.py`, `test_medgemma_screening.py`, `monophase_complementary_candidates.py`, `test_engine_finalize.py`, `visual_inference.py`, `localized_candidate_supervision.py`, `ZipFile`, `_write_json_atomic`, `monophase_external_failure_audit.py`, `Case`, `openswisshcc_v24_planarity_contrast.py`, `gd_eob_hcc_external.py`, `lld_mmri_v23_full_fov_timing.py`, `test_openswisshcc_localizer_enhancement_roi.py`, `canonical_sha256`, `medsiglip_classifier.py`, `_sha256`, `openswisshcc_v20_fusion.py`, `lld_mmri_v23_evaluation.py`, `openswisshcc_v15_fusion.py`, `core.py`, `openswisshcc_alignment.py`, `openswisshcc_candidate_localization_audit.py`, `openswisshcc_v11_fusion.py`, `chaos_v21_preparation.py`, `build_volumetry_manifest`, `runner.py`, `openswisshcc_slice_pairwise_evaluation.py`, `synthetic_external_stress_v1_eval.py`, `openswisshcc_candidate_volume_score.py`, `openswisshcc_v27_nested_recalibration.py`, `medgemma_client.py`, `v23_retrospective_multicohort_phase2.py`, `v23_retrospective_multicohort_phase3.py`, `multiphase_ingest.py`, `test_openswisshcc_enhancement_score_preflight.py`, `openswisshcc_volumetric_gate.py`, `v23_retrospective_multicohort_phase4.py`, `verify_embeddings`, `liverhccseg_v21_signals.py`, `test_rag_retrieval_eval.py`, `robustness.py`, `liver_segmentation_comparison.py`, `run_lld_mmri_v23_segmentation_pilot`, `openswisshcc_candidate_volume.py`, `combine_candidate_masks`, `resolve_monophase_sequence_contract`, `test_chaos_download.py`, `test_medgemma_volumetric.py`, `openswisshcc_inference_batch.py`, `medsiglip_partial_finetune.py`, `test_openswisshcc_highdimensional_batch_inference.py`, `test_openswisshcc_multisequence_chunks.py`, `segmentation_contract.py`, `run_multisequence_scores`, `build_highdimensional_stack`, `openswisshcc_holdout_signals.py`, `test_rag_index_hardening.py`, `run_internal_blind_visual_case.py`, `openswisshcc_holdout_evaluation.py`, `Engine`, `external_bundle_evaluation.py`, `medsiglip_zero_shot.py`, `run_phase_aware_shadow`, `run_raw_phase_equivalence_benchmark.py`, `openswisshcc_freeze.py`, `openswisshcc_lesion_localizer.py`, `v23_external_validation.py`, `radiomics_features.py`, `test_openswisshcc_highdimensional_inference.py`, `openswisshcc_axial_atlas_chunk_score.py`, `freeze_retrospective_multicohort_contract`, `resolve_authorized_blind_phase_folders`, `medsiglip_pairwise_subtype.py`, `create_app`, `stages.py`, `importers.py`, `mrsegmentator_chaos_runner.py`, `merge_localizer_chunks`, `patch25d_classifier.py`, `gd_eob_hbp_pilot.py`, `test_openswisshcc_volume_score.py`, `RuntimeError`, `openswisshcc_multisequence_batch.py`, `openswisshcc_lesion_localizer_evaluation.py`, `extract_development_registration_transforms`, `openswisshcc_candidate_volume_evaluation.py`, `public_independent_v21_evaluation.py`, `openswisshcc_holdout_review.py`, `openswisshcc_review.py`, `openswisshcc_holdout_panels.py`, `openswisshcc_enhancement_timing_projection.py`, `liver_mask_phase_fusion.py`, `openswisshcc_multisequence_chunks.py`, `openswisshcc_multisequence_freeze.py`, `lld_mmri_v23_liver_enriched_timing.py`, `load_profile`, `write_dicom_series`, `openswisshcc_multisequence_quality.py`, `openswisshcc_v23_error_audit.py`, `patch25d_dataset.py`, `build_rag_corpus.py`, `chaos_v21_panels.py`, `liverhccseg_v21_review.py`, `test_viewer_presets.py`, `infer_reviewed_candidate`, `adjudicate_hcc_vs_benign_mimic`, `evaluate_fusion_development`, `evaluate_liver_mask_quality`, `lld_mmri_v23_technical_amendment.py`, `v24_liver_enriched_evaluation.py`, `verify_holdout_v21_signal_context`, `late_fusion.py`, `raw_phase_review.py`, `evaluate_highdimensional_development`, `openswisshcc_volumetric_medsiglip.py`, `lld_mmri_v23_panels.py`, `openswisshcc_localizer_roi_evaluation.py`, `chaos_v21_review.py`, `openswiss_monophase_atlas_candidates.py`, `verify_v23_baseline_lock`, `audit_enhancement_localizer`, `test_openswisshcc_evaluation.py`, `test_openswisshcc_holdout.py`, `openswisshcc_multisequence_evaluation.py`, `openswisshcc_localizer_roi_timing.py`, `raw_dicom_phase_resolver.py`, `validate_atlas_bundle`, `openswisshcc_enhancement_pilot_evaluation.py`, `openswisshcc_multisequence_gate.py`, `scan_multisequence_geometry`, `public_independent_v21_negative_evaluation.py`, `resolve_raw_dicom_phases`, `v24_liver_enriched_inference.py`, `evaluate_enhancement_features_development`, `medgemma_benchmark.py`, `build_volumetric_candidate_cohort`, `environment.py`, `test_medgemma_panel_multiphase.py`, `openswisshcc_axial_atlas_rag_evaluation.py`, `prepare_inference_case`, `compute_candidate_enhancement_features`, `compute_candidate_shape_features`, `openswisshcc_axial_atlas_chunk_evaluation.py`, `process_visual_job`, `build_volumetric_review_gallery`, `test_rag_index.py`, `test_rag_sidecar.py`, `main`, `build_review_gallery`, `run_cohort`, `public_independent_v21_calibrator.py`, `run_slice_pairwise_scores`, `record_candidate_volume_review`, `test_curation.py`, `test_openswisshcc_inference_batch.py`, `_individual_screening_config`, `openswisshcc_multiphase_localizer_audit.py`, `openswisshcc_v11_v13_complementarity.py`, `test_build_rag_corpus.py`, `sha256_of`, `test_rag_dataset_index.py`, `test_openswisshcc_v11_fusion.py`, `build_exam_panels`, `public_independent_v21_consolidation.py`, `server.py`, `_MarkdownExtractor`, `test_liverhccseg_labels.py`, `test_openswisshcc_lesion_localizer_chunks.py`, `test_rag_chunking.py`, `_mesh_from_mask`, `validate_and_store_candidate`, `build_remediated_candidates`, `test_public_independent_v21_calibrator.py`, `test_openswisshcc_fallback.py`, `run_openswisshcc_slice_pairwise.py`, `run_openswisshcc_volumetric_pairwise.py`, `configure_isolated_totalsegmentator_runtime`, `build_lld_mmri_v23_enhancement_panels.py`, `openswisshcc_multisequence_quality_cohort.py`, `test_openswisshcc_axial_atlas_rag_score.py`, `protocol.py`?**
+  _High betweenness centrality (0.379) - this node is a cross-community bridge._
+- **Why does `load_screening_config()` connect `load_screening_config` to `test_webapp.py`, `chaos_v21_panels.py`, `server.py`, `now_utc`, `infer_reviewed_candidate`, `openswisshcc_localizer_roi_inference.py`, `lld_mmri_v23_technical_amendment.py`, `v24_liver_enriched_openswisshcc.py`, `_canonical_hash`, `create_app`, `test_medgemma_screening.py`, `_write_json_atomic`, `PipelineError`, `lld_mmri_v23_full_fov_timing.py`, `_sha256`, `test_openswisshcc_fallback.py`, `openswisshcc_alignment.py`, `runner.py`, `openswisshcc_candidate_volume_score.py`, `v24_liver_enriched_inference.py`, `medgemma_client.py`, `openswisshcc_volumetric_gate.py`, `test_medgemma_panel_multiphase.py`, `liverhccseg_v21_signals.py`, `run_openswisshcc_slice_pairwise.py`, `openswisshcc_candidate_volume.py`, `run_openswisshcc_volumetric_pairwise.py`, `resolve_monophase_sequence_contract`, `openswisshcc_inference_batch.py`, `write_run_outputs`, `openswisshcc_freeze.py`, `openswisshcc_axial_atlas_chunk_score.py`, `sha256_of`, `gd_eob_hbp_pilot.py`, `build_exam_panels`, `setup_medgemma.py`, `openswisshcc_holdout_panels.py`, `openswisshcc_multisequence_freeze.py`, `lld_mmri_v23_liver_enriched_timing.py`, `load_profile`?**
   _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `_sha256()` connect `_sha256` to `build_timing_selection_plan`, `chaos_v21_panels.py`, `liverhccseg_v21_review.py`, `infer_reviewed_candidate`, `openswisshcc_localizer_roi_inference.py`, `_load_json`, `openswisshcc_axial_atlas_evaluation.py`, `openswisshcc_multisequence_panel.py`, `lld_mmri_v23_technical_amendment.py`, `verify_holdout_v21_signal_context`, `openswisshcc_volumetric_medsiglip.py`, `lld_mmri_v23_panels.py`, `_write_json_atomic`, `openswisshcc_localizer_roi_evaluation.py`, `chaos_v21_review.py`, `lld_mmri_v23_full_fov_timing.py`, `audit_enhancement_localizer`, `test_openswisshcc_localizer_enhancement_roi.py`, `openswisshcc_v20_fusion.py`, `lld_mmri_v23_evaluation.py`, `openswisshcc_localizer_roi_timing.py`, `core.py`, `openswisshcc_alignment.py`, `openswisshcc_multisequence_evaluation.py`, `openswisshcc_v11_fusion.py`, `openswisshcc_v15_fusion.py`, `openswisshcc_enhancement_pilot_evaluation.py`, `openswisshcc_multisequence_gate.py`, `scan_multisequence_geometry`, `openswisshcc_slice_pairwise_evaluation.py`, `public_independent_v21_negative_evaluation.py`, `evaluate_enhancement_features_development`, `test_openswisshcc_enhancement_score_preflight.py`, `openswisshcc_volumetric_gate.py`, `openswisshcc_axial_atlas_rag_evaluation.py`, `liverhccseg_v21_signals.py`, `run_lld_mmri_v23_segmentation_pilot`, `compute_candidate_shape_features`, `openswisshcc_candidate_volume.py`, `openswisshcc_axial_atlas_chunk_evaluation.py`, `run_openswisshcc_volumetric_pairwise.py`, `openswisshcc_inference_batch.py`, `build_volumetric_review_gallery`, `run_multisequence_scores`, `openswisshcc_holdout_signals.py`, `openswisshcc_holdout_evaluation.py`, `public_independent_v21_calibrator.py`, `run_slice_pairwise_scores`, `openswisshcc_freeze.py`, `openswisshcc_lesion_localizer.py`, `openswisshcc_multiphase_localizer_audit.py`, `merge_localizer_chunks`, `public_independent_v21_consolidation.py`, `openswisshcc_multisequence_batch.py`, `openswisshcc_lesion_localizer_evaluation.py`, `openswisshcc_candidate_volume_evaluation.py`, `public_independent_v21_evaluation.py`, `openswisshcc_holdout_review.py`, `openswisshcc_review.py`, `openswisshcc_holdout_panels.py`, `openswisshcc_enhancement_timing_projection.py`, `openswisshcc_multisequence_chunks.py`, `openswisshcc_multisequence_freeze.py`, `lld_mmri_v23_liver_enriched_timing.py`, `build_remediated_candidates`?**
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Are the 103 inferred relationships involving `PipelineError` (e.g. with `DatasetCase` and `InferenceSource`) actually correct?**
   _`PipelineError` has 103 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `$schema`, `title`, `type` to the rest of the system?**
-  _2218 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2308 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `medsiglip_multiclass_classifier.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.05198776758409786 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07686453576864535 - nodes in this community are weakly interconnected._
 - **Should `openswisshcc_axial_atlas.py` be split into smaller, more focused modules?**
   _Cohesion score 0.05717171717171717 - nodes in this community are weakly interconnected._
