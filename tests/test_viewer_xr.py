@@ -126,11 +126,27 @@ def test_webxr_client_preserves_desktop_and_exposes_quest_controls():
     assert "drawOrenCore" in xr
     assert "Digital Twin hepático" in xr
     assert "oren-xr-tablet-hud-edges" in xr
-    assert "rgba(253,255,254,.97)" in xr and 'color: 0xeaf4ef' in xr
+    assert "roundedPanelGeometry" in xr and "THREE.ExtrudeGeometry" in xr
+    assert 'panelTop: "rgba(46,49,47,.94)"' in xr and 'color: 0x282d2a' in xr
+    assert 'color: 0x87ad9a' in xr and 'text: "#f4f7f5"' in xr
+    assert "rgba(253,255,254,.97)" not in xr and "color: 0xeaf4ef" not in xr
+    assert "XR_FONT_FAMILY" in xr and '"Roboto", "Noto Sans"' in xr
+    assert "XR_ENTRY_CALIBRATION_FRAMES" in xr and "applyHeadRelativeLayout" in xr
+    assert "beginEntryCalibration" in xr and "updateEntryCalibration" in xr
+    assert "XR_ENTRY_CALIBRATION_TIMEOUT_MS" in xr and "XR_ENTRY_WARMUP_MS" in xr
+    assert 'performanceTier = "stability"' in xr and "setFoveation?.(0.9)" in xr
+    assert "const XR_UI_TEXTURE_SCALE = 1.25" in xr
+    assert "lastPosePersistedAt" not in xr
     assert "XR_FRAMEBUFFER_SCALE" in xr and "setFramebufferScaleFactor" in xr
     assert "POINTER_RAYCAST_INTERVAL_MS" in xr and "PERF_STABILITY_THRESHOLD_MS" in xr
     assert "THREE.InstancedMesh" in xr and "oren-hand-joints-instanced" in xr
     assert "applyPerformanceTier" in xr and 'performanceTier === "stability"' in xr
+    assert 'api.setRenderingQualityTier?.(nextTier)' in xr
+    assert 'api.setRenderingQualityTier?.("stability")' in xr
+    assert 'api.setRenderingQualityTier?.("quality")' in xr
+    assert "performanceStressWindows >= 3" in xr
+    assert "enforceRealismPerformanceFallback" in xr
+    assert 'fallbackReason: "performance_budget_exceeded"' in xr
     assert "interactiveMeshes" in xr and "PERF_EVALUATION_INTERVAL_FRAMES" in xr
     assert "setXrPresentationActive" in app and "settleViewerTransitionsForXR" in app
     assert "stabilizeXrScene" in app and "xrExpectedVisible" in app
@@ -156,4 +172,78 @@ def test_webxr_client_preserves_desktop_and_exposes_quest_controls():
     assert "const createdSession = await navigator.xr.requestSession" in xr
     assert "failedSession.end()" in xr and "originalModelState = null" in xr
     assert "measurement_authority" not in xr  # browser never promotes a render LOD
+    assert "XR_WIREFRAME_TRIANGLE_LIMIT" in app
+    assert "wireframeRoleForCurrentContext" in app
+    assert "mesh.material.wireframe = requested" in app
+    assert "getWireframeStatus" in app and "status?.reason" in xr
+    assert "group.add(measurementGroup)" in app
+    assert "xrRoot.add(api.group); xrRoot.add(api.measurementGroup)" not in xr
+    assert "worldPointToModelPoint" in app and "isWorldPointVisibleByClipping" in app
+    assert "allowHidden: true" in xr and "isStructureVisible" in app
     assert 'id="xr-entry"' in html and 'id="xr-profile"' in html
+
+
+def test_uxvr_spatial_v2_preserves_every_existing_action_contract():
+    source = Path("viewer/xr.js").read_text("utf-8")
+    required_actions = {
+        "default", "anatomy", "triage", "segments", "opacity", "volume", "render_realism", "reset", "tablet_reset",
+        "view_default", "view_anterior", "view_superior", "view_right", "anatomical_liver",
+        "anatomical_segments", "anatomical_vascular", "anatomical_candidate", "save_view", "restore_view",
+        "measure", "clear_measure", "dimensions", "wireframe", "cut", "cut_position", "cut_axis", "cut_invert",
+        "structure_next", "structure_focus", "structure_isolate", "structure_restore", "structure_visibility",
+        "structure_opacity", "reference_axial", "reference_coronal", "reference_sagittal", "reference_previous",
+        "reference_next", "reference_sync", "reference_reset", "rgb_previous", "rgb_next", "rgb_first", "rgb_reset",
+        "review_3d", "review_2d", "review_candidate", "review_research", "candidate_decision", "review_approve",
+        "review_revision",
+    }
+    pages = source.split("const PANEL_PAGES", 1)[1].split("function roundRect", 1)[0]
+    for action in required_actions:
+        assert f'["{action}",' in pages
+    assert "function performAction(action)" in source
+    assert "const panel = createSpatialPanelV2();" in source
+    assert "buttons.push({ action" in source
+    assert 'getRenderingProfile?.() === "anatomic_realistic_v1"' in source
+    assert 'api.setRenderingProfile?.(' in source
+
+
+def test_uxvr_spatial_v2_is_legible_contextual_and_offline():
+    source = Path("viewer/xr.js").read_text("utf-8")
+    assert "const XR_SPATIAL_THEME" in source
+    assert "const XR_PAGE_CONTEXT" in source
+    assert "const XR_ACTION_HINTS" in source
+    assert "OREN SPATIAL" in source
+    assert "SELECIONADA" in source
+    assert "Quest 3S" in source and "qualidade adaptativa" in source
+    assert 'accent: "#78b99b"' in source
+    assert "INTERFACE ESPACIAL" in source
+    assert "fitCanvasText" in source
+    assert "getStructureCategory" in source and "isStructureVisible" in source
+    assert "http://" not in source and "https://" not in source
+
+
+def test_uxvr_spatial_v2_avoids_redundant_texture_uploads_and_heavy_glass():
+    source = Path("viewer/xr.js").read_text("utf-8")
+    assert source.count('if (signature === lastDrawSignature) return false;') >= 3
+    assert source.count("texture.generateMipmaps = false") >= 3
+    assert source.count("THREE.LinearFilter") >= 6
+    assert "textureUploadCount" in source and "getPerformanceStats" in source
+    assert "panel_texture_uploads" in source and "reference_texture_uploads" in source
+    assert "tablet.frameEdges.visible = showDecorativeEdges" in source
+    assert "referenceTablet.edges.visible = showDecorativeEdges" in source
+    assert "tablet.frameEdges.visible = true; referenceTablet.edges.visible = true;" in source
+    assert "const FRAME_BUDGET_MS = 13.9" in source
+    assert "transparent: false, opacity: 1" in source
+    assert "MeshPhysicalMaterial" not in source
+    assert "transmission:" not in source
+
+
+def test_uxvr_spatial_v2_uses_neutral_clinical_glass_palette():
+    source = Path("viewer/xr.js").read_text("utf-8")
+    v2 = source.split("function createSpatialPanelV2()", 1)[1].split("function createExitButton()", 1)[0]
+    assert 'panelMiddle: "rgba(31,35,33,.95)"' in source
+    assert 'surface: "rgba(43,48,45,.94)"' in source
+    assert 'border: "rgba(226,237,231,.24)"' in source
+    assert 'rgba(47,52,49,.95)' in v2
+    assert 'rgba(139,200,172,.46)' in v2
+    assert 'rgba(28,158,111,.99)' not in v2
+    assert '"#8bffd1"' not in v2

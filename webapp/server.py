@@ -18,6 +18,7 @@ o uso clínico exige a revisão humana real do painel.
 """
 from __future__ import annotations
 
+import base64
 import csv
 import hashlib
 import io
@@ -1715,6 +1716,64 @@ def _quest_base_url(request: Request) -> str:
     return f"https://{hostname}:{int(os.environ.get('OREN_QUEST_PORT', '8443'))}"
 
 
+def _quest_qr_data_url(value: str) -> str | None:
+    """Render a self-contained QR code without exposing the XR token in logs."""
+    try:
+        import qrcode
+        from qrcode.image.svg import SvgPathImage
+    except ImportError:
+        log.warning("QR Code indisponivel: instale o extra webapp atualizado.")
+        return None
+    image = qrcode.make(
+        value,
+        image_factory=SvgPathImage,
+        box_size=8,
+        border=2,
+    )
+    buffer = io.BytesIO()
+    image.save(buffer)
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
+def _recent_quest_jobs(*, limit: int = 8) -> list[dict[str, str]]:
+    """Return recent viewer-ready jobs without exposing clinical metadata."""
+    if not WORKSPACE.is_dir():
+        return []
+    candidates: list[tuple[float, str]] = []
+    for job_root in WORKSPACE.iterdir():
+        job_id = job_root.name
+        if (
+            not job_root.is_dir()
+            or not job_id
+            or any(ch not in "0123456789abcdef" for ch in job_id.lower())
+        ):
+            continue
+        case_dir = job_root / "case"
+        manifest = case_dir / "outputs" / "viewer_manifest.json"
+        if not manifest.is_file():
+            continue
+        try:
+            updated_at = manifest.stat().st_mtime
+        except OSError:
+            continue
+        candidates.append((updated_at, job_id))
+    candidates.sort(reverse=True)
+    ready: list[dict[str, str]] = []
+    # Hash validation may read several meshes. Validate newest-first and stop as
+    # soon as the small headset list is full instead of hashing the whole archive.
+    for updated_at, job_id in candidates:
+        if not _model_done(WORKSPACE / job_id / "case"):
+            continue
+        ready.append({
+            "job_id": job_id,
+            "updated_at": datetime.fromtimestamp(updated_at, timezone.utc).isoformat(),
+        })
+        if len(ready) >= limit:
+            break
+    return ready
+
+
 class ReviewChecklistPayload(BaseModel):
     inspected_3d_contour: bool = False
     compared_2d_reference: bool = False
@@ -1742,6 +1801,9 @@ class ViewerSavedViewPayload(BaseModel):
         "none", "liver", "segments", "vascular", "candidate"
     ] = "none"
     material_profile: Literal["default", "anatomy", "triage", "segments"] = "default"
+    rendering_profile: Literal[
+        "scientific_current_v1", "anatomic_realistic_v1"
+    ] = "scientific_current_v1"
     selected_role: str | None = Field(default=None, max_length=64, pattern=r"^[a-z0-9_]+$")
     selection_isolated: bool = False
     camera_position_mm: list[float] = Field(min_length=3, max_length=3)
@@ -1776,6 +1838,15 @@ class ViewerStatePayload(BaseModel):
     active_anatomical_view: Literal[
         "none", "liver", "segments", "vascular", "candidate"
     ] = "none"
+    rendering_profile: Literal[
+        "scientific_current_v1", "anatomic_realistic_v1"
+    ] = "scientific_current_v1"
+    rendering_quality_tier: Literal["quality", "stability"] = "quality"
+    material_pack_id: Literal["oren-liver-realistic-v1"] | None = None
+    material_pack_variant: Literal["desktop_1k", "quest512"] | None = None
+    rendering_fallback_reason: Literal[
+        "asset_load_error", "performance_budget_exceeded"
+    ] | None = None
     wireframe_enabled: bool = False
     reference_sync_enabled: bool = True
     reference_view: Literal["axial", "coronal", "sagittal"] = "axial"
@@ -3266,9 +3337,27 @@ def create_xr_session(job_id: str, payload: XRSessionRequest, request: Request) 
     base = _quest_base_url(request)
     viewer_url = (
         f"{base}/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}"
-        f"&xr=1&xr_role={payload.role}&xr_build=20260812-44#xr_token={token}"
+        f"&xr=1&xr_role={payload.role}&xr_build=20260814-anatomic-v1-3#xr_token={token}"
     )
-    return {**session, "viewer_url": viewer_url}
+    return {
+        **session,
+        "viewer_url": viewer_url,
+        "quest_short_url": f"{base}/quest/",
+        "qr_code_data_url": _quest_qr_data_url(viewer_url),
+    }
+
+
+@app.get("/api/quest/recent-jobs")
+def recent_quest_jobs(limit: int = 8) -> dict:
+    bounded_limit = max(1, min(int(limit), 20))
+    jobs = _recent_quest_jobs(limit=bounded_limit)
+    return {
+        "schema": "oren-quest-ready-jobs-v1",
+        "count": len(jobs),
+        "jobs": jobs,
+        "research_only": True,
+        "clinical_use_allowed": False,
+    }
 
 
 @app.get("/api/jobs/{job_id}/xr-session/{token}")

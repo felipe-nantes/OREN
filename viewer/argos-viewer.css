@@ -532,6 +532,24 @@ body {
     linear-gradient(145deg, #15231e 0%, #0e1814 55%, #0a110e 100%);
 }
 
+/* Escolha de renderização importante, não um microcontrole. Esta regra fica
+   por último para sobreviver às camadas históricas de compatibilidade. */
+#controls .render-profile-button {
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: .005em;
+}
+#controls .render-profile-button.active {
+  border-color: var(--oren-signal-deep);
+  color: #fff;
+  background: linear-gradient(135deg, #238869, var(--oren-signal-deep));
+  box-shadow: 0 12px 24px -18px rgba(21,116,90,.9);
+}
+
 /* Composições reproduzíveis para revisão. Elas só alteram visibilidade,
    opacidade e câmera dos meshes já presentes no manifesto. */
 .preset-panel { display: grid; gap: 10px; margin-bottom: 10px; }
@@ -557,6 +575,21 @@ body {
 .preset-button:active:not(:disabled) { transform: scale(.98); }
 .preset-button:disabled { cursor: not-allowed; opacity: .43; }
 .preset-status { min-height: 28px; margin: 0; color: var(--oren-ink-3); font-size: 9px; line-height: 1.45; }
+
+.render-profile-button {
+  width: 100%;
+  min-height: 38px;
+  border-radius: 11px;
+  font-size: 10px;
+  letter-spacing: .01em;
+}
+.render-profile-button.active {
+  border-color: var(--oren-signal-deep);
+  color: #fff;
+  background: linear-gradient(135deg, #1f8464, var(--oren-signal-deep));
+  box-shadow: 0 12px 24px -18px rgba(21,116,90,.9);
+}
+.render-profile-status { margin-bottom: 0; }
 
 @media (max-width: 780px) {
   .preset-grid { grid-template-columns: 1fr; }
@@ -859,4 +892,20 @@ input[type="range"] { accent-color: var(--oren-signal-deep); }
     radial-gradient(circle at 42% 40%, rgba(45,175,121,.12), transparent 24rem),
     radial-gradient(circle at 72% 74%, rgba(255,255,255,.065), transparent 20rem),
     linear-gradient(145deg, #15231e 0%, #0e1814 55%, #0a110e 100%);
+}
+
+#controls .render-profile-button {
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: .005em;
+}
+#controls .render-profile-button.active {
+  border-color: var(--oren-signal-deep);
+  color: #fff;
+  background: linear-gradient(135deg, #238869, var(--oren-signal-deep));
+  box-shadow: 0 12px 24px -18px rgba(21,116,90,.9);
 }

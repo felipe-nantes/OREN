@@ -3,37 +3,147 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>OREN — Abrindo caso no Meta Quest</title>
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>OREN — Meta Quest</title>
   <style>
-    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #071018; color: #eef7f5; }
-    main { width: min(34rem, 85vw); padding: 2rem; border: 1px solid #284758; border-radius: 1.5rem; background: #101e29; text-align: center; }
-    h1 { font-size: 1.55rem; margin: 0 0 .75rem; }
-    p { color: #b9cbd2; line-height: 1.5; }
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --green: #52e0b1;
+      --green-strong: #19ad80;
+      --text: #f0f8f6;
+      --muted: #a9c0bc;
+      --panel: rgba(11, 30, 35, .82);
+      --line: rgba(129, 236, 204, .2);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 1.2rem;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(28, 177, 133, .2), transparent 35%),
+        radial-gradient(circle at 82% 90%, rgba(43, 113, 121, .2), transparent 38%),
+        #061014;
+      color: var(--text);
+    }
+    main {
+      width: min(42rem, 94vw);
+      padding: clamp(1.25rem, 4vw, 2.25rem);
+      border: 1px solid var(--line);
+      border-radius: 1.8rem;
+      background: var(--panel);
+      box-shadow: 0 30px 90px rgba(0, 0, 0, .42);
+      backdrop-filter: blur(22px);
+    }
+    .eyebrow { color: var(--green); font-size: .78rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: .65rem 0 .6rem; font-size: clamp(1.8rem, 5vw, 2.65rem); letter-spacing: -.04em; }
+    p { margin: 0; color: var(--muted); line-height: 1.55; }
+    .status { margin: 1.25rem 0; padding: .9rem 1rem; border: 1px solid var(--line); border-radius: 1rem; background: rgba(4, 16, 19, .5); }
+    .jobs { display: grid; gap: .75rem; margin-top: 1.2rem; }
+    .job {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 1rem;
+      padding: .95rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: rgba(8, 23, 27, .72);
+    }
+    .job b { display: block; font-size: 1rem; overflow-wrap: anywhere; }
+    .job small { color: var(--muted); }
+    button {
+      min-height: 3.1rem;
+      padding: .75rem 1.05rem;
+      border: 0;
+      border-radius: .9rem;
+      background: linear-gradient(135deg, var(--green), var(--green-strong));
+      color: #032019;
+      font: inherit;
+      font-weight: 850;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    .empty { padding: 1.15rem; border: 1px dashed var(--line); border-radius: 1rem; color: var(--muted); }
+    .foot { margin-top: 1.25rem; font-size: .78rem; color: #789790; }
   </style>
 </head>
 <body>
   <main>
-    <h1>OREN · Meta Quest</h1>
-    <p id="status">Criando uma sessão segura para o caso TCGA-DD-A4NJ…</p>
+    <div class="eyebrow">OREN · acesso rápido</div>
+    <h1>Escolha o fígado para abrir</h1>
+    <p>Esta página mostra somente modelos 3D concluídos neste computador. O exame mais recente aparece primeiro.</p>
+    <div class="status" id="status">Procurando modelos disponíveis…</div>
+    <div class="jobs" id="jobs" aria-live="polite"></div>
+    <div class="foot">Modo Pesquisa · revisão humana obrigatória · nenhum dado clínico é exibido nesta seleção.</div>
   </main>
   <script>
-    (async () => {
-      const status = document.getElementById("status");
+    const status = document.getElementById("status");
+    const jobs = document.getElementById("jobs");
+
+    function formatDate(value) {
+      try { return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
+      catch (_error) { return "modelo concluído"; }
+    }
+
+    async function openJob(jobId, button) {
+      button.disabled = true;
+      button.textContent = "Preparando…";
+      status.textContent = "Criando uma sessão segura para o Meta Quest…";
       try {
-        const response = await fetch("/api/jobs/3304454260a5/xr-session", {
+        const response = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/xr-session`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role: "clinician", ttl_minutes: 120 }),
         });
         const result = await response.json();
         if (!response.ok || !result.viewer_url) throw new Error(result.detail || "Sessão indisponível");
-        status.textContent = "Sessão criada. Abrindo o fígado em mixed reality…";
+        status.textContent = "Sessão criada. Abrindo o visualizador…";
         window.location.replace(result.viewer_url);
       } catch (error) {
-        status.textContent = `Não foi possível abrir o caso: ${error.message}`;
+        status.textContent = `Não foi possível abrir o modelo: ${error.message}`;
+        button.disabled = false;
+        button.textContent = "Abrir no Quest";
       }
-    })();
+    }
+
+    async function loadJobs() {
+      try {
+        const response = await fetch("/api/quest/recent-jobs?limit=8", { cache: "no-store" });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || "Lista indisponível");
+        jobs.replaceChildren();
+        if (!result.jobs.length) {
+          status.textContent = "Nenhum modelo 3D concluído foi encontrado.";
+          jobs.innerHTML = '<div class="empty">Processe um exame no computador e recarregue esta página.</div>';
+          return;
+        }
+        status.textContent = `${result.jobs.length} modelo(s) pronto(s). Toque em Abrir no Quest.`;
+        result.jobs.forEach((item, index) => {
+          const row = document.createElement("div");
+          row.className = "job";
+          const description = document.createElement("div");
+          const title = document.createElement("b");
+          title.textContent = index === 0 ? `Mais recente · ${item.job_id}` : item.job_id;
+          const date = document.createElement("small");
+          date.textContent = formatDate(item.updated_at);
+          description.append(title, date);
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = "Abrir no Quest";
+          button.addEventListener("click", () => openJob(item.job_id, button));
+          row.append(description, button);
+          jobs.appendChild(row);
+        });
+      } catch (error) {
+        status.textContent = `Falha ao procurar modelos: ${error.message}`;
+      }
+    }
+
+    loadJobs();
   </script>
 </body>
 </html>

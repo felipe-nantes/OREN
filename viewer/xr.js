@@ -4,7 +4,8 @@ const XR_SCHEMA = "oren-webxr-viewer-v2";
 const FRAME_BUDGET_MS = 13.9;
 const PANEL_WIDTH = 1024;
 const PANEL_HEIGHT = 1280;
-const XR_UI_TEXTURE_SCALE = 1.5;
+const XR_UI_TEXTURE_SCALE = 1.25;
+const XR_FONT_FAMILY = '"Roboto", "Noto Sans", "Helvetica Neue", Arial, sans-serif';
 const HAND_RAY_LENGTH = 1.6;
 const HAND_RAY_SMOOTHING = 0.32;
 const GRAB_FOLLOW = 0.58;
@@ -27,6 +28,47 @@ const HAND_VISUAL_INTERVAL_MS = 40;
 const PERF_WINDOW_FRAMES = 180;
 const PERF_EVALUATION_INTERVAL_FRAMES = 90;
 const PERF_STABILITY_THRESHOLD_MS = 18;
+const XR_ENTRY_CALIBRATION_FRAMES = 8;
+const XR_ENTRY_CALIBRATION_TIMEOUT_MS = 1500;
+const XR_ENTRY_WARMUP_MS = 1400;
+const XR_SPATIAL_THEME = Object.freeze({
+  panelTop: "rgba(46,49,47,.94)",
+  panelMiddle: "rgba(31,35,33,.95)",
+  panelBottom: "rgba(19,23,21,.96)",
+  surface: "rgba(43,48,45,.94)",
+  surfaceRaised: "rgba(54,60,56,.95)",
+  surfaceActive: "rgba(48,78,65,.96)",
+  border: "rgba(226,237,231,.24)",
+  borderSoft: "rgba(199,215,207,.15)",
+  text: "#f4f7f5",
+  textMuted: "#c4cdc8",
+  textSoft: "#98a39d",
+  accent: "#78b99b",
+  accentStrong: "#8bc8ac",
+  warning: "#d8b57a",
+});
+const XR_PAGE_CONTEXT = Object.freeze({
+  model: ["ANATOMIA DIGITAL", "Composição do fígado", "Camadas, opacidade e volumetria do modelo."],
+  views: ["NAVEGAÇÃO ESPACIAL", "Vistas anatômicas", "Enquadre estruturas e preserve pontos de revisão."],
+  tools: ["FERRAMENTAS CLÍNICAS", "Medição e planos", "Operações em LPS sem alterar a segmentação."],
+  structures: ["CONTEXTO ANATÔMICO", "Estrutura selecionada", "Foque, isole e ajuste somente a camada ativa."],
+  reference: ["REFERÊNCIA MULTIPLANAR", "RM 2D sincronizada", "Compare axial, coronal e sagital com o modelo."],
+  rgb: ["EVIDÊNCIA DO PIPELINE", "Painéis RGB", "Navegue pelas fusões publicadas para o caso."],
+  review: ["GATE HUMANO", "Revisão técnica", "Confirme evidências antes de concluir a análise."],
+});
+const XR_ACTION_HINTS = Object.freeze({
+  opacity: "alternar nível", volume: "máscara de origem", reset: "escala anatômica",
+  render_realism: "textura ilustrativa",
+  tablet_reset: "campo de visão", save_view: "guardar estado", restore_view: "última vista",
+  measure: "dois pontos LPS", clear_measure: "remover réguas", dimensions: "caixa 3D LPS",
+  wireframe: "uma estrutura segura", cut: "plano ortogonal", cut_position: "avançar 10%",
+  cut_axis: "LR · AP · SI", cut_invert: "trocar hemispaço", structure_next: "seleção seguinte",
+  structure_focus: "recentralizar", structure_isolate: "ocultar contexto", structure_restore: "mostrar contexto",
+  structure_visibility: "alternar camada", structure_opacity: "alternar nível", reference_previous: "plano anterior",
+  reference_next: "plano seguinte", reference_sync: "vincular ao corte", reference_reset: "campo de visão",
+  rgb_previous: "painel anterior", rgb_next: "painel seguinte", rgb_first: "voltar ao início",
+  rgb_reset: "campo de visão", review_approve: "finalizar gate", review_revision: "devolver para revisão",
+});
 
 const HAND_BONES = Object.freeze([
   ["wrist", "thumb-metacarpal"],
@@ -65,7 +107,8 @@ const PANEL_PAGES = Object.freeze({
       ["default", "Fígado"], ["anatomy", "Anatomia"],
       ["triage", "Triagem"], ["segments", "Segmentos"],
       ["opacity", "Opacidade fígado"], ["volume", "Volumetria"],
-      ["reset", "Recentrar fígado"], ["tablet_reset", "Recentrar tablet"],
+      ["render_realism", "Textura realista"], ["reset", "Recentrar fígado"],
+      ["tablet_reset", "Recentrar tablet"],
     ],
   },
   views: {
@@ -135,20 +178,62 @@ function strokeRoundRect(context, x, y, width, height, radius) {
   context.stroke();
 }
 
+function canvasFont(weight, size) {
+  return `${weight} ${size}px ${XR_FONT_FAMILY}`;
+}
+
+function fitCanvasText(context, text, maxWidth) {
+  const value = String(text || "");
+  if (context.measureText(value).width <= maxWidth) return value;
+  let compact = value;
+  while (compact.length > 2 && context.measureText(`${compact}…`).width > maxWidth) compact = compact.slice(0, -1);
+  return `${compact}…`;
+}
+
+function drawStatusDot(context, x, y, color = XR_SPATIAL_THEME.accentStrong) {
+  context.save();
+  context.fillStyle = color;
+  context.shadowColor = color;
+  context.shadowBlur = 4;
+  context.beginPath(); context.arc(x, y, 6, 0, Math.PI * 2); context.fill();
+  context.restore();
+}
+
+function roundedPanelGeometry(width, height, depth, radius) {
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfWidth + radius, -halfHeight);
+  shape.lineTo(halfWidth - radius, -halfHeight);
+  shape.quadraticCurveTo(halfWidth, -halfHeight, halfWidth, -halfHeight + radius);
+  shape.lineTo(halfWidth, halfHeight - radius);
+  shape.quadraticCurveTo(halfWidth, halfHeight, halfWidth - radius, halfHeight);
+  shape.lineTo(-halfWidth + radius, halfHeight);
+  shape.quadraticCurveTo(-halfWidth, halfHeight, -halfWidth, halfHeight - radius);
+  shape.lineTo(-halfWidth, -halfHeight + radius);
+  shape.quadraticCurveTo(-halfWidth, -halfHeight, -halfWidth + radius, -halfHeight);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth, bevelEnabled: true, bevelSegments: 3, bevelSize: 0.004,
+    bevelThickness: 0.003, curveSegments: 8,
+  });
+  geometry.translate(0, 0, -depth / 2);
+  return geometry;
+}
+
 function drawOrenCore(context, x, y, radius, phase = 0) {
   context.save();
   context.translate(x, y);
   context.lineCap = "round";
   [[1, 0.18, Math.PI * 1.42], [0.70, 1.9, Math.PI * 1.06]].forEach(([scale, start, span], index) => {
     context.beginPath();
-    context.strokeStyle = index === 1 ? "rgba(21,116,90,.55)" : "rgba(45,175,121,.92)";
+    context.strokeStyle = index === 1 ? "rgba(120,185,155,.28)" : "rgba(120,185,155,.72)";
     context.lineWidth = index === 0 ? 4 : 2;
     context.arc(0, 0, radius * scale, start + phase, start + phase + span);
     context.stroke();
   });
-  context.fillStyle = "rgba(45,175,121,.95)";
-  context.shadowColor = "rgba(45,175,121,.22)";
-  context.shadowBlur = 8;
+  context.fillStyle = "rgba(139,200,172,.88)";
+  context.shadowColor = "rgba(139,200,172,.14)";
+  context.shadowBlur = 4;
   context.beginPath(); context.arc(0, 0, radius * 0.13, 0, Math.PI * 2); context.fill();
   context.restore();
 }
@@ -234,6 +319,9 @@ function createSpatialPanel() {
   context.scale(XR_UI_TEXTURE_SCALE, XR_UI_TEXTURE_SCALE);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
   const material = new THREE.MeshBasicMaterial({
     map: texture, transparent: true, side: THREE.DoubleSide, depthTest: true,
   });
@@ -251,49 +339,49 @@ function createSpatialPanel() {
       ? state.page : "model";
     context.clearRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
     const glass = context.createLinearGradient(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
-    glass.addColorStop(0, "rgba(253,255,254,.97)");
-    glass.addColorStop(0.55, "rgba(246,252,249,.94)");
-    glass.addColorStop(1, "rgba(235,247,241,.92)");
+    glass.addColorStop(0, "rgba(18,65,48,.98)");
+    glass.addColorStop(0.55, "rgba(11,48,35,.97)");
+    glass.addColorStop(1, "rgba(7,35,25,.96)");
     context.fillStyle = glass;
     roundRect(context, 8, 8, 1008, 1264, 54);
 
     context.save();
     context.beginPath(); context.roundRect(8, 8, 1008, 1264, 54); context.clip();
     const glow = context.createRadialGradient(120, 80, 8, 120, 80, 360);
-    glow.addColorStop(0, "rgba(45,175,121,.15)");
+    glow.addColorStop(0, "rgba(66,230,170,.20)");
     glow.addColorStop(1, "rgba(45,175,121,0)");
     context.fillStyle = glow; context.fillRect(0, 0, 520, 430);
     const lowerGlow = context.createRadialGradient(930, 1160, 20, 930, 1160, 420);
-    lowerGlow.addColorStop(0, "rgba(21,116,90,.08)");
+    lowerGlow.addColorStop(0, "rgba(21,151,107,.16)");
     lowerGlow.addColorStop(1, "rgba(21,116,90,0)");
     context.fillStyle = lowerGlow; context.fillRect(500, 760, 524, 520);
     context.restore();
 
-    context.strokeStyle = "rgba(255,255,255,.94)";
+    context.strokeStyle = "rgba(100,244,192,.50)";
     context.lineWidth = 2;
     strokeRoundRect(context, 10, 10, 1004, 1260, 52);
-    context.strokeStyle = "rgba(88,122,108,.16)";
+    context.strokeStyle = "rgba(102,219,175,.22)";
     context.lineWidth = 1;
     strokeRoundRect(context, 23, 23, 978, 1234, 43);
     drawOrenCore(context, 88, 85, 34);
 
-    context.fillStyle = "#18221e";
-    context.font = "500 46px sans-serif";
+    context.fillStyle = "#f1fff8";
+    context.font = canvasFont(700, 46);
     context.fillText("OREN", 144, 80);
-    context.fillStyle = "#405047";
-    context.font = "600 22px sans-serif";
+    context.fillStyle = "#b7d7c8";
+    context.font = canvasFont(600, 22);
     context.fillText("Digital Twin hepático", 145, 111);
-    context.fillStyle = "#15745a";
-    context.font = "700 21px sans-serif";
+    context.fillStyle = "#58e5ad";
+    context.font = canvasFont(700, 21);
     context.fillText(profile === "patient" ? "VISUALIZAÇÃO DO PACIENTE" : "REVISÃO MÉDICA · MÃOS ATIVAS", 54, 151);
-    context.fillStyle = "rgba(236,249,242,.94)";
+    context.fillStyle = "rgba(20,90,65,.96)";
     roundRect(context, 54, 166, 916, 52, 24);
-    context.strokeStyle = "rgba(45,175,121,.16)";
+    context.strokeStyle = "rgba(82,229,170,.30)";
     strokeRoundRect(context, 54, 166, 916, 52, 24);
-    context.fillStyle = "#203229";
-    context.font = "600 24px sans-serif";
+    context.fillStyle = "#effff7";
+    context.font = canvasFont(600, 24);
     context.fillText((state.status || "Toque para selecionar").slice(0, 72), 78, 199);
-    context.fillStyle = "#2daf79";
+    context.fillStyle = "#4ff0ae";
     context.beginPath(); context.arc(934, 192, 6, 0, Math.PI * 2); context.fill();
     buttons.length = 0;
 
@@ -306,17 +394,17 @@ function createSpatialPanel() {
       const x = 54 + column * (tabWidth + tabGap);
       const y = 230 + row * 68;
       const selected = name === pageName;
-      context.shadowColor = selected ? "rgba(21,116,90,.16)" : "transparent";
+      context.shadowColor = selected ? "rgba(55,226,161,.28)" : "transparent";
       context.shadowBlur = selected ? 18 : 0;
       context.shadowOffsetY = selected ? 6 : 0;
-      context.fillStyle = selected ? "rgba(255,255,255,.99)" : "rgba(250,253,251,.88)";
+      context.fillStyle = selected ? "rgba(25,145,102,.98)" : "rgba(13,65,46,.97)";
       roundRect(context, x, y, tabWidth, 58, 22);
       context.shadowColor = "transparent"; context.shadowBlur = 0; context.shadowOffsetY = 0;
-      context.strokeStyle = selected ? "rgba(45,175,121,.32)" : "rgba(88,122,108,.12)";
+      context.strokeStyle = selected ? "rgba(101,244,190,.66)" : "rgba(99,202,162,.24)";
       context.lineWidth = 1;
       strokeRoundRect(context, x, y, tabWidth, 58, 22);
-      context.fillStyle = selected ? "#0f674e" : "#30443a";
-      context.font = "700 22px sans-serif";
+      context.fillStyle = selected ? "#ffffff" : "#d9f4e7";
+      context.font = canvasFont(700, 22);
       context.textAlign = "center";
       context.fillText(page.label, x + tabWidth / 2, y + 37);
       context.textAlign = "left";
@@ -334,42 +422,235 @@ function createSpatialPanel() {
       const active = state.active === action || state.activeActions?.includes(action);
       const hovered = state.hovered === action;
       const buttonGradient = context.createLinearGradient(x, y, x, y + 78);
-      buttonGradient.addColorStop(0, active ? "rgba(21,116,90,.96)" : hovered ? "rgba(236,249,242,.98)" : "rgba(255,255,255,.78)");
-      buttonGradient.addColorStop(1, active ? "rgba(17,97,76,.96)" : hovered ? "rgba(226,244,235,.96)" : "rgba(248,252,250,.70)");
+      buttonGradient.addColorStop(0, active ? "rgba(28,158,111,.99)" : hovered ? "rgba(25,116,83,.99)" : "rgba(14,76,54,.97)");
+      buttonGradient.addColorStop(1, active ? "rgba(14,108,76,.99)" : hovered ? "rgba(14,83,59,.99)" : "rgba(9,53,38,.97)");
       context.fillStyle = buttonGradient;
-      context.shadowColor = active ? "rgba(21,116,90,.18)" : "rgba(24,34,30,.06)";
+      context.shadowColor = active ? "rgba(61,235,170,.30)" : "rgba(0,0,0,.22)";
       context.shadowBlur = active ? 20 : 12; context.shadowOffsetY = 5;
       roundRect(context, x, y, 420, 78, 24);
       context.shadowColor = "transparent"; context.shadowBlur = 0; context.shadowOffsetY = 0;
-      context.strokeStyle = active ? "rgba(21,116,90,.42)" : hovered ? "rgba(45,175,121,.32)" : "rgba(88,122,108,.14)";
+      context.strokeStyle = active ? "rgba(109,255,201,.72)" : hovered ? "rgba(76,231,172,.58)" : "rgba(89,190,151,.26)";
       strokeRoundRect(context, x, y, 420, 78, 24);
-      context.fillStyle = active ? "#ffffff" : hovered ? "#15745a" : "#18221e";
-      context.font = "700 28px sans-serif";
+      context.fillStyle = active ? "#ffffff" : hovered ? "#f3fff9" : "#d9f4e7";
+      context.font = canvasFont(700, 28);
       context.textAlign = "center";
       context.fillText(label, x + 210, y + 49);
       context.textAlign = "left";
       buttons.push({ action, x, y, width: 420, height: 78 });
     });
 
-    context.strokeStyle = "rgba(88,122,108,.14)";
+    context.strokeStyle = "rgba(97,205,162,.26)";
     context.beginPath(); context.moveTo(54, 1116); context.lineTo(970, 1116); context.stroke();
-    context.fillStyle = "#15745a";
-    context.font = "700 21px sans-serif";
+    context.fillStyle = "#5aeab1";
+    context.font = canvasFont(700, 21);
     context.fillText("Toque", 54, 1150);
     context.fillText("Gestos", 54, 1187);
-    context.fillStyle = "#263a30";
-    context.font = "600 22px sans-serif";
+    context.fillStyle = "#e2f7ec";
+    context.font = canvasFont(600, 22);
     context.fillText("Indicador seleciona · pinça inferior move o painel", 143, 1150);
     context.fillText("Pinça move o fígado · duas mãos ajustam escala e rotação", 143, 1187);
-    context.fillStyle = "#405047";
-    context.font = "600 19px sans-serif";
+    context.fillStyle = "#a9cabb";
+    context.font = canvasFont(600, 19);
     context.fillText("Pesquisa · revisão humana obrigatória", 54, 1230);
-    context.fillStyle = "#2daf79";
+    context.fillStyle = "#4ff0ae";
     context.beginPath(); context.arc(944, 1224, 6, 0, Math.PI * 2); context.fill();
     texture.needsUpdate = true;
   };
   draw();
   return { mesh, buttons, draw };
+}
+
+function createSpatialPanelV2() {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(PANEL_WIDTH * XR_UI_TEXTURE_SCALE);
+  canvas.height = Math.round(PANEL_HEIGHT * XR_UI_TEXTURE_SCALE);
+  const context = canvas.getContext("2d");
+  context.scale(XR_UI_TEXTURE_SCALE, XR_UI_TEXTURE_SCALE);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  const material = new THREE.MeshBasicMaterial({
+    map: texture, transparent: true, side: THREE.DoubleSide, depthTest: true, toneMapped: false,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.725), material);
+  mesh.name = "oren-xr-panel";
+  mesh.position.set(-0.53, 1.34, -0.74);
+  mesh.rotation.y = 0.18;
+  mesh.renderOrder = 100;
+  const buttons = [];
+  let lastDrawSignature = "";
+  let textureUploadCount = 0;
+
+  const draw = (state = {}) => {
+    const profile = state.profile === "patient" ? "patient" : "clinician";
+    const pages = Object.entries(PANEL_PAGES).filter(([, page]) => !page.clinicianOnly || profile === "clinician");
+    const pageName = PANEL_PAGES[state.page] && (!PANEL_PAGES[state.page].clinicianOnly || profile === "clinician")
+      ? state.page : "model";
+    const selection = state.selection?.role ? state.selection : null;
+    const signature = JSON.stringify({
+      profile, pageName, status: state.status || "", active: state.active || "",
+      activeActions: state.activeActions || [], hovered: state.hovered || "",
+      performanceTier: state.performanceTier || "", selection,
+    });
+    if (signature === lastDrawSignature) return false;
+    lastDrawSignature = signature;
+
+    context.clearRect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+    const glass = context.createLinearGradient(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+    glass.addColorStop(0, XR_SPATIAL_THEME.panelTop);
+    glass.addColorStop(0.55, XR_SPATIAL_THEME.panelMiddle);
+    glass.addColorStop(1, XR_SPATIAL_THEME.panelBottom);
+    context.fillStyle = glass;
+    roundRect(context, 8, 8, 1008, 1264, 54);
+
+    context.save();
+    context.beginPath(); context.roundRect(8, 8, 1008, 1264, 54); context.clip();
+    const glow = context.createRadialGradient(120, 80, 8, 120, 80, 360);
+    glow.addColorStop(0, "rgba(185,213,200,.08)");
+    glow.addColorStop(1, "rgba(185,213,200,0)");
+    context.fillStyle = glow; context.fillRect(0, 0, 520, 430);
+    const lowerGlow = context.createRadialGradient(930, 1160, 20, 930, 1160, 420);
+    lowerGlow.addColorStop(0, "rgba(122,175,151,.07)");
+    lowerGlow.addColorStop(1, "rgba(122,175,151,0)");
+    context.fillStyle = lowerGlow; context.fillRect(500, 760, 524, 520);
+    context.restore();
+
+    context.strokeStyle = XR_SPATIAL_THEME.border;
+    context.lineWidth = 2;
+    strokeRoundRect(context, 10, 10, 1004, 1260, 52);
+    context.strokeStyle = "rgba(210,225,217,.11)";
+    context.lineWidth = 1;
+    strokeRoundRect(context, 23, 23, 978, 1234, 43);
+    drawOrenCore(context, 88, 85, 34);
+
+    context.fillStyle = XR_SPATIAL_THEME.text;
+    context.font = canvasFont(700, 46);
+    context.fillText("OREN", 144, 80);
+    context.fillStyle = XR_SPATIAL_THEME.textMuted;
+    context.font = canvasFont(600, 22);
+    context.fillText("Digital Twin hepático", 145, 111);
+    context.fillStyle = XR_SPATIAL_THEME.accent;
+    context.font = canvasFont(700, 21);
+    context.fillText(profile === "patient" ? "VISUALIZAÇÃO DO PACIENTE" : "REVISÃO MÉDICA · INTERFACE ESPACIAL", 54, 151);
+
+    context.fillStyle = "rgba(48,53,50,.95)";
+    roundRect(context, 54, 166, 916, 52, 24);
+    context.strokeStyle = "rgba(202,219,210,.16)";
+    strokeRoundRect(context, 54, 166, 916, 52, 24);
+    context.fillStyle = XR_SPATIAL_THEME.text;
+    context.font = canvasFont(600, 24);
+    context.fillText(fitCanvasText(context, state.status || "Toque para selecionar", 820), 78, 199);
+    drawStatusDot(context, 934, 192);
+    buttons.length = 0;
+
+    const tabGap = 10;
+    const tabColumns = 4;
+    const tabWidth = Math.floor((916 - tabGap * (tabColumns - 1)) / tabColumns);
+    pages.forEach(([name, page], index) => {
+      const column = index % tabColumns;
+      const row = Math.floor(index / tabColumns);
+      const x = 54 + column * (tabWidth + tabGap);
+      const y = 230 + row * 66;
+      const selected = name === pageName;
+      context.shadowColor = selected ? "rgba(139,200,172,.12)" : "transparent";
+      context.shadowBlur = selected ? 8 : 0;
+      context.shadowOffsetY = selected ? 4 : 0;
+      context.fillStyle = selected ? XR_SPATIAL_THEME.surfaceActive : XR_SPATIAL_THEME.surface;
+      roundRect(context, x, y, tabWidth, 58, 22);
+      context.shadowColor = "transparent"; context.shadowBlur = 0; context.shadowOffsetY = 0;
+      context.strokeStyle = selected ? "rgba(139,200,172,.42)" : XR_SPATIAL_THEME.borderSoft;
+      strokeRoundRect(context, x, y, tabWidth, 58, 22);
+      context.fillStyle = selected ? XR_SPATIAL_THEME.text : XR_SPATIAL_THEME.textMuted;
+      context.font = canvasFont(700, 22);
+      context.textAlign = "center";
+      context.fillText(page.label, x + tabWidth / 2, y + 37);
+      context.textAlign = "left";
+      buttons.push({ action: `page_${name}`, x, y, width: tabWidth, height: 58 });
+    });
+
+    const [eyebrow, title, description] = XR_PAGE_CONTEXT[pageName];
+    context.fillStyle = "rgba(26,30,28,.78)";
+    roundRect(context, 54, 365, 916, 112, 28);
+    context.strokeStyle = "rgba(208,222,214,.12)";
+    strokeRoundRect(context, 54, 365, 916, 112, 28);
+    context.fillStyle = XR_SPATIAL_THEME.accent;
+    context.font = canvasFont(700, 17);
+    context.fillText(eyebrow, 82, 393);
+    context.fillStyle = XR_SPATIAL_THEME.text;
+    context.font = canvasFont(700, 31);
+    context.fillText(fitCanvasText(context, selection?.label || title, 560), 82, 430);
+    context.fillStyle = XR_SPATIAL_THEME.textMuted;
+    context.font = canvasFont(500, 19);
+    context.fillText(fitCanvasText(context, selection ? `${selection.category} · ${selection.visible ? "visível" : "oculta"}` : description, 610), 82, 458);
+    context.fillStyle = selection ? "rgba(49,78,65,.94)" : "rgba(43,48,45,.92)";
+    roundRect(context, 742, 391, 196, 56, 20);
+    context.strokeStyle = selection ? "rgba(139,200,172,.38)" : "rgba(208,222,214,.12)";
+    strokeRoundRect(context, 742, 391, 196, 56, 20);
+    context.fillStyle = selection ? XR_SPATIAL_THEME.text : XR_SPATIAL_THEME.textMuted;
+    context.font = canvasFont(700, 18);
+    context.textAlign = "center";
+    context.fillText(selection ? "SELECIONADA" : "OREN SPATIAL", 840, 426);
+    context.textAlign = "left";
+
+    const actions = PANEL_PAGES[pageName].actions.filter(([action]) => (
+      profile === "clinician" || !["triage", "measure", "dimensions", "cut", "cut_position", "cut_axis", "cut_invert"].includes(action)
+    ));
+    actions.forEach(([action, label], index) => {
+      const column = index % 2;
+      const row = Math.floor(index / 2);
+      const x = 54 + column * 470;
+      const y = 500 + row * 92;
+      const active = state.active === action || state.activeActions?.includes(action);
+      const hovered = state.hovered === action;
+      const buttonGradient = context.createLinearGradient(x, y, x, y + 76);
+      buttonGradient.addColorStop(0, active ? "rgba(55,88,73,.98)" : hovered ? "rgba(58,64,61,.97)" : "rgba(47,52,49,.95)");
+      buttonGradient.addColorStop(1, active ? "rgba(38,63,52,.98)" : hovered ? "rgba(42,47,44,.97)" : "rgba(32,36,34,.96)");
+      context.fillStyle = buttonGradient;
+      context.shadowColor = active ? "rgba(139,200,172,.14)" : "rgba(0,0,0,.14)";
+      context.shadowBlur = active ? 8 : 5; context.shadowOffsetY = 3;
+      roundRect(context, x, y, 420, 76, 24);
+      context.shadowColor = "transparent"; context.shadowBlur = 0; context.shadowOffsetY = 0;
+      context.strokeStyle = active ? "rgba(139,200,172,.46)" : hovered ? "rgba(218,228,223,.25)" : "rgba(208,222,214,.13)";
+      strokeRoundRect(context, x, y, 420, 76, 24);
+      context.fillStyle = active ? "rgba(139,200,172,.18)" : "rgba(218,228,223,.08)";
+      context.beginPath(); context.arc(x + 37, y + 38, 19, 0, Math.PI * 2); context.fill();
+      context.fillStyle = active ? XR_SPATIAL_THEME.text : hovered ? "#eef2f0" : XR_SPATIAL_THEME.textMuted;
+      context.font = canvasFont(700, 22);
+      context.fillText(fitCanvasText(context, label, 318), x + 70, y + 31);
+      context.fillStyle = active ? "#dce8e1" : XR_SPATIAL_THEME.textSoft;
+      context.font = canvasFont(500, 15);
+      context.fillText(fitCanvasText(context, XR_ACTION_HINTS[action] || (active ? "ativo" : "toque para executar"), 318), x + 70, y + 56);
+      if (active) drawStatusDot(context, x + 37, y + 38, XR_SPATIAL_THEME.accentStrong);
+      buttons.push({ action, x, y, width: 420, height: 76 });
+    });
+
+    context.strokeStyle = "rgba(208,222,214,.14)";
+    context.beginPath(); context.moveTo(54, 1052); context.lineTo(970, 1052); context.stroke();
+    context.fillStyle = XR_SPATIAL_THEME.accent;
+    context.font = canvasFont(700, 19);
+    context.fillText("TOQUE", 54, 1086);
+    context.fillText("GESTOS", 54, 1122);
+    context.fillStyle = XR_SPATIAL_THEME.text;
+    context.font = canvasFont(600, 20);
+    context.fillText("Indicador seleciona · barra inferior move o painel", 150, 1086);
+    context.fillText("Pinça move o fígado · duas mãos escalam e giram", 150, 1122);
+    context.fillStyle = "rgba(39,44,41,.90)";
+    roundRect(context, 54, 1150, 916, 54, 22);
+    context.fillStyle = XR_SPATIAL_THEME.textMuted;
+    context.font = canvasFont(600, 18);
+    context.fillText(`Quest 3S · ${state.performanceTier === "stability" ? "modo estabilidade" : "qualidade adaptativa"}`, 78, 1184);
+    context.fillStyle = XR_SPATIAL_THEME.textSoft;
+    context.font = canvasFont(600, 18);
+    context.fillText("Pesquisa · revisão humana obrigatória", 54, 1240);
+    drawStatusDot(context, 944, 1234);
+    texture.needsUpdate = true;
+    textureUploadCount += 1;
+    return true;
+  };
+  draw();
+  return { mesh, buttons, draw, getPerformanceStats: () => ({ texture_uploads: textureUploadCount }) };
 }
 
 function createExitButton() {
@@ -379,6 +660,9 @@ function createExitButton() {
   const context = canvas.getContext("2d");
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(0.31, 0.089),
     new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthTest: false }),
@@ -386,29 +670,35 @@ function createExitButton() {
   mesh.name = "oren-xr-exit-button";
   mesh.position.set(0, 1.7, -0.68);
   mesh.renderOrder = 120;
+  let lastDrawSignature = "";
   const draw = ({ hovered = false, progress = 0, closing = false } = {}) => {
+    const displayProgress = Math.round(Math.min(Math.max(progress, 0), 1) * 24) / 24;
+    const signature = `${hovered}:${closing}:${displayProgress}`;
+    if (signature === lastDrawSignature) return false;
+    lastDrawSignature = signature;
     context.clearRect(0, 0, canvas.width, canvas.height);
     const exitGlass = context.createLinearGradient(0, 0, 768, 220);
-    exitGlass.addColorStop(0, closing ? "rgba(255,239,237,.97)" : hovered ? "rgba(255,246,244,.97)" : "rgba(253,255,254,.94)");
-    exitGlass.addColorStop(1, closing ? "rgba(250,222,219,.96)" : "rgba(238,247,242,.92)");
+    exitGlass.addColorStop(0, closing ? "rgba(99,39,31,.98)" : hovered ? "rgba(55,88,73,.98)" : "rgba(47,52,49,.96)");
+    exitGlass.addColorStop(1, closing ? "rgba(61,24,20,.98)" : "rgba(30,34,32,.97)");
     context.fillStyle = exitGlass;
     roundRect(context, 8, 8, 752, 204, 34);
-    context.strokeStyle = closing || hovered ? "rgba(185,110,84,.5)" : "rgba(88,122,108,.18)";
+    context.strokeStyle = closing ? "rgba(255,155,126,.66)" : hovered ? "rgba(139,200,172,.46)" : "rgba(208,222,214,.18)";
     context.lineWidth = 2;
     strokeRoundRect(context, 10, 10, 748, 200, 32);
-    if (progress > 0) {
+    if (displayProgress > 0) {
       context.fillStyle = "rgba(185,110,84,.36)";
-      roundRect(context, 22, 176, 724 * Math.min(progress, 1), 17, 8);
+      roundRect(context, 22, 176, 724 * displayProgress, 17, 8);
     }
-    context.fillStyle = closing || hovered ? "#8f4e3e" : "#18221e";
-    context.font = "600 43px sans-serif";
+    context.fillStyle = closing ? "#ffd8cd" : XR_SPATIAL_THEME.text;
+    context.font = canvasFont(600, 43);
     context.textAlign = "center";
     context.fillText(closing ? "Voltando ao webapp…" : "⌂  Voltar ao webapp", 384, 103);
-    context.font = "27px sans-serif";
-    context.fillStyle = closing || hovered ? "#a66554" : "#718078";
-    context.fillText(progress > 0 && !closing ? "Mantenha a pinça" : "Saída segura", 384, 151);
+    context.font = canvasFont(500, 27);
+    context.fillStyle = closing ? "#ffbba8" : hovered ? XR_SPATIAL_THEME.accentStrong : XR_SPATIAL_THEME.textMuted;
+    context.fillText(displayProgress > 0 && !closing ? "Mantenha a pinça" : "Saída segura", 384, 151);
     context.textAlign = "left";
     texture.needsUpdate = true;
+    return true;
   };
   draw();
   return { mesh, draw };
@@ -423,10 +713,10 @@ function createTabletAssembly(panelMesh) {
   panelMesh.quaternion.identity();
 
   const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(0.615, 0.815, 0.014),
+    roundedPanelGeometry(0.615, 0.815, 0.014, 0.035),
     new THREE.MeshStandardMaterial({
-      color: 0xeaf4ef, roughness: 0.78, metalness: 0,
-      transparent: true, opacity: 0.88,
+      color: 0x282d2a, emissive: 0x0b110e, emissiveIntensity: 0.12,
+      roughness: 0.68, metalness: 0.08, transparent: false, opacity: 1,
     }),
   );
   frame.name = "oren-xr-tablet-frame";
@@ -434,7 +724,7 @@ function createTabletAssembly(panelMesh) {
   frame.renderOrder = 96;
   const frameEdges = new THREE.LineSegments(
     new THREE.EdgesGeometry(frame.geometry),
-    new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.78 }),
+    new THREE.LineBasicMaterial({ color: 0x87ad9a, transparent: true, opacity: 0.34 }),
   );
   frameEdges.name = "oren-xr-tablet-hud-edges";
   frameEdges.position.copy(frame.position);
@@ -445,6 +735,9 @@ function createTabletAssembly(panelMesh) {
   const handleContext = handleCanvas.getContext("2d");
   const handleTexture = new THREE.CanvasTexture(handleCanvas);
   handleTexture.colorSpace = THREE.SRGBColorSpace;
+  handleTexture.generateMipmaps = false;
+  handleTexture.minFilter = THREE.LinearFilter;
+  handleTexture.magFilter = THREE.LinearFilter;
   const handle = new THREE.Mesh(
     new THREE.PlaneGeometry(0.55, 0.075),
     new THREE.MeshBasicMaterial({ map: handleTexture, transparent: true, side: THREE.DoubleSide, depthTest: false }),
@@ -452,33 +745,38 @@ function createTabletAssembly(panelMesh) {
   handle.name = "oren-xr-tablet-handle";
   handle.position.set(0, -0.397, 0.004);
   handle.renderOrder = 104;
+  let lastHandleSignature = "";
   const drawHandle = ({ hovered = false, grabbed = false } = {}) => {
+    const signature = `${hovered}:${grabbed}`;
+    if (signature === lastHandleSignature) return false;
+    lastHandleSignature = signature;
     handleContext.clearRect(0, 0, 768, 144);
     const handleGlass = handleContext.createLinearGradient(0, 0, 768, 144);
-    handleGlass.addColorStop(0, grabbed ? "rgba(21,116,90,.96)" : hovered ? "rgba(236,249,242,.97)" : "rgba(253,255,254,.94)");
-    handleGlass.addColorStop(1, grabbed ? "rgba(17,97,76,.96)" : "rgba(235,247,241,.92)");
+    handleGlass.addColorStop(0, grabbed ? "rgba(54,91,75,.98)" : hovered ? "rgba(57,73,65,.98)" : "rgba(50,56,52,.98)");
+    handleGlass.addColorStop(1, grabbed ? "rgba(38,65,53,.98)" : "rgba(31,36,33,.98)");
     handleContext.fillStyle = handleGlass;
     roundRect(handleContext, 5, 5, 758, 134, 26);
-    handleContext.strokeStyle = grabbed ? "rgba(21,116,90,.55)" : hovered ? "rgba(45,175,121,.38)" : "rgba(88,122,108,.16)";
+    handleContext.strokeStyle = grabbed ? "rgba(139,200,172,.46)" : hovered ? "rgba(218,228,223,.25)" : "rgba(208,222,214,.16)";
     handleContext.lineWidth = 2;
     strokeRoundRect(handleContext, 7, 7, 754, 130, 24);
     drawOrenCore(handleContext, 72, 72, 27, grabbed ? 0.7 : 0);
-    handleContext.fillStyle = grabbed ? "#ffffff" : "#18221e";
+    handleContext.fillStyle = XR_SPATIAL_THEME.text;
     handleContext.textAlign = "center";
-    handleContext.font = "600 30px sans-serif";
+    handleContext.font = canvasFont(600, 30);
     handleContext.fillText(grabbed ? "Tablet seguro · mova a mão" : "Pinça inferior · mover tablet", 430, 64);
-    handleContext.font = "20px sans-serif";
-    handleContext.fillStyle = grabbed ? "rgba(255,255,255,.78)" : "#718078";
+    handleContext.font = canvasFont(500, 20);
+    handleContext.fillStyle = grabbed ? "rgba(255,255,255,.88)" : XR_SPATIAL_THEME.textMuted;
     handleContext.fillText("Toque direto com o indicador", 430, 102);
     handleContext.textAlign = "left";
     handleTexture.needsUpdate = true;
+    return true;
   };
   drawHandle();
 
   const touchCursor = new THREE.Mesh(
     new THREE.RingGeometry(0.012, 0.018, 28),
     new THREE.MeshBasicMaterial({
-      color: 0x2daf79, transparent: true, opacity: 0.9, side: THREE.DoubleSide,
+      color: 0x78b99b, transparent: true, opacity: 0.88, side: THREE.DoubleSide,
       depthTest: false,
     }),
   );
@@ -501,9 +799,12 @@ function createReferencePanel() {
   context.scale(XR_UI_TEXTURE_SCALE, XR_UI_TEXTURE_SCALE);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(0.50, 0.583),
-    new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, toneMapped: false }),
   );
   mesh.name = "oren-xr-reference-panel";
   mesh.position.set(0.50, 1.34, -0.74);
@@ -512,25 +813,42 @@ function createReferencePanel() {
   const rgbImage = new Image();
   let rgbSource = "";
   let lastState = {};
+  let lastDrawSignature = "";
+  let textureUploadCount = 0;
   rgbImage.decoding = "async";
-  rgbImage.addEventListener("load", () => draw(lastState));
+  rgbImage.addEventListener("load", () => { lastDrawSignature = ""; draw(lastState); });
   const draw = (state = {}) => {
     lastState = state;
     const rgbMode = state.mode === "rgb";
+    const signature = JSON.stringify({
+      mode: rgbMode ? "rgb" : "reference",
+      image_src: state.image_src || "",
+      metadata: state.metadata || "",
+      image_ready: rgbMode ? Boolean(rgbImage.complete && rgbImage.naturalWidth) : Boolean(document.getElementById("reference-image")?.complete),
+    });
+    if (signature === lastDrawSignature) return false;
+    lastDrawSignature = signature;
     context.clearRect(0, 0, referenceWidth, referenceHeight);
     const glass = context.createLinearGradient(0, 0, referenceWidth, referenceHeight);
-    glass.addColorStop(0, "rgba(253,255,254,.97)");
-    glass.addColorStop(1, "rgba(235,247,241,.93)");
+    glass.addColorStop(0, XR_SPATIAL_THEME.panelTop);
+    glass.addColorStop(1, XR_SPATIAL_THEME.panelBottom);
     context.fillStyle = glass;
-    context.fillRect(0, 0, referenceWidth, referenceHeight);
-    context.strokeStyle = "rgba(255,255,255,.9)";
+    roundRect(context, 4, 4, referenceWidth - 8, referenceHeight - 8, 46);
+    context.strokeStyle = XR_SPATIAL_THEME.border;
     context.lineWidth = 2;
     strokeRoundRect(context, 12, 12, 744, 872, 38);
     drawOrenCore(context, 48, 47, 22);
-    context.fillStyle = "#18221e";
-    context.font = "600 28px sans-serif";
+    context.fillStyle = XR_SPATIAL_THEME.text;
+    context.font = canvasFont(700, 30);
     context.fillText(rgbMode ? "Painéis RGB do caso" : "Referência RM 2D", 86, 54);
-    context.fillStyle = "rgba(88,122,108,.14)";
+    context.fillStyle = rgbMode ? "rgba(216,181,122,.16)" : "rgba(139,200,172,.13)";
+    roundRect(context, 612, 24, 116, 38, 16);
+    context.fillStyle = rgbMode ? XR_SPATIAL_THEME.warning : XR_SPATIAL_THEME.accentStrong;
+    context.font = canvasFont(700, 16);
+    context.textAlign = "center";
+    context.fillText(rgbMode ? "RGB" : "MPR", 670, 49);
+    context.textAlign = "left";
+    context.fillStyle = "rgba(208,222,214,.14)";
     context.fillRect(34, 68, 700, 1);
     if (rgbMode && state.image_src && state.image_src !== rgbSource) {
       rgbSource = state.image_src;
@@ -542,27 +860,34 @@ function createReferencePanel() {
       const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);
       const width = image.naturalWidth * scale;
       const height = image.naturalHeight * scale;
+      context.save();
+      context.beginPath(); context.roundRect(box.x, box.y, box.width, box.height, 28); context.clip();
       context.drawImage(image, box.x + (box.width - width) / 2, box.y + (box.height - height) / 2, width, height);
+      context.restore();
     } else {
-      context.fillStyle = "#111614";
-      context.fillRect(34, 76, 700, 700);
-      context.fillStyle = "#718078";
-      context.font = "28px sans-serif";
+      context.fillStyle = "#0e1110";
+      roundRect(context, 34, 76, 700, 700, 28);
+      context.fillStyle = XR_SPATIAL_THEME.textMuted;
+      context.font = canvasFont(500, 28);
       context.fillText(rgbMode ? "Carregando painel RGB…" : "Imagem de referência indisponível", 130, 430);
     }
-    context.strokeStyle = "rgba(88,122,108,.18)";
-    context.strokeRect(34, 76, 700, 700);
-    context.fillStyle = "#405047";
-    context.font = "20px sans-serif";
+    context.strokeStyle = "rgba(208,222,214,.18)";
+    strokeRoundRect(context, 34, 76, 700, 700, 28);
+    context.fillStyle = "rgba(39,44,41,.92)";
+    roundRect(context, 24, 790, 720, 86, 24);
+    context.fillStyle = XR_SPATIAL_THEME.textMuted;
+    context.font = canvasFont(600, 21);
     context.fillText((state.metadata || "").slice(0, 62), 34, 825);
     context.fillText(
       rgbMode ? "Fusão RGB original usada como evidência pelo pipeline." : "Use a aba RM 2D para navegar e sincronizar o corte.",
       34, 862,
     );
     texture.needsUpdate = true;
+    textureUploadCount += 1;
+    return true;
   };
   draw();
-  return { mesh, draw };
+  return { mesh, draw, getPerformanceStats: () => ({ texture_uploads: textureUploadCount }) };
 }
 
 function createReferencePanelAssembly(panelMesh) {
@@ -574,17 +899,17 @@ function createReferencePanelAssembly(panelMesh) {
   panelMesh.quaternion.identity();
 
   const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(0.535, 0.665, 0.012),
+    roundedPanelGeometry(0.535, 0.665, 0.012, 0.032),
     new THREE.MeshStandardMaterial({
-      color: 0xeaf4ef, roughness: 0.8, metalness: 0,
-      transparent: true, opacity: 0.88,
+      color: 0x282d2a, emissive: 0x0b110e, emissiveIntensity: 0.12,
+      roughness: 0.68, metalness: 0.08, transparent: false, opacity: 1,
     }),
   );
   frame.name = "oren-xr-reference-frame";
   frame.position.z = -0.01;
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(frame.geometry),
-    new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.76 }),
+    new THREE.LineBasicMaterial({ color: 0x87ad9a, transparent: true, opacity: 0.34 }),
   );
   edges.name = "oren-xr-reference-hud-edges";
   edges.position.copy(frame.position);
@@ -594,6 +919,9 @@ function createReferencePanelAssembly(panelMesh) {
   const context = canvas.getContext("2d");
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
   const handle = new THREE.Mesh(
     new THREE.PlaneGeometry(0.46, 0.072),
     new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, depthTest: false }),
@@ -601,22 +929,27 @@ function createReferencePanelAssembly(panelMesh) {
   handle.name = "oren-xr-reference-handle";
   handle.position.set(0, -0.323, 0.004);
   handle.renderOrder = 105;
+  let lastHandleSignature = "";
   const drawHandle = ({ hovered = false, grabbed = false, mode = "reference" } = {}) => {
+    const signature = `${hovered}:${grabbed}:${mode}`;
+    if (signature === lastHandleSignature) return false;
+    lastHandleSignature = signature;
     context.clearRect(0, 0, canvas.width, canvas.height);
     const glass = context.createLinearGradient(0, 0, canvas.width, canvas.height);
-    glass.addColorStop(0, grabbed ? "rgba(21,116,90,.96)" : hovered ? "rgba(236,249,242,.97)" : "rgba(253,255,254,.94)");
-    glass.addColorStop(1, grabbed ? "rgba(17,97,76,.96)" : "rgba(235,247,241,.92)");
+    glass.addColorStop(0, grabbed ? "rgba(54,91,75,.98)" : hovered ? "rgba(57,73,65,.98)" : "rgba(50,56,52,.98)");
+    glass.addColorStop(1, grabbed ? "rgba(38,65,53,.98)" : "rgba(31,36,33,.98)");
     context.fillStyle = glass; roundRect(context, 5, 5, 710, 118, 22);
-    context.strokeStyle = grabbed ? "rgba(21,116,90,.55)" : hovered ? "rgba(45,175,121,.38)" : "rgba(88,122,108,.16)";
+    context.strokeStyle = grabbed ? "rgba(139,200,172,.46)" : hovered ? "rgba(218,228,223,.25)" : "rgba(208,222,214,.16)";
     context.lineWidth = 2; strokeRoundRect(context, 7, 7, 706, 114, 20);
-    context.fillStyle = grabbed ? "#ffffff" : "#18221e"; context.textAlign = "center";
-    context.font = "600 27px sans-serif";
+    context.fillStyle = XR_SPATIAL_THEME.text; context.textAlign = "center";
+    context.font = canvasFont(600, 27);
     const panelName = mode === "rgb" ? "painel RGB" : "RM 2D";
     context.fillText(grabbed ? `${panelName} seguro` : `Pinça inferior · mover ${panelName}`, 360, 57);
-    context.fillStyle = grabbed ? "rgba(255,255,255,.78)" : "#718078";
-    context.font = "18px sans-serif";
+    context.fillStyle = grabbed ? "rgba(255,255,255,.88)" : XR_SPATIAL_THEME.textMuted;
+    context.font = canvasFont(500, 18);
     context.fillText("Solte para fixar no ambiente", 360, 91);
     context.textAlign = "left"; texture.needsUpdate = true;
+    return true;
   };
   drawHandle();
   root.add(frame, edges, panelMesh, handle);
@@ -757,7 +1090,7 @@ export async function initializeOrenXR(api) {
   const xrRoot = new THREE.Group();
   xrRoot.name = "oren-xr-anatomy-root";
   api.scene.add(xrRoot);
-  const panel = createSpatialPanel();
+  const panel = createSpatialPanelV2();
   const tablet = createTabletAssembly(panel.mesh);
   const referencePanel = createReferencePanel();
   const referenceTablet = createReferencePanelAssembly(referencePanel.mesh);
@@ -776,6 +1109,8 @@ export async function initializeOrenXR(api) {
   let lastFrame = 0;
   let frameCounter = 0;
   let performanceTier = "quality";
+  let performanceStressWindows = 0;
+  let realismFallbackActive = false;
   let session = null;
   let twoHandStart = null;
   let tabletGrab = null;
@@ -795,13 +1130,16 @@ export async function initializeOrenXR(api) {
   let lastPanelActive = null;
   let profile = profileSelect.value === "patient" ? "patient" : "clinician";
   let originalModelState = null;
-  let lastPosePersistedAt = 0;
   let lastSceneIntegrityAt = 0;
   let viewerReadinessTimer = null;
   let lastReferenceKey = "";
   let rgbCatalog = null;
   let rgbPanelIndex = 0;
+  let entryCalibration = null;
+  let entryWarmupUntil = 0;
   const poseStorageKey = `oren:xr-pose:${query.get("job") || "local"}`;
+  const anatomyDefaultPosition = new THREE.Vector3(0, 1.24, -0.68);
+  const anatomyDefaultQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   const tabletDefaultPosition = tablet.root.position.clone();
   const tabletDefaultQuaternion = tablet.root.quaternion.clone();
   const referenceDefaultPosition = referenceTablet.root.position.clone();
@@ -813,6 +1151,7 @@ export async function initializeOrenXR(api) {
     if (api.getWireframeEnabled()) result.push("wireframe");
     if (panel.mesh.userData.cutEnabled) result.push("cut");
     if (api.getReferenceState?.().sync_enabled) result.push("reference_sync");
+    if (api.getRenderingProfile?.() === "anatomic_realistic_v1") result.push("render_realism");
     const review = api.getReviewState?.();
     if (review?.checklist?.inspected_3d_contour) result.push("review_3d");
     if (review?.checklist?.compared_2d_reference) result.push("review_2d");
@@ -822,9 +1161,17 @@ export async function initializeOrenXR(api) {
   }
 
   const drawPanel = () => {
+    const selectedRole = api.getSelectedRole?.() || null;
     panel.draw({
       profile, status: lastPanelMessage, active: lastPanelActive, page: activePage,
       activeActions: activePanelActions(), hovered: hoveredAction,
+      performanceTier,
+      selection: selectedRole ? {
+        role: selectedRole,
+        label: api.getStructureLabel?.(selectedRole) || selectedRole,
+        category: api.getStructureCategory?.(selectedRole) || "estrutura",
+        visible: api.isStructureVisible?.(selectedRole) !== false,
+      } : null,
     });
   };
 
@@ -833,7 +1180,7 @@ export async function initializeOrenXR(api) {
     lastPanelActive = active;
     drawPanel();
     statusNode.textContent = message;
-    referenceTablet.root.visible = Boolean(session && ["reference", "rgb"].includes(activePage));
+    referenceTablet.root.visible = Boolean(session && !entryCalibration && ["reference", "rgb"].includes(activePage));
   };
 
   function refreshHoverVisuals() {
@@ -909,9 +1256,112 @@ export async function initializeOrenXR(api) {
     } catch (_error) { return false; }
   }
 
+  function applyHeadRelativeLayout(headPosition, headForward) {
+    const forward = headForward.clone();
+    forward.y = 0;
+    if (forward.lengthSq() < 1e-6) forward.set(0, 0, -1);
+    forward.normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3().crossVectors(forward, up).normalize();
+    const yaw = Math.atan2(-forward.x, -forward.z);
+    const yawQuaternion = new THREE.Quaternion().setFromAxisAngle(up, yaw);
+    const anatomicalQuaternion = new THREE.Quaternion()
+      .setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+
+    anatomyDefaultPosition.copy(headPosition).addScaledVector(forward, 0.72);
+    anatomyDefaultPosition.y = headPosition.y - 0.18;
+    anatomyDefaultQuaternion.copy(yawQuaternion).multiply(anatomicalQuaternion);
+
+    tablet.root.position.copy(headPosition)
+      .addScaledVector(forward, 0.70).addScaledVector(right, -0.50);
+    tablet.root.position.y = headPosition.y - 0.16;
+    tablet.root.lookAt(headPosition.x, tablet.root.position.y, headPosition.z);
+    tabletDefaultPosition.copy(tablet.root.position);
+    tabletDefaultQuaternion.copy(tablet.root.quaternion);
+
+    referenceTablet.root.position.copy(headPosition)
+      .addScaledVector(forward, 0.70).addScaledVector(right, 0.48);
+    referenceTablet.root.position.y = headPosition.y - 0.16;
+    referenceTablet.root.lookAt(headPosition.x, referenceTablet.root.position.y, headPosition.z);
+    referenceDefaultPosition.copy(referenceTablet.root.position);
+    referenceDefaultQuaternion.copy(referenceTablet.root.quaternion);
+
+    exitButton.mesh.position.copy(headPosition).addScaledVector(forward, 0.62);
+    exitButton.mesh.position.y = headPosition.y + 0.25;
+    exitButton.mesh.lookAt(headPosition.x, exitButton.mesh.position.y, headPosition.z);
+  }
+
+  function beginEntryCalibration(time = performance.now()) {
+    entryCalibration = {
+      frames: 0, startedAt: time, position: new THREE.Vector3(),
+      forward: new THREE.Vector3(), samplePosition: new THREE.Vector3(),
+      sampleQuaternion: new THREE.Quaternion(), sampleForward: new THREE.Vector3(),
+    };
+    xrRoot.visible = false;
+    tablet.root.visible = false;
+    referenceTablet.root.visible = false;
+    exitButton.mesh.visible = false;
+    statusNode.textContent = "Calibrando o campo de visão do headset…";
+  }
+
+  function updateEntryCalibration(time) {
+    if (!entryCalibration) return true;
+    const xrCamera = renderer.xr.getCamera(api.camera);
+    xrCamera.getWorldPosition(entryCalibration.samplePosition);
+    xrCamera.getWorldQuaternion(entryCalibration.sampleQuaternion);
+    entryCalibration.sampleForward.set(0, 0, -1)
+      .applyQuaternion(entryCalibration.sampleQuaternion);
+    entryCalibration.sampleForward.y = 0;
+    const poseValid = Number.isFinite(entryCalibration.samplePosition.x)
+      && Number.isFinite(entryCalibration.samplePosition.y)
+      && entryCalibration.samplePosition.y >= 0.45
+      && entryCalibration.samplePosition.y <= 2.6
+      && entryCalibration.sampleForward.lengthSq() >= 1e-6;
+    if (!poseValid) {
+      if (time - entryCalibration.startedAt < XR_ENTRY_CALIBRATION_TIMEOUT_MS) return false;
+      entryCalibration.samplePosition.set(0, 1.55, 0);
+      entryCalibration.sampleForward.set(0, 0, -1);
+      entryCalibration.frames = Math.max(entryCalibration.frames, XR_ENTRY_CALIBRATION_FRAMES - 1);
+    }
+    entryCalibration.sampleForward.normalize();
+    if (entryCalibration.frames === 0) {
+      entryCalibration.position.copy(entryCalibration.samplePosition);
+      entryCalibration.forward.copy(entryCalibration.sampleForward);
+    } else {
+      entryCalibration.position.lerp(entryCalibration.samplePosition, 0.34);
+      entryCalibration.forward.lerp(entryCalibration.sampleForward, 0.34).normalize();
+    }
+    entryCalibration.frames += 1;
+    if (entryCalibration.frames < XR_ENTRY_CALIBRATION_FRAMES) return false;
+
+    applyHeadRelativeLayout(entryCalibration.position, entryCalibration.forward);
+    xrRoot.position.copy(anatomyDefaultPosition);
+    xrRoot.quaternion.copy(anatomyDefaultQuaternion);
+    xrRoot.scale.setScalar(0.001);
+    tablet.root.position.copy(tabletDefaultPosition);
+    tablet.root.quaternion.copy(tabletDefaultQuaternion);
+    tablet.root.scale.setScalar(1);
+    referenceTablet.root.position.copy(referenceDefaultPosition);
+    referenceTablet.root.quaternion.copy(referenceDefaultQuaternion);
+    referenceTablet.root.scale.setScalar(1);
+    entryCalibration = null;
+    entryWarmupUntil = time + XR_ENTRY_WARMUP_MS;
+    performanceTier = "stability";
+    renderer.xr.setFoveation?.(0.9);
+    frameTimes.length = 0; frameCounter = 0; lastFrame = 0;
+    xrRoot.visible = true;
+    tablet.root.visible = true;
+    referenceTablet.root.visible = ["reference", "rgb"].includes(activePage);
+    exitButton.mesh.visible = true;
+    exitButton.draw();
+    const handCount = [...(session?.inputSources || [])].filter((source) => source.hand).length;
+    updatePanel(`Campo de visão calibrado${handCount ? ` · ${handCount === 2 ? "duas mãos detectadas" : "uma mão detectada"}` : ""}.`);
+    return true;
+  }
+
   function resetAnatomy() {
-    xrRoot.position.set(0, 1.24, -0.68);
-    xrRoot.quaternion.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+    xrRoot.position.copy(anatomyDefaultPosition);
+    xrRoot.quaternion.copy(anatomyDefaultQuaternion);
     xrRoot.scale.setScalar(0.001);
     updatePanel("Fígado recentrado em escala anatômica.", "reset");
   }
@@ -997,7 +1447,7 @@ export async function initializeOrenXR(api) {
     }
   }
 
-  function performAction(action) {
+  async function performAction(action) {
     if (!action) return;
     if (action.startsWith("page_")) {
       const requested = action.slice(5);
@@ -1020,6 +1470,19 @@ export async function initializeOrenXR(api) {
     } else if (action === "volume") {
       const volume = api.getManifest()?.volumetry?.whole_liver_summary?.volume_ml;
       updatePanel(Number.isFinite(Number(volume)) ? `Volume hepático: ${Number(volume).toFixed(1)} mL.` : "Volumetria indisponível.", action);
+    } else if (action === "render_realism") {
+      const enabled = api.getRenderingProfile?.() !== "anatomic_realistic_v1";
+      if (enabled) realismFallbackActive = false;
+      updatePanel(enabled ? "Carregando textura anatômica…" : "Restaurando representação atual…", action);
+      const applied = await api.setRenderingProfile?.(
+        enabled ? "anatomic_realistic_v1" : "scientific_current_v1",
+      );
+      updatePanel(
+        applied
+          ? (enabled ? "Representação anatômica realista ativada." : "Representação atual restaurada.")
+          : "Não foi possível trocar o acabamento anatômico.",
+        action,
+      );
     } else if (action === "reset") resetAnatomy();
     else if (action === "tablet_reset") resetTablet();
     else if (action === "exit") requestExitToWebapp();
@@ -1055,7 +1518,11 @@ export async function initializeOrenXR(api) {
     } else if (action === "dimensions") {
       updatePanel(api.measureSelectedStructure3d() ? selectedStructureMessage("Dimensões calculadas para") : "Selecione uma estrutura visível.", action);
     } else if (action === "wireframe") {
-      updatePanel(api.setWireframeEnabled(!api.getWireframeEnabled()) ? "Malha técnica ativada." : "Malha técnica desativada.", action);
+      const enabled = api.setWireframeEnabled(!api.getWireframeEnabled());
+      const status = api.getWireframeStatus?.();
+      updatePanel(enabled
+        ? `Malha técnica otimizada: ${api.getStructureLabel(status?.role) || "estrutura visível"}.`
+        : (status?.reason || "Malha técnica desativada."), action);
     } else if (action === "cut") {
       panel.mesh.userData.cutEnabled = !panel.mesh.userData.cutEnabled;
       api.setClippingState({ enabled: panel.mesh.userData.cutEnabled, axis: ["x", "y", "z"][cutAxisIndex], position_percent: cutPosition, inverted: cutInverted });
@@ -1079,12 +1546,15 @@ export async function initializeOrenXR(api) {
       const roles = api.getStructureRoles();
       if (!roles.length) updatePanel("Nenhuma estrutura disponível.", action);
       else {
-        structureCursor = (structureCursor + 1) % roles.length;
-        api.selectStructure(roles[structureCursor]);
-        updatePanel(selectedStructureMessage("Selecionada"), action);
+        const currentIndex = roles.indexOf(api.getSelectedRole());
+        structureCursor = ((currentIndex >= 0 ? currentIndex : structureCursor) + 1) % roles.length;
+        const role = roles[structureCursor];
+        api.selectStructure(role, { allowHidden: true, alignReference: false });
+        updatePanel(`${selectedStructureMessage("Selecionada")}${api.isStructureVisible(role) ? "" : " · oculta"}.`, action);
       }
     } else if (action === "structure_focus") {
       const role = api.getSelectedRole();
+      if (role && !api.isStructureVisible(role)) api.setStructureVisibility(role, true);
       updatePanel(role && focusXrRoles([role]) ? selectedStructureMessage("Enquadrada no XR") : "Selecione uma estrutura.", action);
     } else if (action === "structure_isolate") {
       updatePanel(api.isolateSelectedStructure() ? selectedStructureMessage("Isolada") : "Selecione uma estrutura.", action);
@@ -1339,11 +1809,20 @@ export async function initializeOrenXR(api) {
       performAction(panelAction(panelHit, panel)); haptic(inputSource); return;
     }
     if (!modelHits.length) return;
-    const hit = modelHits[0];
+    const hit = modelHits.find((candidate) => (
+      api.isWorldPointVisibleByClipping?.(candidate.point) !== false
+    ));
+    if (!hit) {
+      updatePanel("Aponte para uma superfície visível do corte.", "measure");
+      return;
+    }
     api.selectStructure(hit.object.userData.role);
     if (api.getMeasurementEnabled()) {
-      api.handleMeasurementPoint(api.group.worldToLocal(hit.point.clone()));
-      updatePanel("Ponto de medição registrado.", "measure");
+      const modelPoint = api.worldPointToModelPoint?.(hit.point);
+      if (modelPoint) {
+        api.handleMeasurementPoint(modelPoint);
+        updatePanel("Ponto de medição registrado em coordenadas LPS.", "measure");
+      }
     } else if (isHand) {
       startGrab(source.userData.grabSource || source);
       updatePanel("Fígado seguro pela pinça. Use duas mãos para escala e rotação.");
@@ -1664,6 +2143,10 @@ export async function initializeOrenXR(api) {
   function applyPerformanceTier(nextTier, p95 = null) {
     if (performanceTier === nextTier) return;
     performanceTier = nextTier;
+    api.setRenderingQualityTier?.(nextTier);
+    const showDecorativeEdges = nextTier !== "stability";
+    tablet.frameEdges.visible = showDecorativeEdges;
+    referenceTablet.edges.visible = showDecorativeEdges;
     hands.forEach((hand) => {
       if (nextTier === "stability" && hand.userData.visual?.jointInstances) {
         hand.userData.visual.jointInstances.visible = false;
@@ -1677,8 +2160,23 @@ export async function initializeOrenXR(api) {
       : `XR fluido · qualidade visual completa restaurada${suffix}.`);
   }
 
+  function enforceRealismPerformanceFallback(p95) {
+    if (realismFallbackActive || api.getRenderingProfile?.() !== "anatomic_realistic_v1") return;
+    realismFallbackActive = true;
+    void Promise.resolve(api.setRenderingProfile?.("scientific_current_v1", {
+      fallbackReason: "performance_budget_exceeded",
+      message: `Modo científico restaurado para manter fluidez · p95 ${p95.toFixed(1)} ms.`,
+    })).then(() => {
+      updatePanel(`Textura realista pausada para manter fluidez · p95 ${p95.toFixed(1)} ms.`);
+    });
+  }
+
   window.__orenXrFrame = (time) => {
     if (!session) return;
+    if (entryCalibration && !updateEntryCalibration(time)) {
+      api.stabilizeXrScene?.();
+      return;
+    }
     xrRoot.visible = true;
     if (time - lastSceneIntegrityAt >= XR_SCENE_INTEGRITY_INTERVAL_MS) {
       api.stabilizeXrScene?.();
@@ -1696,8 +2194,8 @@ export async function initializeOrenXR(api) {
     updateExitHold(time);
     updateTabletGrab();
     updateGrab();
+    api.refreshClippingPlaneWorld?.();
     refreshReferencePanel();
-    if (time - lastPosePersistedAt > 1000) { persistPose(); lastPosePersistedAt = time; }
     if (lastFrame) {
       const frameTime = time - lastFrame;
       if (frameTime > 0 && frameTime < 100) frameTimes.push(frameTime);
@@ -1708,8 +2206,16 @@ export async function initializeOrenXR(api) {
         const sorted = [...frameTimes].sort((a, b) => a - b);
         const p95 = sorted[Math.floor(sorted.length * 0.95)];
         panel.mesh.userData.frameP95 = p95;
-        if (p95 > PERF_STABILITY_THRESHOLD_MS) applyPerformanceTier("stability", p95);
-        else if (p95 <= FRAME_BUDGET_MS * 1.08) applyPerformanceTier("quality", p95);
+        if (p95 > PERF_STABILITY_THRESHOLD_MS) {
+          performanceStressWindows += 1;
+          applyPerformanceTier("stability", p95);
+          if (performanceStressWindows >= 3) enforceRealismPerformanceFallback(p95);
+        } else if (time >= entryWarmupUntil && p95 <= FRAME_BUDGET_MS * 1.08) {
+          performanceStressWindows = 0;
+          applyPerformanceTier("quality", p95);
+        } else {
+          performanceStressWindows = 0;
+        }
       }
     }
     lastFrame = time;
@@ -1720,6 +2226,10 @@ export async function initializeOrenXR(api) {
     if (originalModelState) persistPose();
     activeGrabs.clear(); twoHandStart = null; tabletGrab = null;
     lastFrame = 0; frameCounter = 0; frameTimes.length = 0; performanceTier = "quality";
+    performanceStressWindows = 0; realismFallbackActive = false;
+    api.setRenderingQualityTier?.("quality");
+    tablet.frameEdges.visible = true; referenceTablet.edges.visible = true;
+    entryCalibration = null; entryWarmupUntil = 0;
     interactiveMeshes = [];
     tablet.root.visible = false; tablet.touchCursor.visible = false;
     referenceTablet.root.visible = false; exitButton.mesh.visible = false;
@@ -1787,7 +2297,8 @@ export async function initializeOrenXR(api) {
         api.setXrPresentationActive?.(true);
         api.stabilizeXrScene?.();
         interactiveMeshes = Object.values(api.meshes);
-        updatePanel("Sessão retomada · modelo e controles prontos.");
+        if (entryCalibration) statusNode.textContent = "Sessão retomada · recalibrando pelo seu olhar.";
+        else updatePanel("Sessão retomada · modelo e controles prontos.");
       } else {
         statusNode.textContent = "Sessão XR pausada pelo sistema.";
       }
@@ -1799,27 +2310,23 @@ export async function initializeOrenXR(api) {
       clipping: api.getClippingState?.(),
     };
     api.setXrPresentationActive?.(true);
+    api.setRenderingQualityTier?.("stability");
     api.setClippingState?.({ enabled: false });
     api.camera.near = 0.01;
     api.camera.far = 20;
     api.camera.updateProjectionMatrix();
     interactiveMeshes = Object.values(api.meshes);
-    xrRoot.add(api.group); xrRoot.add(api.measurementGroup);
-    resetAnatomy();
-    resetTablet();
-    resetReferenceTablet();
-    if (restorePose()) updatePanel("Posição anterior restaurada. Mostre as mãos e faça uma pinça.");
-    tablet.root.visible = true;
-    exitButton.mesh.visible = true;
-    exitButton.draw();
+    xrRoot.add(api.group);
     api.setOrbitEnabled(false);
     await renderer.xr.setSession(session);
-    renderer.xr.setFoveation?.(0.55);
+    beginEntryCalibration(performance.now());
+    renderer.xr.setFoveation?.(0.9);
     reportClientEvent("session_started", { mode });
     entry.textContent = "Encerrar modo imersivo";
     entry.disabled = false;
-    updatePanel(`${mode === "immersive-ar" ? "Mixed reality" : "VR"} ativo · mãos, pinça e painel espacial prontos.`);
+    statusNode.textContent = `${mode === "immersive-ar" ? "Mixed reality" : "VR"} ativo · calibrando pelo seu olhar.`;
     const announceInputs = () => {
+      if (entryCalibration) return;
       const handCount = [...requestedSession.inputSources].filter((source) => source.hand).length;
       if (handCount) updatePanel(`${handCount === 2 ? "Duas mãos" : "Uma mão"} detectada${handCount === 2 ? "s" : ""} · faça pinça para interagir.`);
     };
@@ -1884,6 +2391,8 @@ export async function initializeOrenXR(api) {
       framebuffer_scale: XR_FRAMEBUFFER_SCALE,
       pointer_raycast_interval_ms: performanceTier === "stability"
         ? POINTER_RAYCAST_INTERVAL_MS * 1.5 : POINTER_RAYCAST_INTERVAL_MS,
+      panel_texture_uploads: panel.getPerformanceStats?.().texture_uploads ?? null,
+      reference_texture_uploads: referencePanel.getPerformanceStats?.().texture_uploads ?? null,
     }),
   };
 }

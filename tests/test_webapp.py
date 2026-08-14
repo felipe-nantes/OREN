@@ -229,6 +229,8 @@ def test_xr_session_is_short_lived_role_scoped_and_restart_resilient(monkeypatch
     assert patient.status_code == 200
     patient_url = patient.json()["viewer_url"]
     assert patient_url.startswith("http://192.168.15.8:8082/viewer/index.html?")
+    assert patient.json()["quest_short_url"] == "http://192.168.15.8:8082/quest/"
+    assert patient.json()["qr_code_data_url"].startswith("data:image/svg+xml;base64,")
     patient_token = patient_url.split("#xr_token=", 1)[1]
     assert patient_token not in list((outputs / "xr_sessions").iterdir())[0].name
     assert client.get(f"/api/jobs/{job_id}/xr-session/{patient_token}").json()["role"] == "patient"
@@ -250,6 +252,53 @@ def test_xr_session_is_short_lived_role_scoped_and_restart_resilient(monkeypatch
     assert approved.json()["xr_session"]["role"] == "clinician"
     saved = json.loads((outputs / "approval.json").read_text("utf-8"))
     assert saved["xr_session"]["schema"] == "oren-xr-session-v1"
+
+
+def test_quest_short_page_lists_only_recent_viewer_ready_jobs(monkeypatch, tmp_path):
+    import json
+    import os
+
+    from dtwin.core import sha256_of
+
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+
+    def ready_job(job_id: str, timestamp: float) -> None:
+        outputs = tmp_path / job_id / "case" / "outputs"
+        outputs.mkdir(parents=True)
+        stl = outputs / "figado_orgao.stl"
+        stl.write_bytes(b"solid liver\nendsolid liver\n")
+        manifest = outputs / "viewer_manifest.json"
+        manifest.write_text(json.dumps({
+            "meshes": [{
+                "role": "orgao",
+                "stl": stl.name,
+                "color": "#ffffff",
+                "metrics": {"mesh_sha256": sha256_of(stl)},
+            }]
+        }), "utf-8")
+        os.utime(manifest, (timestamp, timestamp))
+
+    ready_job("aa11", 1000.0)
+    ready_job("bb22", 2000.0)
+    incomplete = tmp_path / "cc33" / "case" / "outputs"
+    incomplete.mkdir(parents=True)
+    (incomplete / "viewer_manifest.json").write_text('{"meshes": []}', "utf-8")
+
+    client = TestClient(server.app)
+    response = client.get("/api/quest/recent-jobs?limit=8")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["schema"] == "oren-quest-ready-jobs-v1"
+    assert [item["job_id"] for item in payload["jobs"]] == ["bb22", "aa11"]
+    assert payload["count"] == 2
+    assert "patient" not in response.text.lower()
+
+
+def test_quest_short_page_is_dynamic_and_has_no_hardcoded_job():
+    page = Path("webapp/static/quest/index.html").read_text("utf-8")
+    assert "/api/quest/recent-jobs" in page
+    assert "Abrir no Quest" in page
+    assert "3304454260a5" not in page
 
 
 def test_xr_client_event_accepts_only_bounded_diagnostic_payload(monkeypatch, tmp_path):

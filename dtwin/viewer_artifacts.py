@@ -263,6 +263,10 @@ def generate_reference_images(
     candidate: np.ndarray | None = None
     if candidate_mask_path is not None and Path(candidate_mask_path).is_file():
         candidate_image = _as_3d(read_image(Path(candidate_mask_path)), "Máscara candidata")
+        try:
+            candidate_image = sitk.DICOMOrient(candidate_image, "LPS")
+        except RuntimeError as exc:
+            raise PipelineError(f"Falha ao orientar máscara candidata em LPS: {exc}") from exc
         if not _same_geometry(mask_image, candidate_image):
             raise PipelineError("Máscara candidata incompatível com a referência 2D.")
         candidate = array_from(candidate_image) > 0
@@ -275,6 +279,13 @@ def generate_reference_images(
     spacing_x, spacing_y, spacing_z = (float(value) for value in mask_image.GetSpacing())
     centroid_z, centroid_y, centroid_x = np.rint(locations.mean(axis=0)).astype(int)
     axial_indices = np.flatnonzero(mask.any(axis=(1, 2))).astype(int).tolist()
+    candidate_present = candidate is not None and bool(candidate.any())
+    if candidate_present:
+        candidate_z = int(np.argmax(candidate.sum(axis=(1, 2))))
+        candidate_y = int(np.argmax(candidate.sum(axis=(0, 2))))
+        candidate_x = int(np.argmax(candidate.sum(axis=(0, 1))))
+    else:
+        candidate_z, candidate_y, candidate_x = centroid_z, centroid_y, centroid_x
 
     expected_files: set[str] = set()
     axial_frames: list[dict[str, Any]] = []
@@ -301,26 +312,34 @@ def generate_reference_images(
                 "index": int(z_index),
                 "position_lps_mm": round(float(position[2]), 4),
                 "relative_liver_position_percent": round(float(relative), 2),
+                "candidate_visible_in_plane": bool(
+                    candidate_present and candidate[z_index].any()
+                ),
             }
         )
+
+    axial_default_index = min(
+        range(len(axial_indices)),
+        key=lambda index: abs(axial_indices[index] - candidate_z),
+    )
 
     orthogonal: dict[str, dict[str, Any]] = {}
     planes = {
         "coronal": (
-            np.flipud(gray[:, centroid_y, :]),
-            np.flipud(mask[:, centroid_y, :]),
-            np.flipud(candidate[:, centroid_y, :]) if candidate is not None else None,
+            np.flipud(gray[:, candidate_y, :]),
+            np.flipud(mask[:, candidate_y, :]),
+            np.flipud(candidate[:, candidate_y, :]) if candidate is not None else None,
             (spacing_x, spacing_z),
-            centroid_y,
+            candidate_y,
             1,
             {"top": "S", "bottom": "I", "left": "R", "right": "L"},
         ),
         "sagittal": (
-            np.flipud(gray[:, :, centroid_x]),
-            np.flipud(mask[:, :, centroid_x]),
-            np.flipud(candidate[:, :, centroid_x]) if candidate is not None else None,
+            np.flipud(gray[:, :, candidate_x]),
+            np.flipud(mask[:, :, candidate_x]),
+            np.flipud(candidate[:, :, candidate_x]) if candidate is not None else None,
             (spacing_y, spacing_z),
-            centroid_x,
+            candidate_x,
             0,
             {"top": "S", "bottom": "I", "left": "A", "right": "P"},
         ),
@@ -333,14 +352,23 @@ def generate_reference_images(
             _render_reference_slice(plane, plane_mask, plane_spacing, plane_candidate), path
         )
         point_index = [int(centroid_x), int(centroid_y), int(centroid_z)]
+        point_index[axis] = int(index)
         position = mask_image.TransformIndexToPhysicalPoint(tuple(point_index))
         orthogonal[orientation] = {
+            "default_frame_index": 0,
+            "selection_basis": (
+                "maximum_unconfirmed_candidate_cross_section"
+                if candidate_present else "liver_centroid"
+            ),
             "frames": [
                 {
                     "file": filename,
                     "sha256": sha256_of(path),
                     "index": int(index),
                     "position_lps_mm": round(float(position[axis]), 4),
+                    "candidate_visible_in_plane": bool(
+                        plane_candidate is not None and plane_candidate.any()
+                    ),
                 }
             ],
             "orientation_labels": labels,
@@ -367,6 +395,11 @@ def generate_reference_images(
         "views": {
             "axial": {
                 "coverage": "all_liver_bearing_planes",
+                "default_frame_index": int(axial_default_index),
+                "selection_basis": (
+                    "maximum_unconfirmed_candidate_cross_section"
+                    if candidate_present else "liver_midpoint"
+                ),
                 "frames": axial_frames,
                 "orientation_labels": {
                     "top": "A",

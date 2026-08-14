@@ -222,7 +222,20 @@ function addQuestActions(actions, container){
         try{ await navigator.clipboard.writeText(data.viewer_url); }catch(_error){}
         const note=el('div','note');
         note.innerHTML='<b>Link seguro do Quest (30 min).</b><br><a target="_blank" rel="noopener" href="'
-          +escapeHtml(data.viewer_url)+'">'+escapeHtml(data.viewer_url)+'</a><br>O endereço também foi copiado quando permitido.';
+          +escapeHtml(data.viewer_url)+'">Abrir este exame</a><br>'
+          +'No headset, favorite o acesso curto: <a target="_blank" rel="noopener" href="'
+          +escapeHtml(data.quest_short_url||'/quest/')+'">'+escapeHtml(data.quest_short_url||'/quest/')+'</a>.';
+        if(data.qr_code_data_url){
+          const qr=el('img','');
+          qr.src=data.qr_code_data_url;
+          qr.alt='QR Code para abrir este exame no Meta Quest';
+          qr.width=220; qr.height=220;
+          qr.style.cssText='display:block;width:min(220px,100%);height:auto;margin:14px auto 6px;padding:10px;border-radius:16px;background:#fff;';
+          note.appendChild(qr);
+          const qrHint=el('div','small','Aponte um leitor de QR Code para abrir diretamente sem digitar a URL.');
+          qrHint.style.textAlign='center';
+          note.appendChild(qrHint);
+        }
         container.appendChild(note);
       }catch(error){
         container.appendChild(el('div','note',escapeHtml(error.message)));

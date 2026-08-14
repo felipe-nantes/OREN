@@ -31,6 +31,15 @@ __pycache__
 *.glb
 *.gltf
 *.png
+!viewer/assets/
+!viewer/assets/materials/
+!viewer/assets/materials/liver_realistic_v1_albedo.png
+!viewer/assets/materials/liver_realistic_v1_normal.png
+!viewer/assets/materials/liver_realistic_v1_roughness.png
+!viewer/assets/materials/liver_realistic_v1_quest512_albedo.png
+!viewer/assets/materials/liver_realistic_v1_quest512_normal.png
+!viewer/assets/materials/liver_realistic_v1_quest512_roughness.png
+viewer/assets/materials/liver_realistic_v1_source.png
 *.jpg
 *.jpeg
 *.gif

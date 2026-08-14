@@ -31,6 +31,32 @@ def test_reference_generator_accepts_singleton_4d_volume(synthetic_case, tmp_pat
     assert result["views"]["sagittal"]["orientation_labels"]["left"] == "A"
 
 
+def test_reference_generator_centres_all_orientations_on_segmented_candidate(
+    synthetic_case, tmp_path
+):
+    reference = read_image(synthetic_case.mask_organ)
+    shape = tuple(reversed(reference.GetSize()))
+    candidate = make_sphere_mask(shape, (23, 24, 25), 2)
+    candidate_path = tmp_path / "candidate.nii.gz"
+    save_image(array_to_image(candidate, reference, np.uint8), candidate_path)
+
+    result = generate_reference_images(
+        synthetic_case.volume,
+        synthetic_case.mask_organ,
+        tmp_path / "candidate_references",
+        candidate_path,
+    )
+
+    axial = result["views"]["axial"]
+    selected_axial = axial["frames"][axial["default_frame_index"]]
+    assert axial["selection_basis"] == "maximum_unconfirmed_candidate_cross_section"
+    assert selected_axial["candidate_visible_in_plane"] is True
+    for orientation in ("coronal", "sagittal"):
+        view = result["views"][orientation]
+        assert view["selection_basis"] == "maximum_unconfirmed_candidate_cross_section"
+        assert view["frames"][0]["candidate_visible_in_plane"] is True
+
+
 def test_acquisition_summary_discloses_interpolation(synthetic_case):
     summary = acquisition_summary(
         synthetic_case.volume,

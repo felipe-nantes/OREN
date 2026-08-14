@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OREN — Visualizador 3D</title>
-  <link rel="stylesheet" href="./argos-viewer.css?v=oren-20260811-11" />
+  <link rel="stylesheet" href="./argos-viewer.css?v=oren-20260814-anatomic-v1-2" />
 </head>
 <body>
   <div id="banner">Modo Pesquisa — não destinado a decisão clínica · Coordenadas LPS</div>
@@ -86,9 +86,9 @@
         </div>
         <div id="selection-action-status" class="selection-action-status" role="status"></div>
         <div id="selection-dimensions-result" class="selection-dimensions-result" hidden>
-          <strong>Dimensões da malha em LPS</strong>
+          <strong>Dimensões da segmentação em LPS</strong>
           <div id="selection-dimensions-metrics" class="metric-grid selection-dimensions-metrics"></div>
-          <p>LR: esquerda–direita · AP: anterior–posterior (profundidade) · SI: superior–inferior. Medida aproximada da segmentação automática.</p>
+          <p>LR: esquerda–direita · AP: anterior–posterior (profundidade) · SI: superior–inferior. Usa a máscara fonte quando disponível; a malha visual permanece apenas como alternativa aproximada.</p>
         </div>
         <button id="selection-clear" type="button" class="secondary-button">Limpar seleção</button>
       </section>
@@ -180,6 +180,6 @@
   <script type="importmap">
     { "imports": { "three": "./vendor/three.module.js" } }
   </script>
-  <script type="module" src="./app.js?v=oren-20260812-44"></script>
+  <script type="module" src="./app.js?v=oren-20260814-anatomic-v1-3"></script>
 </body>
 </html>

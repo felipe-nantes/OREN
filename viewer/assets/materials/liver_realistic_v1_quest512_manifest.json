@@ -1,0 +1,28 @@
+{
+  "schema": "oren-anatomic-material-pack-v1",
+  "material_id": "liver_realistic_v1",
+  "variant": "quest512",
+  "texture_source": "illustrative_not_patient_derived",
+  "geometry_displacement": false,
+  "size": [
+    512,
+    512
+  ],
+  "maps": {
+    "albedo": {
+      "filename": "liver_realistic_v1_quest512_albedo.png",
+      "sha256": "8d289eefc1dec5210f1e02fcf790f8d226b486e32d0ebb7aecf2b4468d2b08e9",
+      "bytes": 524889
+    },
+    "normal": {
+      "filename": "liver_realistic_v1_quest512_normal.png",
+      "sha256": "ae86347115540a7516cba9b38f5a42c6ce0e91c8b35c3bef72b5c09116303be6",
+      "bytes": 573998
+    },
+    "roughness": {
+      "filename": "liver_realistic_v1_quest512_roughness.png",
+      "sha256": "7eaf2ffffe563230f9df7a0178302a0e9c182f89f31147a644de9c3aab9d51e2",
+      "bytes": 153618
+    }
+  }
+}

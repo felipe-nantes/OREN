@@ -22,6 +22,24 @@ def test_viewer_exposes_reproducible_visual_presets_without_new_inference():
     assert "applyInitialPreset(manifest);" in source
     assert "active_preset: currentPreset" in source
 
+
+def test_rendering_profile_toggle_preserves_protected_baseline_contract():
+    source = Path("viewer/app.js").read_text("utf-8")
+    assert 'const SCIENTIFIC_CURRENT_PROFILE = "scientific_current_v1"' in source
+    assert 'const ANATOMIC_REALISTIC_PROFILE = "anatomic_realistic_v1"' in source
+    assert "function setRenderingProfile(name, options = {})" in source
+    assert "function toggleRenderingProfile()" in source
+    assert '"Ativar textura realista"' in source
+    assert '"Desativar textura realista"' in source
+    assert "applyScientificCurrentAppearance" in source
+    assert "applyAnatomicRealisticAppearance" in source
+    assert "mesh.userData.targetOpacity = opacity" in source
+    assert "mesh.visible = visible" in source
+    assert 'const REALISTIC_MATERIAL_PACK_ID = "oren-liver-realistic-v1"' in source
+    assert 'const RENDERING_QUALITY_TIERS = Object.freeze(["quality", "stability"])' in source
+    assert "function setRenderingQualityTier" in source
+    assert "displacementMap" not in source
+
     apply_body = source.split("function applyPreset(name)", 1)[1].split("function buildControls", 1)[0]
     assert "fetch(" not in apply_body
     assert "animateMeshVisibility" in apply_body
@@ -36,23 +54,50 @@ def test_segments_preset_requires_segment_meshes():
     assert "Segmentos de Couinaud" in source
     assert "REQUIRED_COUINAUD_ROLES.every" in source
     assert "function applySegmentAtlasAppearance(item, mesh)" in source
-    assert '["organ", "segment"].includes(meshCategory(item))' in source
+    assert '["organ", "segment", "vessel", "gallbladder"].includes(category)' in source
     segments_state = source.split('if (presetName === "segments")', 1)[1].split(
         "return { visible, opacity };", 1
     )[0]
     assert "segment: 1.0" in segments_state
     assert "solidSurface && value >= 0.999" in source
+    assert '["organ", "segment", "vessel", "gallbladder"].includes(category)' in source
+    assert "mesh.material.transparent = !fullyOpaque" in source
+    assert "mesh.material.depthWrite = fullyOpaque" in source
+    assert "organ: 1.0, vessel: 1.0, gallbladder: 1.0" in source
+    assert "organ: 0.30, vessel: 1.0, gallbladder: 1.0" in source
 
 
 def test_viewer_state_accepts_only_known_visual_presets():
-    state = server.ViewerStatePayload(active_preset="default")
+    state = server.ViewerStatePayload(
+        active_preset="default",
+        rendering_profile="anatomic_realistic_v1",
+        rendering_quality_tier="stability",
+        material_pack_id="oren-liver-realistic-v1",
+        material_pack_variant="quest512",
+        rendering_fallback_reason="performance_budget_exceeded",
+    )
     assert state.active_preset == "default"
+    assert state.rendering_profile == "anatomic_realistic_v1"
+    assert state.rendering_quality_tier == "stability"
+    assert state.material_pack_id == "oren-liver-realistic-v1"
+    assert state.material_pack_variant == "quest512"
+    assert state.rendering_fallback_reason == "performance_budget_exceeded"
 
     # Compatibilidade com revisões históricas, sem reexpor o modo na interface.
     assert server.ViewerStatePayload(active_preset="realistic").active_preset == "realistic"
 
     with pytest.raises(ValidationError):
         server.ViewerStatePayload(active_preset="../../arbitrary")
+    with pytest.raises(ValidationError):
+        server.ViewerStatePayload(rendering_profile="../../arbitrary")
+    with pytest.raises(ValidationError):
+        server.ViewerStatePayload(rendering_quality_tier="ultra")
+    with pytest.raises(ValidationError):
+        server.ViewerStatePayload(material_pack_id="remote-or-arbitrary")
+    with pytest.raises(ValidationError):
+        server.ViewerStatePayload(material_pack_variant="4k-unbounded")
+    with pytest.raises(ValidationError):
+        server.ViewerStatePayload(rendering_fallback_reason="silent-or-unknown")
 
 
 def test_realistic_tissue_is_the_default_visual_language_and_respects_occlusion():
@@ -262,18 +307,38 @@ def test_selected_mesh_can_be_measured_in_three_lps_dimensions():
 
     assert 'id="selection-dimensions"' in html
     assert "function measureSelectedStructure3d()" in source
-    assert "new THREE.Box3().setFromObject(mesh)" in source
-    assert "left_right_mm: Number(size.x.toFixed(3))" in source
-    assert "anterior_posterior_mm: Number(size.y.toFixed(3))" in source
-    assert "superior_inferior_mm: Number(size.z.toFixed(3))" in source
-    assert 'method: "axis_aligned_lps_bounding_box"' in source
-    assert 'source: "selected_segmentation_mesh"' in source
+    assert "mesh.geometry.computeBoundingBox()" in source
+    assert "item.metrics?.dimensions_mm" in source
+    assert '"source_binary_mask_axis_aligned_lps_bounding_box"' in source
+    assert '"source_binary_mask_metrics"' in source
+    assert "approximate: !dimensionsFromMask" in source
     assert "structure_dimensions_3d: structureMeasurements3d.slice(0, 16)" in source
     body = source.split("function measureSelectedStructure3d()", 1)[1].split(
         "function anatomicalTargetRoles", 1
     )[0]
     assert "fetch(" not in body
     assert "dimensionGuide" in body
+
+
+def test_clipping_plane_follows_xr_model_transform_and_preserves_anatomy():
+    source = (ROOT / "viewer" / "app.js").read_text(encoding="utf-8")
+    xr = (ROOT / "viewer" / "xr.js").read_text(encoding="utf-8")
+
+    assert "const localClippingPlane" in source
+    assert "function refreshClippingPlaneWorld()" in source
+    assert "applyMatrix4(group.matrixWorld, clippingNormalMatrix)" in source
+    assert "sourceBounds.min" in source and "sourceBounds.max" in source
+    assert "function safeClippingPercent" in source
+    assert "Math.max(numeric, 5)" in source and "Math.min(numeric, 95)" in source
+    assert "api.refreshClippingPlaneWorld?.();" in xr
+
+
+def test_reference_sync_restores_previous_manual_clipping_state():
+    source = (ROOT / "viewer" / "app.js").read_text(encoding="utf-8")
+
+    assert "referenceSyncPreviousClippingState = getClippingState();" in source
+    assert "corte anterior restaurado" in source
+    assert "clipEnabled.checked = previous.enabled" in source
 
     dimensions = server.StructureDimensions3DPayload(
         role="candidato",
