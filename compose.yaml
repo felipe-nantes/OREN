@@ -21,6 +21,7 @@ x-argos-environment: &argos-environment
   NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env.docker}
   TOTALSEG_WEIGHTS_PATH: /home/argos/.totalsegmentator/nnunet/results
   ARGOS_TOTALSEG_RUNTIME_DIR: /tmp/argos_totalsegmentator_runtime
+  OREN_QUEST_BASE_URL: ${OREN_QUEST_BASE_URL:-}
   HF_HOME: /home/argos/.cache/huggingface
   HF_HUB_OFFLINE: "1"
   TRANSFORMERS_OFFLINE: "1"

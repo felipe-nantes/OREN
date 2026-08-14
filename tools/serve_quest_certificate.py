@@ -55,8 +55,9 @@ class CertificateHandler(BaseHTTPRequestHandler):
         if path == "/":
             body = (
                 "<!doctype html><meta charset=utf-8><title>OREN Quest</title>"
-                "<h1>Certificado local OREN</h1>"
+                "<h1>CA local estavel do OREN</h1>"
                 "<p>Uso exclusivo na rede privada de pesquisa.</p>"
+                "<p>Instale uma unica vez. Mudancas de IP nao exigem novo download.</p>"
                 "<p><a download href=/oren-quest-cert.zip style='font-size:1.4rem'>"
                 "Baixar pacote ZIP do certificado</a></p>"
                 "<p>Abra o ZIP em Arquivos, extraia e instale oren-quest-cert.crt.</p>"
@@ -88,7 +89,7 @@ def main() -> int:
         bundle.writestr("oren-quest-cert.crt", CertificateHandler.certificate)
         bundle.writestr(
             "LEIA-ME.txt",
-            "Extraia oren-quest-cert.crt e instale como certificado CA. "
+            "Extraia oren-quest-cert.crt e instale como certificado CA uma unica vez. "
             "Uso exclusivo na rede privada de pesquisa OREN.\n",
         )
     CertificateHandler.certificate_zip = archive.getvalue()

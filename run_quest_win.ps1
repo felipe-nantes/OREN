@@ -9,13 +9,9 @@ $Py = Join-Path $Repo "$Venv\Scripts\python.exe"
 $Cert = Join-Path $Repo ".local\quest_https\oren-quest-cert.pem"
 $Key = Join-Path $Repo ".local\quest_https\oren-quest-key.pem"
 if (-not (Test-Path $Py)) { throw "Ambiente Python nao encontrado: $Py" }
-if (-not (Test-Path $Cert) -or -not (Test-Path $Key)) {
-  & (Join-Path $Repo "setup_quest_https.ps1") -Venv $Venv
-}
-$Ip = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-  Where-Object { $_.IPAddress -notlike '127.*' -and $_.PrefixOrigin -ne 'WellKnown' } |
-  Sort-Object InterfaceMetric | Select-Object -First 1 -ExpandProperty IPAddress
-if (-not $Ip) { throw "Nao foi possivel encontrar o IPv4 da rede local." }
+. (Join-Path $Repo "tools\quest_network.ps1")
+$Ip = (Get-OrenQuestNetwork).IPAddress
+& (Join-Path $Repo "setup_quest_https.ps1") -Venv $Venv -Ip $Ip | Out-Null
 
 # O launcher pode ser executado mais de uma vez (duplo clique, tarefa agendada
 # ou retomada do Windows). Uma instancia OREN saudavel na porta solicitada nao e

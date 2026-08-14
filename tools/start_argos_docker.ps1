@@ -17,18 +17,27 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue) -and (Test-Path $doc
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "Docker CLI not found. Run tools\setup_docker_windows.ps1 and restart Windows if requested."
 }
-docker info *> $null
-if ($LASTEXITCODE -ne 0) { throw "Docker Desktop engine is not running." }
+& powershell -NoProfile -ExecutionPolicy Bypass -File tools\ensure_docker_desktop.ps1
+if ($LASTEXITCODE -ne 0) { throw "Docker Desktop engine could not be started." }
+
+$networkHelper = Join-Path $repo "tools\quest_network.ps1"
+. $networkHelper
+$questNetwork = Get-OrenQuestNetwork
+$questIp = $questNetwork.IPAddress
+if ($questIp) {
+    # Evita que o backend dentro do Docker publique o IP interno 172.x quando a
+    # sessão Quest é criada pela interface desktop em 127.0.0.1.
+    $env:OREN_QUEST_BASE_URL = "https://${questIp}:8443"
+}
 
 if (-not (Test-Path .env.docker)) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File tools\initialize_argos_docker.ps1
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
-if (-not (Test-Path .local\quest_https\oren-quest-cert.pem) -or
-    -not (Test-Path .local\quest_https\oren-quest-key.pem)) {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File setup_quest_https.ps1
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-}
+# Executado em toda inicializacao: e idempotente e renova somente o certificado
+# de servidor quando o IPv4 LAN mudou. A CA confiada pelo Quest permanece fixa.
+& powershell -NoProfile -ExecutionPolicy Bypass -File setup_quest_https.ps1 -Ip $questIp
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $composeArgs = @("compose", "--env-file", ".env.docker")
 if ($MedGemmaMode -eq "Container") {
@@ -70,14 +79,14 @@ $deadline = [DateTime]::UtcNow.AddMinutes(15)
 while ([DateTime]::UtcNow -lt $deadline) {
     try {
         $health = Invoke-RestMethod "http://127.0.0.1:8080/api/health" -TimeoutSec 8
-        if ($health.backend -eq "pronto") {
-            $ip = Get-NetIPConfiguration -ErrorAction SilentlyContinue |
-                Where-Object { $_.NetAdapter.Status -eq "Up" -and $_.IPv4DefaultGateway } |
-                ForEach-Object { $_.IPv4Address } |
-                Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" } |
-                Select-Object -First 1 -ExpandProperty IPAddress
+        $backendReady = $health.backend -eq "pronto"
+        $backendIntentionallyOffline = $SkipMedGemmaStart -and $health.backend -eq "desligado"
+        if ($backendReady -or $backendIntentionallyOffline) {
             Write-Host "OREN desktop: http://127.0.0.1:8080" -ForegroundColor Green
-            if ($ip) { Write-Host "OREN Meta Quest: https://${ip}:8443" -ForegroundColor Green }
+            if ($questIp) { Write-Host "OREN Meta Quest: https://${questIp}:8443/quest/" -ForegroundColor Green }
+            if ($backendIntentionallyOffline) {
+                Write-Host "MedGemma não iniciado por solicitação; visualizador e fluxos sem inferência estão prontos." -ForegroundColor Yellow
+            }
             exit 0
         }
     } catch { }
