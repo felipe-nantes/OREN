@@ -4,6 +4,10 @@ Guia operacional para executar o Digital Twin Cirúrgico no MAC (única máquina
 execução: Ollama + MedGemma 27B + segmentação).
 Caminho assumido: `/Users/sander_gurgel/Documents/projetos_sander/argos-main`.
 
+> Existe também um modo Docker portátil ARM64, mantendo Ollama/MedGemma no host.
+> Para transferência automatizada e uso em Docker, consulte
+> `docs/232_DOCKER_PORTATIL_MAC_E_OUTROS.md`.
+
 ## Serviços e ordem de subida
 
 | # | Serviço | Porta | Terminal |

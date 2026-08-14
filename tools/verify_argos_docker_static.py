@@ -81,6 +81,31 @@ def verify(root: Path) -> dict[str, object]:
     if "USER argos" not in dockerfile:
         raise ValueError("ARGOS runtime must be non-root")
 
+    portable_compose = _read(root / "compose.portable.yaml")
+    portable_dockerfile = _read(root / "docker" / "Dockerfile.argos-portable")
+    portable_cpu_config = yaml.safe_load(
+        _read(root / "configs" / "training" / "medsiglip_frozen_cpu_v1.yaml")
+    )
+    if "Dockerfile.argos-portable" not in portable_compose:
+        raise ValueError("portable Compose does not select the portable runtime")
+    if "gpus: !reset []" not in portable_compose:
+        raise ValueError("portable Compose must remove NVIDIA GPU reservations")
+    if "python:3.11-slim-bookworm" not in portable_dockerfile:
+        raise ValueError("portable runtime must use a multi-platform base image")
+    if "FROM pytorch/pytorch" in portable_dockerfile or "cuda12" in portable_dockerfile.lower():
+        raise ValueError("portable runtime base must not require CUDA")
+    if portable_cpu_config.get("device") != "cpu" or portable_cpu_config.get("dtype") != "float32":
+        raise ValueError("portable MedSigLIP config must be explicit CPU float32")
+    for script in (
+        "initialize_argos_docker.sh",
+        "start_argos_docker_mac.sh",
+        "verify_argos_docker_portable.sh",
+        "export_argos_portable.ps1",
+        "import_argos_portable.sh",
+    ):
+        if not (root / "tools" / script).is_file():
+            raise ValueError(f"portable automation is absent: {script}")
+
     nginx = _read(root / "docker" / "nginx.conf")
     for required in ("listen 8080", "listen 8443 ssl", "client_max_body_size 20g"):
         if required not in nginx:
@@ -94,6 +119,8 @@ def verify(root: Path) -> dict[str, object]:
         "medical_data_in_image": False,
         "graphify_network": "none",
         "quest_https": True,
+        "portable_arm64_runtime": True,
+        "portable_container_acceleration": "cpu",
     }
 
 

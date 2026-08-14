@@ -1,12 +1,11 @@
 # Como transferir e executar o ARGOS/OREN Docker em outro PC
 
-Este guia descreve a transferência do ambiente Docker validado em 13 de agosto
-de 2026. Ele foi escrito para um **PC Windows 10/11 x64 com GPU NVIDIA e WSL2**.
+Este guia descreve a transferência do ambiente Docker NVIDIA validado em 13 de
+agosto de 2026 para outro **PC Windows 10/11 x64 com GPU NVIDIA e WSL2**.
 
-> Importante: o contêiner atual usa CUDA 12.4, `gpus: all` e scripts PowerShell
-> específicos do Windows. Ele não pode ser enviado sem alterações para um Mac
-> Apple Silicon/M5. No Mac, deve-se usar o fluxo nativo já existente ou criar uma
-> imagem ARM64/MPS separada.
+> Para Mac Apple Silicon/M5 e computadores sem NVIDIA, use a imagem ARM64/CPU e
+> os automatizadores descritos em `docs/232_DOCKER_PORTATIL_MAC_E_OUTROS.md`.
+> O Docker no Mac não recebe MPS/Metal; MedGemma 27B permanece nativo no host.
 
 ## 1. O que realmente precisa ser transferido
 

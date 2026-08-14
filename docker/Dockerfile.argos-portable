@@ -1,0 +1,64 @@
+# syntax=docker/dockerfile:1.7
+FROM python:3.11-slim-bookworm
+
+ARG ARGOS_UID=10001
+ARG ARGOS_GID=10001
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HOME=/home/argos \
+    ARGOS_CONTAINER=1 \
+    WEBAPP_MRSEGMENTATOR_EXE=/usr/local/bin/mrsegmentator \
+    ARGOS_TOTALSEG_RUNTIME_DIR=/tmp/argos_totalsegmentator_runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates curl libgl1 libglib2.0-0 libgomp1 libsm6 libxext6 libxrender1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid ${ARGOS_GID} argos \
+    && useradd --uid ${ARGOS_UID} --gid ${ARGOS_GID} --create-home --shell /bin/bash argos
+
+WORKDIR /opt/argos
+
+COPY pyproject.toml README.md digital_twin.py ./
+COPY dtwin ./dtwin
+COPY webapp ./webapp
+COPY viewer ./viewer
+COPY configs ./configs
+COPY profiles ./profiles
+COPY tools ./tools
+
+# Keep the CPU inference stack explicit on both supported architectures. The
+# portable image does not install bitsandbytes/CUDA: MedGemma remains on the
+# host (Ollama on macOS), while segmentation and MedSigLIP run in the container.
+RUN machine="$(uname -m)" \
+    && if [ "$machine" = "x86_64" ]; then \
+         python -m pip install --no-cache-dir \
+           --index-url https://download.pytorch.org/whl/cpu \
+           "torch==2.10.0" "torchvision==0.25.0"; \
+       else \
+         python -m pip install --no-cache-dir \
+           "torch==2.10.0" "torchvision==0.25.0"; \
+       fi \
+    && python -m pip install --no-cache-dir \
+       ".[webapp,seg,graphrag,quest,training]" \
+       "TotalSegmentator==2.18.0" \
+       "torch==2.10.0" \
+       "torchvision==0.25.0" \
+       "transformers>=4.57" \
+       "mrsegmentator==2.0.0" \
+    && python -m pip check \
+    && mkdir -p /opt/argos/casos /home/argos/.cache/huggingface \
+       /home/argos/.totalsegmentator /home/argos/.mrsegmentator \
+    && chown -R argos:argos /opt/argos /home/argos
+
+COPY --chown=argos:argos docker/entrypoint.sh /usr/local/bin/argos-entrypoint
+RUN chmod 0755 /usr/local/bin/argos-entrypoint
+
+USER argos
+
+EXPOSE 8000
+ENTRYPOINT ["/usr/local/bin/argos-entrypoint"]
+CMD ["python", "-m", "uvicorn", "webapp.server:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

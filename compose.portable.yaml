@@ -1,0 +1,24 @@
+services:
+  argos:
+    image: ${ARGOS_RUNTIME_IMAGE:-argos-runtime-portable:local}
+    platform: ${ARGOS_DOCKER_PLATFORM:-linux/arm64}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.argos-portable
+    gpus: !reset []
+    environment:
+      WEBAPP_MRSEGMENTATOR_EXE: /usr/local/bin/mrsegmentator
+      WEBAPP_VISUAL_EMBEDDING_CONFIG: configs/training/medsiglip_frozen_cpu_v1.yaml
+      WEBAPP_MEDGEMMA_CONFIG: configs/medgemma_ollama_27b.yaml
+      WEBAPP_VOLUMETRIC_MEDGEMMA_CONFIG: configs/medgemma_ollama_27b_volumetric.yaml
+      WEBAPP_RAG_MEDGEMMA_CONFIG: configs/medgemma_ollama_27b_rag.yaml
+      WEBAPP_VOLUMETRIC_RAG_MEDGEMMA_CONFIG: configs/medgemma_ollama_27b_volumetric_rag.yaml
+      WEBAPP_MONOPHASE_MEDGEMMA_CONFIG: configs/medgemma_ollama_27b_rag.yaml
+      WEBAPP_PATHOLOGY_TARGET_MEDGEMMA_CONFIG: configs/medgemma_ollama_27b_volumetric_pathology_target.yaml
+      WEBAPP_FAST_PATHOLOGY_MEDGEMMA_CONFIG: configs/medgemma_ollama_27b_volumetric_pathology_target.yaml
+      WEBAPP_MEDGEMMA_BACKENDS: 27b=MedGemma 27B Ollama=configs/medgemma_ollama_27b.yaml=${MEDGEMMA_BASE_URL:-http://host.docker.internal:8001}/health
+      WEBAPP_PREP_TIMEOUT_CPU: "3600"
+      WEBAPP_MODEL_TIMEOUT: "900"
+
+  medgemma:
+    gpus: !reset []
