@@ -1,0 +1,16 @@
+# FINAL_EVIDENCE_PACKAGE
+
+Copie todos os campos de `../EVIDENCE_PACKAGE_SCHEMA.md`, preencha `N/A` com justificativa e anexe:
+
+```yaml
+INDEPENDENT_VERIFICATION:
+ROUTER_REVALIDATION:
+CONTRADICTION_CHECK:
+SOURCE_LINKS: []
+ARTIFACT_HASHES: []
+HUMAN_DECISIONS_LEDGER: []
+NEXT_RECOMMENDED_TASK:
+```
+
+FINAL_STATUS permitido: `DONE`, `BLOCKED`, `REJECTED`, `ROLLED_BACK`. “Tests passed” isoladamente não permite `DONE`.
+

@@ -1,0 +1,1953 @@
+== ENV FINGERPRINT ==
+Python 3.11.11
+torch 2.6.0+cu124 cuda_available True device_count 1
+== APT GIT (ephemeral) ==
+git version 2.34.1
+== PIP INSTALL (ephemeral) ==
+PIP_OK
+== COPIA GRAVAVEL ==
+COPY_OK
+== PYTEST FULL SUITE (writable tree) ==
+........................................................................ [  4%]
+........................................................................ [  8%]
+........................................................................ [ 13%]
+..............................................................F......... [ 17%]
+........................................................................ [ 22%]
+........................................................................ [ 26%]
+..............................................sss....................... [ 31%]
+........................................................................ [ 35%]
+........................................................................ [ 40%]
+........................................................................ [ 44%]
+........................................................................ [ 49%]
+........................................................................ [ 53%]
+........................................................................ [ 58%]
+........................................................................ [ 62%]
+........................................................................ [ 67%]
+........................................................................ [ 71%]
+............................................................F........... [ 76%]
+........................................................................ [ 80%]
+........................................................................ [ 84%]
+........................................................................ [ 89%]
+........................................................................ [ 93%]
+........................................................................ [ 98%]
+..........................                                               [100%]
+=================================== FAILURES ===================================
+____ test_windows_publish_fallback_copies_manifest_last_and_verifies_hashes ____
+
+tmp_path = PosixPath('/tmp/pytest/test_windows_publish_fallback_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x755fbf520190>
+
+    def test_windows_publish_fallback_copies_manifest_last_and_verifies_hashes(
+        tmp_path, monkeypatch
+    ):
+        staging = tmp_path / "staging"
+        destination = tmp_path / "published"
+        (staging / "nested").mkdir(parents=True)
+        (staging / "nested/image.png").write_bytes(b"image")
+        (staging / "dataset_manifest.json").write_text("{}\n", encoding="utf-8")
+        original_replace = slice_module.os.replace
+    
+        def fail_directory_replace(source, target):
+            if source == staging:
+                raise PermissionError("simulated Windows directory lock")
+            return original_replace(source, target)
+    
+        monkeypatch.setattr(slice_module.os, "replace", fail_directory_replace)
+>       publish_immutable_directory(staging, destination)
+
+tests/test_learning_monophase_slice_candidates.py:60: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+dtwin/learning/monophase_slice_candidates.py:78: in publish_immutable_directory
+    os.replace(staging, destination)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+source = PosixPath('/tmp/pytest/test_windows_publish_fallback_0/staging')
+target = PosixPath('/tmp/pytest/test_windows_publish_fallback_0/published')
+
+    def fail_directory_replace(source, target):
+        if source == staging:
+>           raise PermissionError("simulated Windows directory lock")
+E           PermissionError: simulated Windows directory lock
+
+tests/test_learning_monophase_slice_candidates.py:56: PermissionError
+______ test_relative_workspace_still_exposes_operational_timing_artifact _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x755fbf9bb0d0>
+tmp_path = PosixPath('/tmp/pytest/test_relative_workspace_still_0')
+
+    def test_relative_workspace_still_exposes_operational_timing_artifact(monkeypatch, tmp_path):
+        """Regressão do smoke real: timing_path é absoluto e WORKSPACE pode ser relativo."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(server, "WORKSPACE", Path("workspace"))
+        monkeypatch.setattr(server, "find_best_series", lambda _root: ([], 0))
+        job_id = "ab1800000002"
+        raw_dir = Path("workspace") / job_id / "_upload"
+        raw_dir.mkdir(parents=True)
+        server._jobs[job_id] = {
+            "state": "queued", "step": "recebendo", "progress": 5, "result": None,
+        }
+    
+        server.process_job(
+            job_id,
+            raw_dir,
+            server.FAST_PATHOLOGY_MEDGEMMA_CONFIG,
+            "fast_pathology",
+        )
+    
+        job = server._jobs.pop(job_id)
+>       assert job["operational_timing_artifact"] == "case\\outputs\\operational_timing.json"
+E       AssertionError: assert 'case/outputs...l_timing.json' == 'case\\output...l_timing.json'
+E         
+E         - case\outputs\operational_timing.json
+E         ?     ^       ^
+E         + case/outputs/operational_timing.json
+E         ?     ^       ^
+
+/tmp/ws/tests/test_operational_timing_relative_workspace.py:26: AssertionError
+=============================== warnings summary ===============================
+../../opt/conda/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /opt/conda/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/test_candidate_region.py: 2 warnings
+tests/test_cli.py: 2 warnings
+tests/test_engine_finalize.py: 10 warnings
+tests/test_gates_extra.py: 2 warnings
+tests/test_stages_units.py: 1 warning
+  /tmp/ws/dtwin/stages.py:133: FutureWarning: `binary_opening` is deprecated since version 0.26 and will be removed in version 0.28. Use `skimage.morphology.opening` instead.
+    m = morphology.binary_opening(m, footprint=fp)  # API atual: footprint (não selem)
+
+tests/test_candidate_region.py: 5 warnings
+tests/test_cli.py: 3 warnings
+tests/test_engine_finalize.py: 15 warnings
+tests/test_gates_extra.py: 3 warnings
+tests/test_stages_units.py: 2 warnings
+  /tmp/ws/dtwin/stages.py:134: FutureWarning: `binary_closing` is deprecated since version 0.26 and will be removed in version 0.28. Use `skimage.morphology.closing` instead.
+    m = morphology.binary_closing(m, footprint=fp)
+
+tests/test_candidate_region.py: 5 warnings
+tests/test_cli.py: 3 warnings
+tests/test_engine_finalize.py: 15 warnings
+tests/test_gates_extra.py: 3 warnings
+tests/test_stages_units.py: 2 warnings
+  /tmp/ws/dtwin/stages.py:136: FutureWarning: Parameter `min_size` is deprecated since version 0.26.0 and will be removed in 2.0.0 (or later). To avoid this warning, please use the parameter `max_size` instead. For more details, see the documentation of `remove_small_objects`. Note that the new threshold removes objects smaller than **or equal to** its value, while the previous parameter only removed smaller ones.
+    m = morphology.remove_small_objects(m, min_size=int(min_voxels))
+
+tests/test_learning_medsiglip_head_classifier.py::test_nonlinear_head_keeps_case_boundaries_and_scores
+  /opt/conda/lib/python3.11/site-packages/sklearn/neural_network/_multilayer_perceptron.py:695: UserWarning: Got `batch_size` less than 1 or larger than sample size. It is going to be clipped
+    warnings.warn(
+
+tests/test_learning_radiomics_classifier.py::test_elastic_net_pipeline_selects_features_inside_fit
+  /opt/conda/lib/python3.11/site-packages/sklearn/feature_selection/_univariate_selection.py:110: UserWarning: Features [2] are constant.
+    warnings.warn("Features %s are constant." % constant_features_idx, UserWarning)
+
+tests/test_learning_radiomics_classifier.py::test_elastic_net_pipeline_selects_features_inside_fit
+  /opt/conda/lib/python3.11/site-packages/sklearn/feature_selection/_univariate_selection.py:111: RuntimeWarning: invalid value encountered in divide
+    f = msb / msw
+
+tests/test_learning_radiomics_classifier.py::test_elastic_net_pipeline_selects_features_inside_fit
+  /opt/conda/lib/python3.11/site-packages/sklearn/linear_model/_logistic.py:1403: FutureWarning: 'penalty' was deprecated in version 1.8 and will be removed in 1.10. To avoid this warning, leave 'penalty' set to its default value and use 'l1_ratio' or 'C' instead. Use l1_ratio=0 instead of penalty='l2', l1_ratio=1 instead of penalty='l1', l1_ratio set to a float between 0 and 1 instead of penalty='elasticnet', and C=np.inf instead of penalty=None.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+________________________ test_cli_finalize_returns_zero ________________________
+----------------------------- Captured stdout call -----------------------------
+======================================================================
+ DIGITAL TWIN CIRÚRGICO — PIPELINE (MVP · Nível 1: modelo anatômico)
+ MODO PESQUISA — saída NÃO destinada a decisão clínica.
+======================================================================
+
+[OK] 'finalize' concluído. Saídas em: /tmp/pytest/test_cli_finalize_returns_zero0/outputs
+STL(s) e viewer_manifest.json prontos para o visualizador web.
+___________________ test_cli_finalize_no_lesion_returns_zero ___________________
+----------------------------- Captured stdout call -----------------------------
+======================================================================
+ DIGITAL TWIN CIRÚRGICO — PIPELINE (MVP · Nível 1: modelo anatômico)
+ MODO PESQUISA — saída NÃO destinada a decisão clínica.
+======================================================================
+
+[OK] 'finalize' concluído. Saídas em: /tmp/pytest/test_cli_finalize_no_lesion_re0/outputs
+STL(s) e viewer_manifest.json prontos para o visualizador web.
+------------------------------ Captured log call -------------------------------
+WARNING  dtwin:stages.py:680 Estágio 4b: caso sem lesão por escolha explícita (--no-lesion).
+_______________________ test_cli_bad_profile_returns_one _______________________
+----------------------------- Captured stdout call -----------------------------
+======================================================================
+ DIGITAL TWIN CIRÚRGICO — PIPELINE (MVP · Nível 1: modelo anatômico)
+ MODO PESQUISA — saída NÃO destinada a decisão clínica.
+======================================================================
+
+[ABORTADO] Perfil não encontrado: profiles/__nope__.yaml
+____________ test_cli_validates_versioned_template_and_emits_labels ____________
+----------------------------- Captured stdout call -----------------------------
+[OK] curadoria: 3 casos, 2 revisados, 1 reclassificados
+      negativos por subtipo: {'benign_anatomic_variant': 1, 'pseudolesion_or_artifact': 1}
+      positivos por subtipo: {'focal_lesion_suspicious': 1}
+      rótulos protegidos escritos em /tmp/pytest/test_cli_validates_versioned_t0/protected_labels.jsonl
+_________________________ test_finalize_no_lesion_flag _________________________
+------------------------------ Captured log call -------------------------------
+WARNING  dtwin:stages.py:680 Estágio 4b: caso sem lesão por escolha explícita (--no-lesion).
+_________________ test_refinalize_no_lesion_drops_prior_lesion _________________
+------------------------------ Captured log call -------------------------------
+WARNING  dtwin:stages.py:680 Estágio 4b: caso sem lesão por escolha explícita (--no-lesion).
+____________ test_estagio5_descarta_uniao_com_geometria_divergente _____________
+------------------------------ Captured log call -------------------------------
+WARNING  dtwin:stages.py:731 Estágio 5: mask_organ_union.nii.gz tem geometria divergente da venosa; descartando e usando a venosa.
+_______________________ test_prepare_runs_without_torch ________________________
+----------------------------- Captured stdout call -----------------------------
+
+------------------------------------------------------------------
+REVISÃO HUMANA NECESSÁRIA — 3D Slicer (estágio 4)
+A segmentação do órgão é automática; a LESÃO é marcada por humano.
+
+  1) Abra o 3D Slicer e carregue:
+       Volume : /tmp/pytest/test_prepare_runs_without_torc0/case/volume.nii.gz
+       Órgão  : /tmp/pytest/test_prepare_runs_without_torc0/case/mask_organ.nii.gz   (revise e corrija se necessário)
+  2) Crie um novo segmento para a LESÃO usando: threshold, region_growing, paint.
+  3) Salve a máscara da lesão EXATAMENTE em:
+       /tmp/pytest/test_prepare_runs_without_torc0/case/mask_lesion.nii.gz
+  4) (Opcional) Se corrigiu o órgão, sobrescreva:
+       /tmp/pytest/test_prepare_runs_without_torc0/case/mask_organ.nii.gz
+
+Depois finalize com:
+   python digital_twin.py finalize "/tmp/pytest/test_prepare_runs_without_torc0/case" --profile <perfil>
+Se o caso REALMENTE não tiver lesão, finalize com --no-lesion.
+------------------------------------------------------------------
+
+________________ test_lesion_outside_organ_warns_but_completes _________________
+------------------------------ Captured log call -------------------------------
+WARNING  dtwin:stages.py:703 Estágio 4b: a lesão marcada não sobrepõe o órgão. Confira no Slicer.
+_____________________ test_stage1_no_readable_dicom_aborts _____________________
+----------------------------- Captured stderr call -----------------------------
+WARNING: In /tmp/SimpleITK-build/ITK/Modules/IO/GDCM/src/itkGDCMSeriesFileNames.cxx, line 114
+GDCMSeriesFileNames (0x755fa800feb0): No Series can be found, make sure your restrictions are not too strong
+
+__________________ test_cli_case_dir_resolves_safe_case_paths __________________
+----------------------------- Captured stdout call -----------------------------
+======================================================================
+ MEDGEMMA — TRIAGEM VISUAL HEPÁTICA (MODO PESQUISA)
+ NÃO é diagnóstico. NÃO é laudo médico. Revisão humana obrigatória.
+======================================================================
+{
+  "case_id": "anon-test000000",
+  "status": "panel_ready",
+  "panel_path": "/tmp/pytest/test_cli_case_dir_resolves_saf0/outputs/medgemma/medgemma_liver_screening_panel.png",
+  "panel_manifest_path": "/tmp/pytest/test_cli_case_dir_resolves_saf0/outputs/medgemma/medgemma_liver_screening_manifest.json",
+  "report_path": null,
+  "requires_human_review": true,
+  "panel_sha256": "947639c8e7d98a42fe814807c1ac6a4532f2bb5f5a34a258610a6ff061e7ef59",
+  "panel_paths": [
+    "/tmp/pytest/test_cli_case_dir_resolves_saf0/outputs/medgemma/medgemma_liver_screening_panel.png"
+  ],
+  "panel_strategy": "uniform_9"
+}
+_______________ test_batch_routes_candidates_and_requires_freeze _______________
+----------------------------- Captured stdout call -----------------------------
+{"case_id": "anon-fallback", "effective_config_sha256": "effective", "elapsed_seconds": 0.0002, "index": 1, "model_elapsed_seconds": 10.0, "prediction": "NEGATIVA", "report_sha256": "f4fda0f104b379a1fedd03b543f905cc84d7a05a03fe298cc2d7d1ff8d65fbe1", "status": "success_pending_human_review", "total": 2, "within_time_limit": true}
+{"case_id": "anon-multi", "effective_config_sha256": "effective", "elapsed_seconds": 0.0002, "index": 2, "model_elapsed_seconds": 10.0, "prediction": "NEGATIVA", "report_sha256": "1f5d4df0a6167b6d28c6acee4dcc38946aa9d52ada3e74bf98e09f3ba8ae8dc8", "status": "success_pending_human_review", "total": 2, "within_time_limit": true}
+______________ test_batch_records_external_timeout_and_continues _______________
+----------------------------- Captured stdout call -----------------------------
+{"case_id": "anon-fallback", "elapsed_seconds": 0.0, "error": "Subprocesso excedeu 180.000 segundos.", "index": 1, "status": "timeout", "total": 2, "within_time_limit": false}
+{"case_id": "anon-multi", "effective_config_sha256": "effective", "elapsed_seconds": 0.0002, "index": 2, "model_elapsed_seconds": 10.0, "prediction": "NEGATIVA", "report_sha256": "1f5d4df0a6167b6d28c6acee4dcc38946aa9d52ada3e74bf98e09f3ba8ae8dc8", "status": "success_pending_human_review", "total": 2, "within_time_limit": true}
+_______________________ test_cli_writes_documents_jsonl ________________________
+----------------------------- Captured stdout call -----------------------------
+[OK] 1 documentos RAG gerados em /tmp/pytest/test_cli_writes_documents_json0/rag/dataset_documents.jsonl
+_____________ test_eval_cli_returns_nonzero_when_acceptance_fails ______________
+----------------------------- Captured stdout call -----------------------------
+{
+  "status": "complete",
+  "accepted": false,
+  "query_count": 1,
+  "passed_count": 0,
+  "pass_rate": 0.0,
+  "category_hit_rate": 0.0,
+  "empty_result_count": 0,
+  "out": "/tmp/pytest/test_eval_cli_returns_nonzero_0/out"
+}
+___________ test_eval_cli_no_fail_returns_zero_when_acceptance_fails ___________
+----------------------------- Captured stdout call -----------------------------
+{
+  "status": "complete",
+  "accepted": false,
+  "query_count": 1,
+  "passed_count": 0,
+  "pass_rate": 0.0,
+  "category_hit_rate": 0.0,
+  "empty_result_count": 0,
+  "out": "/tmp/pytest/test_eval_cli_no_fail_returns_0/out"
+}
+_____________________ test_eval_cli_rejects_invalid_top_k ______________________
+----------------------------- Captured stderr call -----------------------------
+[ABORTADO] --top-k deve ser positivo.
+____________ test_visual_job_keeps_ambiguous_raw_study_fail_closed _____________
+------------------------------ Captured log call -------------------------------
+ERROR    dtwin.webapp:server.py:333 Job ambig0000001: falha ao persistir estado final
+Traceback (most recent call last):
+  File "/tmp/ws/webapp/server.py", line 1291, in process_visual_job
+    multiphase = build_multiphase_case(
+                 ^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/ws/tests/test_webapp.py", line 882, in ambiguous
+    raise RawPhaseResolutionError(
+dtwin.learning.raw_dicom_phase_resolver.RawPhaseResolutionError: mais de um estudo elegível
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/tmp/ws/webapp/server.py", line 331, in _set
+    _persist_completed_job_state(job_id, completed_snapshot)
+  File "/tmp/ws/webapp/server.py", line 1575, in _persist_completed_job_state
+    path = _completed_job_state_path(job_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/ws/webapp/server.py", line 1557, in _completed_job_state_path
+    return _case_dir_for_job(job_id) / "outputs" / "webapp_job_state.json"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/ws/webapp/server.py", line 1552, in _case_dir_for_job
+    raise HTTPException(status_code=404, detail="Job nao encontrado.")
+fastapi.exceptions.HTTPException: 404: Job nao encontrado.
+________________ test_gate_anatomico_recusa_mascara_implausivel ________________
+------------------------------ Captured log call -------------------------------
+WARNING  dtwin.webapp:server.py:616 teste: máscara reprovada (['physical_volume_below_minimum'])
+________ test_registro_de_backends_ignora_entrada_invalida_sem_derrubar ________
+------------------------------ Captured log call -------------------------------
+WARNING  dtwin.webapp:server.py:213 Backend MedGemma ignorado (formato inválido): 'quebrado=sem_config'
+WARNING  dtwin.webapp:server.py:218 Backend MedGemma 'inexistente' ignorado: config ausente (configs/nao_existe_mesmo.yaml)
+============================= slowest 25 durations =============================
+4.05s call     tests/test_openswisshcc_multisequence_panel.py::test_generates_every_projected_trace_plane_once
+3.00s call     tests/test_monophase_complementary_candidates.py::test_builds_three_real_sequences_with_exact_coverage
+1.64s call     tests/test_benchmark_cli.py::test_recalculate_existing_run_checks_hashes_without_inference
+1.00s call     tests/test_lld_mmri_v23_preparation.py::test_isolated_segmenter_hard_timeout_removes_partial_output
+0.87s call     tests/test_quest_dynamic_certificate.py::test_stable_ca_survives_ip_change_and_leaf_is_reissued
+0.71s call     tests/test_engine_finalize.py::test_refinalize_no_lesion_drops_prior_lesion
+0.70s call     tests/test_openswisshcc_v26_bbox_fill.py::test_nested_loocv_is_deterministic
+0.70s call     tests/test_openswisshcc_v24_planarity_contrast.py::test_nested_loocv_is_deterministic
+0.70s call     tests/test_openswisshcc_v25_sphericity.py::test_nested_loocv_is_deterministic
+0.58s call     tests/test_candidate_region.py::test_finalize_publishes_unconfirmed_candidate_separately
+0.57s call     tests/test_gd_eob_hcc_external.py::test_extract_publishes_only_images_and_keeps_protected_payloads_closed
+0.53s call     tests/test_engine_finalize.py::test_finalize_exports_internal_anatomy_when_available
+0.50s call     tests/test_mrsegmentator_chaos_runner.py::test_publish_directory_retries_transient_windows_handle
+0.44s call     tests/test_engine_finalize.py::test_finalize_produces_stls_and_manifest
+0.43s call     tests/test_viewer_xr.py::test_decimated_mesh_is_published_only_after_fidelity_gate
+0.40s call     tests/test_cli.py::test_cli_finalize_returns_zero
+0.38s call     tests/test_liver_segmentation_comparison.py::test_evaluator_generates_results_and_gallery_without_touching_cases
+0.38s call     tests/test_openswisshcc_axial_atlas.py::test_frame_count_is_deterministic[37-10]
+0.38s call     tests/test_medgemma_panel_full_fov.py::test_full_fov_three_panels_use_27_distinct_planes_and_deterministic_names
+0.38s call     tests/test_medgemma_panel_liver_enriched.py::test_renderer_uses_mask_only_for_localization_and_never_renders_it
+0.31s call     tests/test_cli.py::test_cli_finalize_no_lesion_returns_zero
+0.31s call     tests/test_engine_finalize.py::test_finalize_no_lesion_flag
+0.29s call     tests/test_medgemma_panel_multiphase.py::test_multiphase_generates_11_rgb_views_without_phi_or_lesion
+0.26s call     tests/test_medgemma_panel_multiphase.py::test_partial_fov_uses_venous_grayscale_and_records_audit
+0.25s call     tests/test_medgemma_panel_liver_enriched.py::test_hbp_single_phase_is_replicated_as_grayscale_without_dynamic_claim
+=========================== short test summary info ============================
+PASSED tests/test_anatomic_material_pack.py::test_material_builder_is_deterministic_tile_safe_and_geometry_neutral
+PASSED tests/test_anatomic_material_pack.py::test_versioned_repository_material_manifest_matches_every_runtime_asset[liver_realistic_v1_manifest.json-desktop_1k-1024]
+PASSED tests/test_anatomic_material_pack.py::test_versioned_repository_material_manifest_matches_every_runtime_asset[liver_realistic_v1_quest512_manifest.json-quest512-512]
+PASSED tests/test_anatomic_material_pack.py::test_viewer_uses_only_the_local_allowlisted_material_pack
+PASSED tests/test_anatomic_material_pack.py::test_portable_docker_context_includes_runtime_maps_but_not_generation_source
+PASSED tests/test_benchmark_cli.py::test_cli_dry_run_validates_and_never_calls_inference
+PASSED tests/test_benchmark_cli.py::test_recalculate_existing_run_checks_hashes_without_inference
+PASSED tests/test_benchmark_importers.py::test_nifti_importer_physically_excludes_ground_truth
+PASSED tests/test_benchmark_importers.py::test_protected_taxonomy_is_attached_only_after_inference
+PASSED tests/test_benchmark_importers.py::test_protected_taxonomy_rejects_negative_subtype_on_positive_case
+PASSED tests/test_benchmark_importers.py::test_protected_taxonomy_rejects_invalid_phenotype_tag
+PASSED tests/test_benchmark_importers.py::test_nifti_importer_preserves_adjacent_anonymized_manifest
+PASSED tests/test_benchmark_importers.py::test_nifti_importer_rejects_sanitized_manifest_with_wrong_policy
+PASSED tests/test_benchmark_importers.py::test_nifti_importer_rejects_sanitized_manifest_with_phi_key
+PASSED tests/test_benchmark_importers.py::test_nifti_importer_rejects_sanitized_manifest_with_wrong_volume_hash
+PASSED tests/test_benchmark_importers.py::test_nifti_importer_generates_medgemma_compatible_manifest_for_anon_case
+PASSED tests/test_benchmark_importers.py::test_manifest_rejects_ground_truth_inside_inference
+PASSED tests/test_benchmark_importers.py::test_manifest_rejects_protected_taxonomy_inside_inference
+PASSED tests/test_benchmark_importers.py::test_nifti_geometry_mismatch_aborts
+PASSED tests/test_benchmark_importers.py::test_dicom_importer_reuses_stage1_and_explicit_organ_mask
+PASSED tests/test_benchmark_metrics.py::test_primary_penalizes_every_non_correct_outcome
+PASSED tests/test_benchmark_metrics.py::test_decisions_only_excludes_non_decisions
+PASSED tests/test_benchmark_metrics.py::test_categorical_matrix_preserves_technical_states
+PASSED tests/test_benchmark_metrics.py::test_gate_requires_sensitivity_and_specificity
+PASSED tests/test_benchmark_metrics.py::test_wilson_and_undefined_metrics_are_explicit
+PASSED tests/test_benchmark_metrics.py::test_stratified_metrics_separate_benign_variants_and_positive_subtypes
+PASSED tests/test_benchmark_reporting.py::test_hashes_and_git_state_are_recordable
+PASSED tests/test_benchmark_reporting.py::test_run_outputs_are_complete_and_machine_readable
+PASSED tests/test_benchmark_runner.py::test_run_id_is_stable_and_filesystem_safe
+PASSED tests/test_benchmark_runner.py::test_case_workspace_slug_is_short_and_deterministic
+PASSED tests/test_benchmark_runner.py::test_invalid_model_response_is_not_collapsed_into_generic_failure
+PASSED tests/test_benchmark_runner.py::test_runner_subprocess_never_receives_ground_truth
+PASSED tests/test_benchmark_runner.py::test_runner_timeout_is_a_distinct_error
+PASSED tests/test_benchmark_subtype_metrics.py::test_subtype_binary_endpoint_is_pathology_target_not_any_alteration
+PASSED tests/test_benchmark_subtype_metrics.py::test_subtype_metrics_compute_balanced_accuracy_and_confusion
+PASSED tests/test_benchmark_subtype_metrics.py::test_subtype_metrics_penalize_undetermined_inconclusive_and_failure
+PASSED tests/test_benchmark_subtype_metrics.py::test_subtype_gate_requires_all_four_reference_classes
+PASSED tests/test_benchmark_subtype_metrics.py::test_subtype_metrics_reject_missing_or_open_vocabulary_truth
+PASSED tests/test_benign_mimic_adjudication.py::test_confident_second_negative_can_clear_initial_positive
+PASSED tests/test_benign_mimic_adjudication.py::test_low_confidence_second_negative_becomes_inconclusive
+PASSED tests/test_benign_mimic_adjudication.py::test_second_reader_never_upgrades_initial_negative
+PASSED tests/test_benign_mimic_adjudication.py::test_requires_same_panels_and_distinct_prompt[input_panel_set_sha256-other]
+PASSED tests/test_benign_mimic_adjudication.py::test_requires_same_panels_and_distinct_prompt[screening_config_sha256-a]
+PASSED tests/test_benign_mimic_adjudication.py::test_rejects_discriminator_without_pathology_target_v2
+PASSED tests/test_build_rag_corpus.py::test_extract_markdown_removes_script_style_and_reference_tail
+PASSED tests/test_build_rag_corpus.py::test_build_corpus_from_local_html_generates_auditable_outputs
+PASSED tests/test_build_rag_corpus.py::test_build_corpus_no_download_requires_local_source
+PASSED tests/test_build_rag_corpus.py::test_build_corpus_multiple_articles_preserves_categories_and_hashes
+PASSED tests/test_build_rag_corpus.py::test_build_rag_corpus_cli_completes_with_local_sources
+PASSED tests/test_build_rag_corpus.py::test_real_corpus_manifest_v1_has_expected_coverage_and_approval
+PASSED tests/test_candidate_region.py::test_candidate_is_clipped_to_liver_and_is_never_diagnostic
+PASSED tests/test_candidate_region.py::test_candidate_rejects_geometry_mismatch
+PASSED tests/test_candidate_region.py::test_finalize_publishes_unconfirmed_candidate_separately
+PASSED tests/test_candidate_region.py::test_tampered_candidate_aborts_viewer_publication
+PASSED tests/test_candidate_subprocess.py::test_candidate_subprocess_uses_crash_resilient_totalsegmentator_runtime
+PASSED tests/test_chaos_download.py::test_download_refuses_before_network_without_explicit_license
+PASSED tests/test_chaos_download.py::test_download_is_atomic_verified_and_records_license
+PASSED tests/test_chaos_download.py::test_verifier_rejects_checksum_and_unsafe_layout
+PASSED tests/test_chaos_download.py::test_download_failure_cleans_staging
+PASSED tests/test_chaos_download.py::test_extracts_only_mri_and_publishes_tree_manifest
+PASSED tests/test_chaos_download.py::test_extraction_rejects_tampered_download_manifest
+PASSED tests/test_chaos_download.py::test_extraction_preflight_rehashes_masks_and_dicoms
+PASSED tests/test_chaos_v21_panels.py::test_validate_config_requires_actual_chaos_sequence_semantics
+PASSED tests/test_chaos_v21_panels.py::test_case_files_requires_ground_truth_class_to_remain_unread
+PASSED tests/test_chaos_v21_panels.py::test_gallery_is_blind_and_states_non_dynamic_rgb_semantics
+PASSED tests/test_chaos_v21_panels.py::test_gallery_rejects_changed_panel
+PASSED tests/test_chaos_v21_preparation.py::test_prepares_registered_label_blind_chaos_case
+PASSED tests/test_chaos_v21_preparation.py::test_preparation_rejects_wrong_public_protocol_signature
+PASSED tests/test_chaos_v21_preparation.py::test_preflight_rejects_changed_prepared_volume
+PASSED tests/test_chaos_v21_review.py::test_review_requires_explicit_approval
+PASSED tests/test_chaos_v21_review.py::test_review_is_signed_and_verifiable
+PASSED tests/test_chaos_v21_review.py::test_review_invalidates_after_gallery_image_change
+PASSED tests/test_chaos_v21_review.py::test_review_invalidates_after_signature_change
+PASSED tests/test_chaos_v21_signals.py::test_context_fails_before_config_or_model_when_review_is_missing
+PASSED tests/test_chaos_v21_signals.py::test_localizer_manifest_uses_t2_spir_without_lesion_or_label
+PASSED tests/test_chaos_v21_signals.py::test_chaos_context_emits_separate_medgemma_schemas
+PASSED tests/test_cli.py::test_cli_finalize_returns_zero
+PASSED tests/test_cli.py::test_cli_finalize_no_lesion_returns_zero
+PASSED tests/test_cli.py::test_cli_bad_profile_returns_one
+PASSED tests/test_core_geometry.py::test_identity_direction_maps_index_to_physical
+PASSED tests/test_core_geometry.py::test_oblique_direction_is_applied
+PASSED tests/test_core_profile.py::test_valid_profile_loads
+PASSED tests/test_core_profile.py::test_missing_file_aborts
+PASSED tests/test_core_profile.py::test_missing_required_key_aborts
+PASSED tests/test_core_profile.py::test_missing_rotulo_alvo_aborts
+PASSED tests/test_core_profile.py::test_real_figado_profile_loads
+PASSED tests/test_core_profile.py::test_load_profile_accepts_str_path
+PASSED tests/test_curation.py::test_reviewed_variant_becomes_protected_negative_label
+PASSED tests/test_curation.py::test_negative_subtype_requires_negative_recommended_label
+PASSED tests/test_curation.py::test_invalid_negative_subtype_rejected
+PASSED tests/test_curation.py::test_negative_and_positive_subtype_mutually_exclusive
+PASSED tests/test_curation.py::test_invalid_phenotype_tag_rejected
+PASSED tests/test_curation.py::test_invalid_review_status_rejected
+PASSED tests/test_curation.py::test_reclassification_to_positive_is_summarized
+PASSED tests/test_curation.py::test_build_protected_labels_only_includes_reviewed
+PASSED tests/test_curation.py::test_duplicate_case_id_rejected
+PASSED tests/test_curation.py::test_cli_validates_versioned_template_and_emits_labels
+PASSED tests/test_dataset_audit.py::test_audit_is_phi_safe_and_classifies_sequences
+PASSED tests/test_dataset_audit.py::test_audit_splits_shared_uid_by_echo_time
+PASSED tests/test_dataset_audit.py::test_audit_flags_nonuniform_spacing_and_non_mr
+PASSED tests/test_dataset_audit.py::test_selector_prefers_clinically_useful_series_over_largest
+PASSED tests/test_dataset_audit.py::test_selector_rejects_ct_even_when_larger
+PASSED tests/test_dataset_audit.py::test_monophase_evidence_selector_preserves_complementary_real_sequences
+PASSED tests/test_dataset_audit.py::test_monophase_evidence_selector_returns_no_series_for_ct_only
+PASSED tests/test_dataset_registry.py::test_dicom_mr_dataset_generates_registry_record_without_raw_uid
+PASSED tests/test_dataset_registry.py::test_registry_preserves_same_uid_in_distinct_physical_directories
+PASSED tests/test_dataset_registry.py::test_tcga_lihc_mr_ignores_ct_and_accepts_only_mr
+PASSED tests/test_dataset_registry.py::test_dicom_ct_only_dataset_fails_closed_for_mr_registry
+PASSED tests/test_dataset_registry.py::test_lld_mmri_nifti_never_marks_dicom_original_and_links_annotation
+PASSED tests/test_dataset_registry.py::test_nifti_corrupted_file_fails
+PASSED tests/test_dataset_registry.py::test_chaos_config_is_negative_control_not_absolute_normal
+PASSED tests/test_dataset_registry.py::test_registry_cli_writes_jsonl
+PASSED tests/test_dataset_registry.py::test_write_jsonl_is_machine_readable
+PASSED tests/test_docker_integration.py::test_docker_contract_is_safe_and_complete
+PASSED tests/test_docker_integration.py::test_portable_runtime_is_native_arm64_capable_and_has_no_gpu_reservation
+PASSED tests/test_docker_integration.py::test_portable_transfer_is_fail_closed_for_medical_data_and_secrets
+PASSED tests/test_docker_integration.py::test_container_path_override_preserves_windows_default
+PASSED tests/test_docker_integration.py::test_docker_secrets_and_local_paths_are_not_versioned
+PASSED tests/test_docker_integration.py::test_medgemma_container_remains_optional
+PASSED tests/test_docker_integration.py::test_launchers_switch_medgemma_modes_without_gpu_or_port_conflicts
+PASSED tests/test_docker_integration.py::test_container_medgemma_has_private_bind_opt_in_only
+PASSED tests/test_docker_integration.py::test_graphify_container_has_no_network
+PASSED tests/test_docker_integration.py::test_e2e_smoke_requires_real_result_and_viewer
+PASSED tests/test_docker_integration.py::test_independent_job_verifier_covers_durable_artifacts_and_xr
+PASSED tests/test_docker_integration.py::test_e2e_smoke_can_explicitly_request_enhanced_3d
+PASSED tests/test_doctor.py::test_doctor_runs_and_returns_zero
+PASSED tests/test_download_http_ranges.py::test_split_ranges_covers_every_byte_exactly_once
+PASSED tests/test_download_http_ranges.py::test_split_ranges_supports_more_workers_than_bytes
+PASSED tests/test_download_http_ranges.py::test_split_ranges_rejects_invalid_values[0-1]
+PASSED tests/test_download_http_ranges.py::test_split_ranges_rejects_invalid_values[1-0]
+PASSED tests/test_download_http_ranges.py::test_split_ranges_rejects_invalid_values[-1-2]
+PASSED tests/test_engine_finalize.py::test_finalize_produces_stls_and_manifest
+PASSED tests/test_engine_finalize.py::test_finalize_no_lesion_flag
+PASSED tests/test_engine_finalize.py::test_refinalize_no_lesion_drops_prior_lesion
+PASSED tests/test_engine_finalize.py::test_finalize_exports_internal_anatomy_when_available
+PASSED tests/test_engine_finalize.py::test_isolar_orgao_remove_ilha_quando_o_corpo_principal_domina
+PASSED tests/test_engine_finalize.py::test_isolar_orgao_preserva_tudo_quando_o_figado_esta_partido
+PASSED tests/test_engine_finalize.py::test_isolar_orgao_preenche_cavidade_interna
+PASSED tests/test_engine_finalize.py::test_preencher_cavidade_nao_desfaz_a_guarda_do_figado_partido
+PASSED tests/test_engine_finalize.py::test_fonte_da_malha_prefere_uniao_quando_disponivel
+PASSED tests/test_engine_finalize.py::test_fonte_da_malha_so_prefere_shadow_com_receipt_seguro
+PASSED tests/test_engine_finalize.py::test_estagio5_descarta_uniao_com_geometria_divergente
+PASSED tests/test_engine_finalize.py::test_regiao_classificada_so_existe_quando_ha_uniao
+PASSED tests/test_engine_finalize.py::test_regiao_classificada_fica_contida_no_orgao_da_uniao
+PASSED tests/test_engine_finalize.py::test_regiao_classificada_e_removida_quando_a_execucao_deixa_de_ter_uniao
+PASSED tests/test_engine_prepare.py::test_prepare_runs_without_torch
+PASSED tests/test_engine_prepare.py::test_prepare_rejects_wrong_modality
+PASSED tests/test_external_bundle_evaluation.py::test_external_predictions_are_label_blind_and_count_failures
+PASSED tests/test_external_bundle_evaluation.py::test_external_prediction_rejects_training_overlap
+PASSED tests/test_external_bundle_evaluation.py::test_external_prediction_can_bind_exact_label_blind_case_manifest
+PASSED tests/test_external_bundle_evaluation.py::test_external_prediction_rejects_case_manifest_that_is_not_label_blind
+PASSED tests/test_external_bundle_evaluation.py::test_external_evaluation_opens_labels_only_after_valid_freeze
+PASSED tests/test_external_bundle_evaluation.py::test_external_evaluation_rejects_tampered_predictions
+PASSED tests/test_external_signal_diagnostics.py::test_oracle_is_explicitly_non_deployable
+PASSED tests/test_external_signal_diagnostics.py::test_diagnostic_rejects_tampered_predictions
+PASSED tests/test_filter_embedding_dataset.py::test_filter_materializes_exact_hash_bound_subset
+PASSED tests/test_filter_embedding_dataset.py::test_filter_rejects_tampered_candidate_manifest
+PASSED tests/test_filter_embedding_dataset.py::test_filter_rejects_tampered_embedding_file_without_partial_publish
+PASSED tests/test_filter_embedding_dataset.py::test_rebind_reuses_only_identical_candidate_images
+PASSED tests/test_filter_embedding_dataset.py::test_rebind_rejects_changed_image_hash
+PASSED tests/test_gates_extra.py::test_stage3_missing_package_aborts
+PASSED tests/test_gates_extra.py::test_stage3_success_writes_organ_mask
+PASSED tests/test_gates_extra.py::test_stage3_exports_supported_internal_anatomy_without_affecting_liver_gate
+PASSED tests/test_gates_extra.py::test_stage3_never_publishes_partial_required_anatomy
+PASSED tests/test_gates_extra.py::test_stage3_missing_output_aborts
+PASSED tests/test_gates_extra.py::test_stage3_empty_segmentation_aborts
+PASSED tests/test_gates_extra.py::test_stage3_segmentator_raises_aborts
+PASSED tests/test_gates_extra.py::test_minmax_normalization_maps_to_unit_range
+PASSED tests/test_gates_extra.py::test_minmax_no_contrast_aborts
+PASSED tests/test_gates_extra.py::test_lesion_size_mismatch_aborts
+PASSED tests/test_gates_extra.py::test_lesion_outside_organ_warns_but_completes
+PASSED tests/test_gates_extra.py::test_lesion_missing_without_flag_aborts
+PASSED tests/test_gates_extra.py::test_organ_missing_aborts
+PASSED tests/test_gates_extra.py::test_refino_zeroing_organ_aborts
+PASSED tests/test_gates_extra.py::test_refino_zeroing_lesion_aborts
+PASSED tests/test_gates_extra.py::test_empty_organ_mesh_aborts
+PASSED tests/test_gates_extra.py::test_pseudonymize_policy_aborts
+PASSED tests/test_gates_extra.py::test_unknown_policy_aborts
+PASSED tests/test_gates_extra.py::test_anonymize_policy_returns_anon_id
+PASSED tests/test_gates_extra.py::test_stage1_missing_dicom_dir_aborts
+PASSED tests/test_gates_extra.py::test_stage1_no_readable_dicom_aborts
+PASSED tests/test_gates_extra.py::test_stage4a_incomplete_aborts
+PASSED tests/test_gd_eob_hbp_pilot.py::test_pilot_selection_is_deterministic_balanced_and_label_free
+PASSED tests/test_gd_eob_hbp_pilot.py::test_static_gate_rejects_direct_v23_because_dynamic_shape_is_missing
+PASSED tests/test_gd_eob_hcc_external.py::test_public_metadata_is_pinned
+PASSED tests/test_gd_eob_hcc_external.py::test_metadata_rejects_archive_change
+PASSED tests/test_gd_eob_hcc_external.py::test_contract_constants_freeze_hcc_endpoint_without_claiming_healthy
+PASSED tests/test_gd_eob_hcc_external.py::test_case_ids_are_deterministic_and_do_not_expose_source_id
+PASSED tests/test_gd_eob_hcc_external.py::test_archive_classifier_selects_only_220_images
+PASSED tests/test_gd_eob_hcc_external.py::test_archive_classifier_rejects_missing_image
+PASSED tests/test_gd_eob_hcc_external.py::test_archive_classifier_rejects_unclassified_payload
+PASSED tests/test_gd_eob_hcc_external.py::test_archive_classifier_rejects_path_traversal
+PASSED tests/test_gd_eob_hcc_external.py::test_nifti_metadata_accepts_valid_3d_image
+PASSED tests/test_gd_eob_hcc_external.py::test_nifti_metadata_rejects_non_3d_image
+PASSED tests/test_gd_eob_hcc_external.py::test_extract_publishes_only_images_and_keeps_protected_payloads_closed
+PASSED tests/test_gd_eob_hcc_external.py::test_verify_image_collection_rejects_protected_path
+PASSED tests/test_graphify_integration.py::test_graphify_scan_excludes_medical_and_generated_data
+PASSED tests/test_graphify_integration.py::test_graphify_build_is_local_code_only
+PASSED tests/test_graphify_integration.py::test_graphify_install_is_reproducibly_pinned
+PASSED tests/test_graphify_integration.py::test_graphify_is_separate_from_clinical_graphrag
+PASSED tests/test_graphify_integration.py::test_graphify_verifier_blocks_protected_sources[casos/example/panel.py]
+PASSED tests/test_graphify_integration.py::test_graphify_verifier_blocks_protected_sources[data/private/loader.py]
+PASSED tests/test_graphify_integration.py::test_graphify_verifier_blocks_protected_sources[.codex-tmp/graphify-source/graphify/cli.py]
+PASSED tests/test_graphify_integration.py::test_graphify_verifier_blocks_protected_sources[dicoms/case/image.dcm]
+PASSED tests/test_graphify_integration.py::test_graphify_verifier_blocks_protected_sources[artifacts/mesh.nii.gz]
+PASSED tests/test_graphify_integration.py::test_graphify_verifier_allows_clinical_graphrag_source_code
+PASSED tests/test_graphrag_metadata.py::test_ingest_records_creates_schema_and_upserts_records
+PASSED tests/test_graphrag_metadata.py::test_metadata_context_recovers_hard_negative_and_mimic_relation
+PASSED tests/test_graphrag_metadata.py::test_graph_params_do_not_persist_raw_path_or_uid
+PASSED tests/test_graphrag_metadata.py::test_registry_record_rejects_raw_uid_key
+PASSED tests/test_graphrag_metadata.py::test_iter_registry_records_validates_jsonl
+PASSED tests/test_graphrag_metadata.py::test_load_graphrag_config_uses_password_env
+PASSED tests/test_graphrag_metadata.py::test_load_graphrag_config_fails_without_password_env
+PASSED tests/test_learning_candidate_dataset.py::test_build_and_verify_label_blind_candidate_dataset
+PASSED tests/test_learning_candidate_dataset.py::test_builder_rejects_protected_field_in_case_manifest
+PASSED tests/test_learning_candidate_dataset.py::test_verifier_detects_image_tampering
+PASSED tests/test_learning_candidate_dataset.py::test_output_is_immutable
+PASSED tests/test_learning_environment.py::test_environment_report_blocks_busy_gpu
+PASSED tests/test_learning_environment.py::test_environment_report_accepts_free_gpu
+PASSED tests/test_learning_environment.py::test_environment_report_detects_missing_module
+PASSED tests/test_learning_internal_blind_phase_adapter.py::test_resolver_maps_opaque_series_and_returns_safe_provenance
+PASSED tests/test_learning_internal_blind_phase_adapter.py::test_resolver_fails_closed_when_required_phase_is_missing
+PASSED tests/test_learning_internal_blind_phase_adapter.py::test_resolver_fails_closed_on_ambiguous_arterial_phase
+PASSED tests/test_learning_internal_blind_phase_adapter.py::test_resolver_rejects_hash_mismatch
+PASSED tests/test_learning_internal_blind_phase_adapter.py::test_resolver_rejects_additional_unauthenticated_dicom
+PASSED tests/test_learning_internal_blind_phase_adapter.py::test_resolver_rejects_dicom_identity_mismatch_even_with_matching_hash
+PASSED tests/test_learning_internal_blind_phase_adapter.py::test_resolver_rejects_non_authorized_case_identifier
+PASSED tests/test_learning_internal_blind_phase_adapter.py::test_eligibility_preflight_is_label_free_and_separates_incomplete_cases
+PASSED tests/test_learning_late_fusion.py::test_fusion_config_requires_weights_sum_one
+PASSED tests/test_learning_late_fusion.py::test_metrics_count_failures_as_errors
+PASSED tests/test_learning_late_fusion.py::test_metrics_gate_requires_both_axes
+PASSED tests/test_learning_medsiglip_classifier.py::test_panel_probability_aggregations
+PASSED tests/test_learning_medsiglip_classifier.py::test_threshold_selection_uses_failures_as_errors
+PASSED tests/test_learning_medsiglip_classifier.py::test_confusion_counts_negative_failure_as_false_positive
+PASSED tests/test_learning_medsiglip_embeddings.py::test_extract_and_verify_embeddings
+PASSED tests/test_learning_medsiglip_embeddings.py::test_verifier_detects_embedding_tampering
+PASSED tests/test_learning_medsiglip_embeddings.py::test_config_requires_pinned_revision_and_local_files
+PASSED tests/test_learning_medsiglip_head_classifier.py::test_nonlinear_head_keeps_case_boundaries_and_scores
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_requires_inner_only_threshold
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_requires_positive_classes
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_validates_iterative_topk_mil
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_validates_domain_balanced_case_weighting
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_rejects_unsafe_mil_selection[selection0-Modo]
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_rejects_unsafe_mil_selection[selection1-positive_top_k]
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_rejects_unsafe_mil_selection[selection2-limite]
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_build_labels_uses_finest_available_granularity
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_build_labels_rejects_subtype_contradicting_binary_endpoint
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_resolve_positive_classes_matches_protected_polarity
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_resolve_positive_classes_rejects_incomplete_declaration
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_resolve_positive_classes_rejects_absent_class
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_fit_model_requires_both_polarities_present
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_positive_probability_sums_mass_over_positive_classes
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_domain_balanced_case_weighting_trains_with_unequal_domains
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_iterative_topk_mil_learns_from_sparse_positive_instances
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_aggregate_methods
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_confusion_counts_missing_score_as_error_on_correct_axis
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_binary_granularity_collapses_fine_labels
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_build_labels_rejects_unknown_granularity
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_rejects_unknown_granularity_and_empty_restriction
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_validates_label_blind_subtype_probability_options
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_defaults_preserve_unrestricted_clinical_behaviour
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_config_validates_monophase_deployment_contract
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_restrict_splits_keeps_original_fold_membership
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_best_threshold_selected_from_supplied_scores_only
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_cross_validated_scores_cover_each_case_exactly_once
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_case_class_probability_mass_is_label_blind_and_normalized
+PASSED tests/test_learning_medsiglip_multiclass_classifier.py::test_subtype_metrics_count_failure_as_error_and_report_macro_recall
+PASSED tests/test_learning_medsiglip_pairwise_subtype.py::test_pairwise_config_is_fail_closed
+PASSED tests/test_learning_medsiglip_pairwise_subtype.py::test_four_classes_create_exactly_six_pairs
+PASSED tests/test_learning_medsiglip_pairwise_subtype.py::test_pairwise_mass_is_normalized_and_label_blind
+PASSED tests/test_learning_medsiglip_pairwise_subtype.py::test_pairwise_rejects_missing_pair_model
+PASSED tests/test_learning_medsiglip_pairwise_subtype.py::test_macro_recall_counts_missing_embedding_as_error
+PASSED tests/test_learning_medsiglip_pairwise_subtype.py::test_pair_fit_fails_if_training_fold_lacks_a_class
+PASSED tests/test_learning_medsiglip_partial_finetune.py::test_partial_config_is_pinned_and_safe
+PASSED tests/test_learning_medsiglip_partial_finetune.py::test_panel_aggregations_are_deterministic
+PASSED tests/test_learning_medsiglip_partial_finetune.py::test_partial_config_rejects_lesion_mask_access
+PASSED tests/test_learning_monophase_slice_candidates.py::test_public_holdout_contract_is_label_blind_only_without_forbidden_roles
+PASSED tests/test_learning_monophase_slice_candidates.py::test_untyped_manifest_requires_explicit_label_blind_flags
+PASSED tests/test_learning_monophase_slice_candidates.py::test_every_liver_slice_is_selected_exactly_once[indices0]
+PASSED tests/test_learning_monophase_slice_candidates.py::test_every_liver_slice_is_selected_exactly_once[indices1]
+PASSED tests/test_learning_monophase_slice_candidates.py::test_every_liver_slice_is_selected_exactly_once[indices2]
+PASSED tests/test_learning_monophase_slice_candidates.py::test_every_liver_slice_is_selected_exactly_once[indices3]
+PASSED tests/test_learning_monophase_slice_candidates.py::test_every_liver_slice_is_selected_exactly_once[indices4]
+PASSED tests/test_learning_monophase_slice_candidates.py::test_empty_intervals_do_not_create_fake_slices
+PASSED tests/test_learning_monophase_slice_candidates.py::test_bbox_has_margin_and_stays_in_bounds
+PASSED tests/test_learning_monophase_slice_candidates.py::test_window_uses_only_liver_and_is_case_level
+PASSED tests/test_learning_monophase_slice_candidates.py::test_render_is_exact_rgb_grayscale_and_448
+PASSED tests/test_learning_monophase_slice_candidates.py::test_empty_mask_and_degenerate_window_fail_closed
+PASSED tests/test_learning_monophase_subtype_adjudication.py::test_top2_requires_closed_normalized_four_class_space
+PASSED tests/test_learning_monophase_subtype_adjudication.py::test_prompts_reverse_order_and_forbid_cross_phase_claims
+PASSED tests/test_learning_monophase_subtype_adjudication.py::test_balanced_reads_map_letters_back_to_subtypes
+PASSED tests/test_learning_monophase_subtype_adjudication.py::test_inconclusive_or_small_margin_never_names_subtype
+PASSED tests/test_learning_monophase_subtype_adjudication.py::test_fusion_never_promotes_benign_binary_and_exposes_disagreement
+PASSED tests/test_learning_monophase_subtype_adjudication.py::test_fusion_rejects_choice_outside_frozen_top2
+PASSED tests/test_learning_multi_signal_fusion.py::test_load_fusion_config_requires_at_least_two_signals
+PASSED tests/test_learning_multi_signal_fusion.py::test_load_fusion_config_rejects_fixed_weight_selection
+PASSED tests/test_learning_multi_signal_fusion.py::test_load_fusion_config_accepts_valid_config
+PASSED tests/test_learning_multi_signal_fusion.py::test_load_fusion_config_validates_missing_signal_policy
+PASSED tests/test_learning_multi_signal_fusion.py::test_align_signals_intersects_all_sources_and_protected_cases
+PASSED tests/test_learning_multi_signal_fusion.py::test_align_signals_raises_when_no_common_case
+PASSED tests/test_learning_multi_signal_fusion.py::test_feature_vector_is_signed_margin_and_none_on_failure
+PASSED tests/test_learning_multi_signal_fusion.py::test_feature_vector_rejects_case_when_every_signal_is_missing
+PASSED tests/test_learning_multi_signal_fusion.py::test_score_correlation_perfect_positive
+PASSED tests/test_learning_multi_signal_fusion.py::test_score_correlation_none_when_insufficient_overlap
+PASSED tests/test_learning_multi_signal_fusion.py::test_fit_meta_model_rejects_single_class_training_set
+PASSED tests/test_learning_multi_signal_fusion.py::test_fit_meta_model_learns_a_separable_boundary
+PASSED tests/test_learning_multi_signal_fusion.py::test_confusion_counts_technical_failure_as_error_on_correct_axis
+PASSED tests/test_learning_multi_signal_fusion.py::test_best_threshold_prefers_balanced_operating_point
+PASSED tests/test_learning_multi_signal_fusion.py::test_restrict_splits_preserves_fold_membership_and_drops_missing_cases
+PASSED tests/test_learning_multi_signal_fusion.py::test_v23_style_source_loads_via_freeze_schema
+PASSED tests/test_learning_multiphase_ingest.py::test_normalize_phase_name_handles_aliases_accents_and_separators
+PASSED tests/test_learning_multiphase_ingest.py::test_discover_phase_folders_finds_three_phases
+PASSED tests/test_learning_multiphase_ingest.py::test_discover_phase_folders_tolerates_wrapper_directory
+PASSED tests/test_learning_multiphase_ingest.py::test_discover_phase_folders_requires_all_three
+PASSED tests/test_learning_multiphase_ingest.py::test_discover_phase_folders_fails_closed_on_ambiguity
+PASSED tests/test_learning_multiphase_ingest.py::test_discover_phase_folders_ignores_empty_phase_folder
+PASSED tests/test_learning_multiphase_ingest.py::test_squeeze_collapses_trailing_singleton_preserving_geometry
+PASSED tests/test_learning_multiphase_ingest.py::test_squeeze_is_noop_for_plain_3d_image
+PASSED tests/test_learning_multiphase_ingest.py::test_squeeze_rejects_multiple_temporal_volumes
+PASSED tests/test_learning_multiphase_ingest.py::test_harmonize_resamples_onto_reference_grid_with_full_coverage
+PASSED tests/test_learning_multiphase_ingest.py::test_harmonize_flags_acquisition_covering_smaller_physical_extent
+PASSED tests/test_learning_multiphase_ingest.py::test_harmonize_reports_low_coverage_for_disjoint_acquisition
+PASSED tests/test_learning_multiphase_ingest.py::test_build_multiphase_case_rejects_low_coverage
+PASSED tests/test_learning_multiphase_ingest.py::test_build_multiphase_case_produces_panel_ready_inputs
+PASSED tests/test_learning_multiphase_ingest.py::test_build_multiphase_case_requires_segmentation_outputs
+PASSED tests/test_learning_multiphase_ingest.py::test_build_multiphase_case_accepts_explicit_authorized_phase_mapping
+PASSED tests/test_learning_multiphase_ingest.py::test_build_multiphase_case_rejects_incomplete_explicit_mapping
+PASSED tests/test_learning_patch25d_classifier.py::test_candidate_aggregations
+PASSED tests/test_learning_patch25d_classifier.py::test_failures_count_as_case_errors
+PASSED tests/test_learning_patch25d_classifier.py::test_inner_threshold_balances_axes
+PASSED tests/test_learning_patch25d_classifier.py::test_candidate_fit_preserves_non_sequential_localized_ids
+PASSED tests/test_learning_patch25d_dataset.py::test_top_components_are_ordered_by_volume_and_limited
+PASSED tests/test_learning_patch25d_dataset.py::test_patch_render_is_deterministic_448_rgb_without_overlay
+PASSED tests/test_learning_protocol.py::test_freeze_and_verify_protocol
+PASSED tests/test_learning_protocol.py::test_freeze_is_immutable
+PASSED tests/test_learning_protocol.py::test_verifier_detects_label_source_change
+PASSED tests/test_learning_protocol.py::test_source_outside_workspace_is_rejected
+PASSED tests/test_learning_radiomics_classifier.py::test_negative_technical_failure_counts_as_false_positive
+PASSED tests/test_learning_radiomics_classifier.py::test_threshold_is_selected_without_dropping_failures
+PASSED tests/test_learning_radiomics_classifier.py::test_elastic_net_pipeline_selects_features_inside_fit
+PASSED tests/test_learning_radiomics_classifier.py::test_training_requires_two_classes
+PASSED tests/test_learning_radiomics_features.py::test_multiphase_features_are_deterministic_and_finite
+PASSED tests/test_learning_radiomics_features.py::test_geometry_mismatch_is_rejected
+PASSED tests/test_learning_radiomics_features.py::test_small_mask_is_rejected
+PASSED tests/test_learning_radiomics_features.py::test_missing_phase_is_rejected
+PASSED tests/test_learning_robustness.py::test_leave_one_dataset_out_splits_metrics_by_dataset
+PASSED tests/test_learning_robustness.py::test_bootstrap_resamples_by_patient_group_not_by_case
+PASSED tests/test_learning_robustness.py::test_bootstrap_is_deterministic_given_same_seed
+PASSED tests/test_learning_robustness.py::test_subgroup_metrics_reports_honest_coverage_when_subtypes_missing
+PASSED tests/test_learning_robustness.py::test_subgroup_metrics_breaks_down_by_declared_subtype_and_tag
+PASSED tests/test_learning_robustness.py::test_metrics_for_counts_technical_failure_as_error
+PASSED tests/test_learning_robustness.py::test_clinical_subtype_map_reads_cohort_specific_field
+PASSED tests/test_learning_robustness.py::test_clinical_subtype_metrics_separates_mimickers_and_picks_right_axis
+PASSED tests/test_learning_robustness.py::test_clinical_subtype_metrics_reports_partial_coverage
+PASSED tests/test_learning_schemas.py::test_protected_case_validates_target_taxonomy
+PASSED tests/test_learning_schemas.py::test_positive_rejects_negative_subtype
+PASSED tests/test_learning_schemas.py::test_label_blind_guard_rejects_protected_fields[record0]
+PASSED tests/test_learning_schemas.py::test_label_blind_guard_rejects_protected_fields[record1]
+PASSED tests/test_learning_schemas.py::test_label_blind_guard_rejects_protected_fields[record2]
+PASSED tests/test_learning_schemas.py::test_label_blind_guard_rejects_protected_fields[record3]
+PASSED tests/test_learning_schemas.py::test_label_blind_guard_accepts_image_provenance
+PASSED tests/test_learning_splits.py::test_nested_splits_are_deterministic_and_label_free
+PASSED tests/test_learning_splits.py::test_each_case_is_external_test_exactly_once
+PASSED tests/test_learning_splits.py::test_patient_group_never_crosses_external_boundary
+PASSED tests/test_learning_splits.py::test_conflicting_patient_labels_are_rejected
+PASSED tests/test_learning_splits.py::test_validation_rejects_external_leakage
+PASSED tests/test_learning_visual_benchmark.py::test_out_of_sample_only_in_headline_and_in_sample_separated
+PASSED tests/test_learning_visual_benchmark.py::test_case_failure_becomes_technical_error_not_fabricated_decision
+PASSED tests/test_learning_visual_benchmark.py::test_all_in_sample_has_no_out_of_sample_headline
+PASSED tests/test_learning_visual_benchmark.py::test_unknown_provenance_never_enters_the_headline
+PASSED tests/test_learning_visual_benchmark.py::test_provenance_map_rescues_unknown_into_a_verdict
+PASSED tests/test_learning_visual_benchmark.py::test_empty_cases_rejected
+PASSED tests/test_learning_visual_inference.py::test_load_bundle_rejects_tampered_manifest
+PASSED tests/test_learning_visual_inference.py::test_load_bundle_rejects_tampered_model
+PASSED tests/test_learning_visual_inference.py::test_classify_embeddings_uses_positive_mass_aggregation_and_threshold
+PASSED tests/test_learning_visual_inference.py::test_classify_rejects_empty_embeddings
+PASSED tests/test_learning_visual_inference.py::test_in_sample_status_matches_by_case_or_group
+PASSED tests/test_learning_visual_inference.py::test_foreign_namespace_is_unknown_not_out_of_sample
+PASSED tests/test_learning_visual_inference.py::test_provenance_map_resolves_foreign_identifier
+PASSED tests/test_learning_visual_inference.py::test_partition_separates_three_states
+PASSED tests/test_liver_mask_phase_fusion.py::test_majority_requires_two_phases
+PASSED tests/test_liver_mask_phase_fusion.py::test_guarded_union_fills_internal_hole_and_rejects_far_island
+PASSED tests/test_liver_mask_phase_fusion.py::test_venous_fill_uses_only_venous_and_fills_hole
+PASSED tests/test_liver_mask_phase_fusion.py::test_rejects_missing_phase_and_unknown_policy
+PASSED tests/test_liver_mask_phase_fusion.py::test_verify_detects_changed_mask
+PASSED tests/test_liver_segmentation_comparison.py::test_perfect_segmentation_metrics_are_exact
+PASSED tests/test_liver_segmentation_comparison.py::test_shifted_segmentation_has_surface_and_overlap_penalty
+PASSED tests/test_liver_segmentation_comparison.py::test_multiclass_prediction_uses_configured_liver_label
+PASSED tests/test_liver_segmentation_comparison.py::test_evaluator_generates_results_and_gallery_without_touching_cases
+PASSED tests/test_liver_segmentation_comparison.py::test_required_prediction_missing_fails_closed
+PASSED tests/test_liver_segmentation_comparison.py::test_evaluator_refuses_overwrite
+PASSED tests/test_liverhccseg_labels.py::test_reads_subject_level_tumor_status_without_openpyxl
+PASSED tests/test_liverhccseg_labels.py::test_filter_excludes_non_tumor_without_calling_it_negative
+PASSED tests/test_liverhccseg_labels.py::test_metadata_hash_and_counts_fail_closed
+PASSED tests/test_liverhccseg_labels.py::test_registry_unknown_subject_fails_and_outputs_are_atomic
+PASSED tests/test_liverhccseg_preparation.py::test_preparation_copies_only_registered_phases_and_liver_mask
+PASSED tests/test_liverhccseg_preparation.py::test_preparation_resamples_geometry_mismatch_to_arterial_grid
+PASSED tests/test_liverhccseg_preparation.py::test_preparation_rejects_phase_without_liver_support_atomically
+PASSED tests/test_liverhccseg_preparation.py::test_preparation_rejects_bad_audit_and_overwrite
+PASSED tests/test_liverhccseg_preparation.py::test_preflight_verifies_complete_prepared_bundle
+PASSED tests/test_liverhccseg_preparation.py::test_preflight_rejects_tampered_phase
+PASSED tests/test_liverhccseg_v21_panels.py::test_validate_config_requires_uniform9_choice_4b
+PASSED tests/test_liverhccseg_v21_panels.py::test_case_files_rejects_lesion_filename
+PASSED tests/test_liverhccseg_v21_panels.py::test_gallery_is_label_blind_and_checks_hashes
+PASSED tests/test_liverhccseg_v21_panels.py::test_gallery_rejects_changed_panel
+PASSED tests/test_liverhccseg_v21_review.py::test_review_requires_explicit_approval
+PASSED tests/test_liverhccseg_v21_review.py::test_signed_review_roundtrip
+PASSED tests/test_liverhccseg_v21_review.py::test_review_detects_panel_change
+PASSED tests/test_liverhccseg_v21_review.py::test_review_detects_signature_tampering
+PASSED tests/test_liverhccseg_v21_signals.py::test_medgemma_stage_persists_uncertainty_margin_without_decision
+PASSED tests/test_liverhccseg_v21_signals.py::test_medsiglip_stage_persists_inverse_sagittal_without_decision
+PASSED tests/test_liverhccseg_v21_signals.py::test_medgemma_stage_rejects_non_normalized_probabilities
+PASSED tests/test_liverhccseg_v21_signals.py::test_assemble_builds_exact_three_signals_and_time_gate
+PASSED tests/test_lld_mmri_v23_direct_timing.py::test_direct_timing_requires_exact_prediction_reproduction
+PASSED tests/test_lld_mmri_v23_direct_timing.py::test_direct_timing_rejects_changed_prediction
+PASSED tests/test_lld_mmri_v23_direct_timing.py::test_direct_timing_requires_all_stage_receipts
+PASSED tests/test_lld_mmri_v23_direct_timing.py::test_direct_timing_runs_only_eligible_cases_and_binds_failures
+PASSED tests/test_lld_mmri_v23_direct_timing.py::test_direct_timing_resumes_after_interruption_without_repeating_case
+PASSED tests/test_lld_mmri_v23_download.py::test_selects_exactly_eight_images_and_no_labels
+PASSED tests/test_lld_mmri_v23_download.py::test_missing_phase_fails_closed
+PASSED tests/test_lld_mmri_v23_download.py::test_duplicate_phase_fails_closed
+PASSED tests/test_lld_mmri_v23_download.py::test_download_requires_explicit_license_acceptance
+PASSED tests/test_lld_mmri_v23_download.py::test_download_and_verify_complete_image_only_manifest
+PASSED tests/test_lld_mmri_v23_download.py::test_verifier_rejects_tampered_image
+PASSED tests/test_lld_mmri_v23_download.py::test_parallel_download_preserves_frozen_case_order
+PASSED tests/test_lld_mmri_v23_download.py::test_download_rejects_unsafe_worker_count[0]
+PASSED tests/test_lld_mmri_v23_download.py::test_download_rejects_unsafe_worker_count[17]
+PASSED tests/test_lld_mmri_v23_download.py::test_download_rejects_unsafe_worker_count[True]
+PASSED tests/test_lld_mmri_v23_evaluation.py::test_requires_explicit_label_authorization
+PASSED tests/test_lld_mmri_v23_evaluation.py::test_reports_accuracy_but_does_not_qualify_without_end_to_end_time
+PASSED tests/test_lld_mmri_v23_evaluation.py::test_technical_failure_counts_as_error_without_fabricated_prediction
+PASSED tests/test_lld_mmri_v23_evaluation.py::test_auc_is_explicitly_unavailable_when_failures_remove_one_truth_class
+PASSED tests/test_lld_mmri_v23_evaluation.py::test_qualifies_only_with_signed_direct_end_to_end_timing
+PASSED tests/test_lld_mmri_v23_evaluation.py::test_valid_timing_over_budget_fails_gate_without_invalidating_evidence
+PASSED tests/test_lld_mmri_v23_evaluation.py::test_rejects_prediction_tampering_before_label_parse
+PASSED tests/test_lld_mmri_v23_external.py::test_lld_case_id_is_deterministic_and_anonymous
+PASSED tests/test_lld_mmri_v23_full_fov_review.py::test_full_fov_review_roundtrip_and_exact_sources
+PASSED tests/test_lld_mmri_v23_full_fov_review.py::test_full_fov_review_refuses_missing_approval
+PASSED tests/test_lld_mmri_v23_full_fov_review.py::test_full_fov_review_detects_changed_gallery_image
+PASSED tests/test_lld_mmri_v23_full_fov_review.py::test_full_fov_review_detects_changed_html
+PASSED tests/test_lld_mmri_v23_full_fov_timing.py::test_timing_protocol_requires_signed_review
+PASSED tests/test_lld_mmri_v23_full_fov_timing.py::test_timing_protocol_roundtrip_and_tamper_detection
+PASSED tests/test_lld_mmri_v23_full_fov_timing.py::test_timing_runner_calls_three_panels_sequentially_and_aggregates
+PASSED tests/test_lld_mmri_v23_full_fov_timing.py::test_timing_runner_refuses_tampered_persisted_case
+PASSED tests/test_lld_mmri_v23_full_fov_timing.py::test_timing_protocol_refuses_non_180_limit
+PASSED tests/test_lld_mmri_v23_geometry_audit.py::test_geometry_audit_passes_complete_label_blind_case
+PASSED tests/test_lld_mmri_v23_geometry_audit.py::test_geometry_audit_freezes_failure_before_segmentation
+PASSED tests/test_lld_mmri_v23_harmonization.py::test_harmonizes_only_mismatched_dynamic_phase
+PASSED tests/test_lld_mmri_v23_harmonization.py::test_verifier_rejects_tampered_harmonized_phase
+PASSED tests/test_lld_mmri_v23_liver_enriched_evaluation.py::test_score_uses_maximum_positive_panel_probability
+PASSED tests/test_lld_mmri_v23_liver_enriched_evaluation.py::test_invalid_choice_probabilities_are_rejected[value0]
+PASSED tests/test_lld_mmri_v23_liver_enriched_evaluation.py::test_invalid_choice_probabilities_are_rejected[value1]
+PASSED tests/test_lld_mmri_v23_liver_enriched_evaluation.py::test_invalid_choice_probabilities_are_rejected[value2]
+PASSED tests/test_lld_mmri_v23_liver_enriched_evaluation.py::test_freeze_verify_and_evaluate_penalizes_failures_and_inconclusive
+PASSED tests/test_lld_mmri_v23_liver_enriched_evaluation.py::test_prediction_tampering_is_detected_before_labels_are_read
+PASSED tests/test_lld_mmri_v23_liver_enriched_full_verification.py::test_full_verifier_recomputes_every_contract
+PASSED tests/test_lld_mmri_v23_liver_enriched_full_verification.py::test_full_verifier_rejects_axial_interleaving_tamper
+PASSED tests/test_lld_mmri_v23_liver_enriched_full_verification.py::test_full_verifier_rejects_png_metadata
+PASSED tests/test_lld_mmri_v23_liver_enriched_full_verification.py::test_full_verifier_rejects_panel_byte_tamper
+PASSED tests/test_lld_mmri_v23_liver_enriched_review.py::test_liver_enriched_review_roundtrip
+PASSED tests/test_lld_mmri_v23_liver_enriched_review.py::test_liver_enriched_review_requires_explicit_approval
+PASSED tests/test_lld_mmri_v23_liver_enriched_review.py::test_liver_enriched_review_detects_changed_panel
+PASSED tests/test_lld_mmri_v23_liver_enriched_review.py::test_liver_enriched_review_detects_changed_html
+PASSED tests/test_lld_mmri_v23_liver_enriched_timing.py::test_liver_enriched_protocol_requires_review
+PASSED tests/test_lld_mmri_v23_liver_enriched_timing.py::test_liver_enriched_protocol_freezes_variable_panel_counts
+PASSED tests/test_lld_mmri_v23_liver_enriched_timing.py::test_liver_enriched_protocol_detects_panel_count_tamper
+PASSED tests/test_lld_mmri_v23_liver_enriched_timing.py::test_liver_enriched_protocol_refuses_non_180_limit
+PASSED tests/test_lld_mmri_v23_liver_enriched_timing.py::test_runner_uses_three_and_two_panels_and_aggregates
+PASSED tests/test_lld_mmri_v23_liver_enriched_timing.py::test_runner_refuses_tampered_persisted_report
+PASSED tests/test_lld_mmri_v23_liver_enriched_timing.py::test_runner_intermediate_failure_has_no_final_report
+PASSED tests/test_lld_mmri_v23_mask_quality.py::test_gate_accepts_plausible_connected_liver
+PASSED tests/test_lld_mmri_v23_mask_quality.py::test_gate_rejects_tiny_fragmented_mask
+PASSED tests/test_lld_mmri_v23_mask_quality.py::test_gated_segmenter_removes_small_remote_island
+PASSED tests/test_lld_mmri_v23_mask_quality.py::test_gated_segmenter_deletes_rejected_mask
+PASSED tests/test_lld_mmri_v23_panels.py::test_builds_uniform9_panels_pending_human_review
+PASSED tests/test_lld_mmri_v23_panels.py::test_gallery_is_label_blind_and_immutable
+PASSED tests/test_lld_mmri_v23_panels.py::test_panel_generation_resumes_from_durable_case_checkpoint
+PASSED tests/test_lld_mmri_v23_preparation.py::test_isolated_segmenter_returns_receipt_and_output
+PASSED tests/test_lld_mmri_v23_preparation.py::test_isolated_segmenter_hard_timeout_removes_partial_output
+PASSED tests/test_lld_mmri_v23_preparation.py::test_preparation_checkpoint_recovers_last_fsynced_backup
+PASSED tests/test_lld_mmri_v23_preparation.py::test_preparation_checkpoint_retries_transient_windows_reader_lock
+PASSED tests/test_lld_mmri_v23_preparation.py::test_real_segmenter_uses_isolated_ephemeral_totalseg_config
+PASSED tests/test_lld_mmri_v23_preparation.py::test_real_segmenter_restores_environment_after_totalseg_failure
+PASSED tests/test_lld_mmri_v23_preparation.py::test_dedicated_mr_segments_segmenter_unions_all_eight_classes
+PASSED tests/test_lld_mmri_v23_preparation.py::test_prepares_eight_phases_and_only_automatic_liver_mask
+PASSED tests/test_lld_mmri_v23_preparation.py::test_preparation_reuses_only_verified_complete_segmentation_audit
+PASSED tests/test_lld_mmri_v23_preparation.py::test_dynamic_t1_geometry_mismatch_aborts_atomically
+PASSED tests/test_lld_mmri_v23_preparation.py::test_preparation_accepts_only_verified_harmonization_after_failed_audit
+PASSED tests/test_lld_mmri_v23_preparation.py::test_partial_fov_requires_signed_amendment_and_is_persisted
+PASSED tests/test_lld_mmri_v23_preparation.py::test_preparation_excludes_signed_technical_failure_but_preserves_error_contract
+PASSED tests/test_lld_mmri_v23_preparation.py::test_invalid_automatic_liver_mask_aborts_atomically
+PASSED tests/test_lld_mmri_v23_preparation.py::test_preparation_refuses_overwrite
+PASSED tests/test_lld_mmri_v23_preparation.py::test_preparation_verifier_rejects_tampered_phase
+PASSED tests/test_lld_mmri_v23_review.py::test_creates_and_verifies_all_case_review
+PASSED tests/test_lld_mmri_v23_review.py::test_review_requires_explicit_approval
+PASSED tests/test_lld_mmri_v23_review.py::test_review_rejects_changed_gallery_image
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_pilot_is_label_blind_and_never_inference_eligible
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_pilot_rejects_non_frozen_selection_size
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_checkpoint_writer_keeps_last_valid_generation
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_audit_rejects_case_count_above_frozen_cohort
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_invalid_primary_mask_uses_fast_fallback_and_records_both_attempts
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_primary_and_fallback_failure_aborts_without_checkpointing_case
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_full_audit_can_record_technical_failure_and_continue
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_checkpoint_with_technical_failure_resumes_without_requiring_mask
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_full_audit_checkpoints_failure_and_resumes_without_resegmenting_first_case
+PASSED tests/test_lld_mmri_v23_segmentation_pilot.py::test_lowest_coverage_selection_is_label_blind_and_deterministic
+PASSED tests/test_lld_mmri_v23_shape.py::test_candidate_shape_uses_frozen_t3_top5_branch
+PASSED tests/test_lld_mmri_v23_shape.py::test_candidate_shape_rejects_dynamic_geometry_mismatch
+PASSED tests/test_lld_mmri_v23_shape.py::test_shape_branch_persists_label_blind_features
+PASSED tests/test_lld_mmri_v23_signals.py::test_signal_context_is_review_gated_and_model_exact
+PASSED tests/test_lld_mmri_v23_signals.py::test_localizer_manifest_contains_only_venous_and_automatic_liver_mask
+PASSED tests/test_lld_mmri_v23_technical_amendment.py::test_freezes_partial_fov_policy_before_predictions
+PASSED tests/test_lld_mmri_v23_technical_amendment.py::test_amendment_rejects_incomplete_venous_reference
+PASSED tests/test_lld_mmri_v23_technical_amendment.py::test_amendment_binds_technical_failures_without_treating_them_as_support
+PASSED tests/test_lld_mmri_v23_technical_amendment.py::test_amendment_rejects_failure_with_fabricated_mask_evidence
+PASSED tests/test_localized_candidate_features.py::test_localized_dynamic_feature_contract_is_fixed_and_finite
+PASSED tests/test_localized_candidate_supervision.py::test_localized_boxes_cover_every_automatic_voxel_deterministically
+PASSED tests/test_localized_candidate_supervision.py::test_localized_boxes_remain_inside_small_volume
+PASSED tests/test_localized_candidate_supervision.py::test_lesion_target_corresponds_to_visible_box_content
+PASSED tests/test_localized_candidate_supervision.py::test_invalid_visible_slice_contract_fails_closed[0]
+PASSED tests/test_localized_candidate_supervision.py::test_invalid_visible_slice_contract_fails_closed[2]
+PASSED tests/test_localized_candidate_supervision.py::test_invalid_visible_slice_contract_fails_closed[4]
+PASSED tests/test_localized_candidate_supervision.py::test_empty_automatic_component_is_rejected
+PASSED tests/test_localized_candidate_supervision.py::test_rendered_localized_patch_contains_seven_dynamic_tiles_without_metadata
+PASSED tests/test_medgemma_client.py::test_json_retry_preserves_v1_and_v2_schema_boundaries
+PASSED tests/test_medgemma_client.py::test_default_config_uses_medgemma_15_4b
+PASSED tests/test_medgemma_client.py::test_config_switches_to_27b_without_code_change
+PASSED tests/test_medgemma_client.py::test_environment_can_override_model_and_endpoint
+PASSED tests/test_medgemma_client.py::test_environment_can_override_response_validation_retries
+PASSED tests/test_medgemma_client.py::test_invalid_numeric_environment_override_is_pipeline_error
+PASSED tests/test_medgemma_client.py::test_prompt_contains_research_states_and_human_review
+PASSED tests/test_medgemma_client.py::test_rag_config_is_explicit_and_versioned
+PASSED tests/test_medgemma_client.py::test_volumetric_rag_config_preserves_volumetric_strategy
+PASSED tests/test_medgemma_client.py::test_pathology_target_volumetric_config_uses_4b_safe_limits
+PASSED tests/test_medgemma_client.py::test_fast_pathology_config_is_prefilled_single_panel_and_no_retry
+PASSED tests/test_medgemma_client.py::test_compact_classification_expands_to_legacy_report_without_clinical_invention
+PASSED tests/test_medgemma_client.py::test_compact_positive_without_suspicious_lesion_is_rejected
+PASSED tests/test_medgemma_client.py::test_compact_placeholder_evidence_is_rejected
+PASSED tests/test_medgemma_client.py::test_prefilled_http_request_generates_only_the_label_object
+PASSED tests/test_medgemma_client.py::test_prefilled_label_rejects_extra_model_fields
+PASSED tests/test_medgemma_client.py::test_prefilled_label_accepts_only_safe_minimal_fields
+PASSED tests/test_medgemma_client.py::test_pathology_target_configs_preserve_volumetric_strategy_and_target_prompt
+PASSED tests/test_medgemma_client.py::test_rag_config_rejects_absolute_or_parent_paths
+PASSED tests/test_medgemma_client.py::test_report_accepts_only_the_three_defined_states[POSITIVA]
+PASSED tests/test_medgemma_client.py::test_report_accepts_only_the_three_defined_states[NEGATIVA]
+PASSED tests/test_medgemma_client.py::test_report_accepts_only_the_three_defined_states[INCONCLUSIVA]
+PASSED tests/test_medgemma_client.py::test_report_rejects_unknown_state
+PASSED tests/test_medgemma_client.py::test_parser_recovers_english_and_cased_state
+PASSED tests/test_medgemma_client.py::test_parser_recovers_confidence_locale_and_case
+PASSED tests/test_medgemma_client.py::test_parser_coerces_string_list_field_and_drops_extras
+PASSED tests/test_medgemma_client.py::test_report_v2_accepts_negative_benign_variant_and_preserves_fields
+PASSED tests/test_medgemma_client.py::test_report_v2_rejects_positive_without_suspicious_lesion_flag
+PASSED tests/test_medgemma_client.py::test_report_v2_rejects_invalid_non_target_type
+PASSED tests/test_medgemma_client.py::test_parser_still_blocks_diagnosis_after_normalization
+PASSED tests/test_medgemma_client.py::test_parser_still_rejects_untranslatable_state
+PASSED tests/test_medgemma_client.py::test_report_always_requires_human_review
+PASSED tests/test_medgemma_client.py::test_report_rejects_definitive_diagnosis
+PASSED tests/test_medgemma_client.py::test_report_extracts_single_fenced_json_after_model_reasoning
+PASSED tests/test_medgemma_client.py::test_backend_not_configured_aborts_clearly
+PASSED tests/test_medgemma_client.py::test_unavailable_27b_aborts_clearly
+PASSED tests/test_medgemma_client.py::test_http_adapter_sends_contract_and_validates_echoed_model
+PASSED tests/test_medgemma_client.py::test_http_adapter_retries_invalid_schema_with_strict_prompt
+PASSED tests/test_medgemma_client.py::test_http_adapter_uses_distinct_compact_retries_when_json_is_missing
+PASSED tests/test_medgemma_client.py::test_http_adapter_retries_v2_inconsistent_report
+PASSED tests/test_medgemma_client.py::test_http_adapter_fails_after_schema_retry_is_exhausted
+PASSED tests/test_medgemma_client.py::test_http_adapter_discards_response_from_wrong_model
+PASSED tests/test_medgemma_panel.py::test_panel_generates_11_views_without_phi_metadata_or_lesion
+PASSED tests/test_medgemma_panel.py::test_panel_rejects_volume_that_does_not_match_case_manifest
+PASSED tests/test_medgemma_panel.py::test_panel_fails_if_volume_does_not_exist
+PASSED tests/test_medgemma_panel.py::test_panel_fails_if_mask_does_not_exist
+PASSED tests/test_medgemma_panel.py::test_panel_fails_on_incompatible_geometry
+PASSED tests/test_medgemma_panel.py::test_panel_fails_on_empty_mask
+PASSED tests/test_medgemma_panel.py::test_panel_fails_with_too_few_liver_slices
+PASSED tests/test_medgemma_panel.py::test_panel_rejects_non_anonymous_case
+PASSED tests/test_medgemma_panel.py::test_fast_panel_crops_to_liver_without_artificial_contour
+PASSED tests/test_medgemma_panel_full_fov.py::test_full_fov_panel_is_mask_independent_and_systematic
+PASSED tests/test_medgemma_panel_full_fov.py::test_full_fov_api_has_no_mask_parameter
+PASSED tests/test_medgemma_panel_full_fov.py::test_full_fov_three_panels_use_27_distinct_planes_and_deterministic_names
+PASSED tests/test_medgemma_panel_full_fov.py::test_full_fov_three_panel_api_has_no_mask_parameter
+PASSED tests/test_medgemma_panel_liver_enriched.py::test_stable_localizer_creates_three_interleaved_full_range_panels
+PASSED tests/test_medgemma_panel_liver_enriched.py::test_weak_localizer_creates_two_mask_independent_interleaved_panels
+PASSED tests/test_medgemma_panel_liver_enriched.py::test_renderer_uses_mask_only_for_localization_and_never_renders_it
+PASSED tests/test_medgemma_panel_liver_enriched.py::test_hbp_single_phase_is_replicated_as_grayscale_without_dynamic_claim
+PASSED tests/test_medgemma_panel_liver_enriched.py::test_renderer_api_does_not_accept_lesion_or_ground_truth
+PASSED tests/test_medgemma_panel_multiphase.py::test_multiphase_config_validates_and_is_fusion_mode
+PASSED tests/test_medgemma_panel_multiphase.py::test_lld_v23_config_enables_only_explicit_partial_fov_fallback
+PASSED tests/test_medgemma_panel_multiphase.py::test_single_phase_config_still_validates
+PASSED tests/test_medgemma_panel_multiphase.py::test_multiphase_generates_11_rgb_views_without_phi_or_lesion
+PASSED tests/test_medgemma_panel_multiphase.py::test_lld_short_liver_uses_blank_tiles_without_duplicating_slices
+PASSED tests/test_medgemma_panel_multiphase.py::test_default_multiphase_still_rejects_short_liver
+PASSED tests/test_medgemma_panel_multiphase.py::test_multiphase_fails_when_a_required_phase_is_missing
+PASSED tests/test_medgemma_panel_multiphase.py::test_multiphase_fails_on_incompatible_phase_geometry
+PASSED tests/test_medgemma_panel_multiphase.py::test_partial_fov_requires_explicit_safe_policy
+PASSED tests/test_medgemma_panel_multiphase.py::test_partial_fov_uses_venous_grayscale_and_records_audit
+PASSED tests/test_medgemma_panel_multiphase.py::test_config_rejects_multiphase_without_channel_map
+PASSED tests/test_medgemma_screening.py::test_panel_only_never_creates_fake_report
+PASSED tests/test_medgemma_screening.py::test_full_flow_persists_traceable_pending_review_report
+PASSED tests/test_medgemma_screening.py::test_new_inference_clears_stale_success_failure_and_rag_artifacts
+PASSED tests/test_medgemma_screening.py::test_full_flow_persists_response_validation_audit_without_raw_response
+PASSED tests/test_medgemma_screening.py::test_full_flow_with_rag_persists_context_and_prompt_audit
+PASSED tests/test_medgemma_screening.py::test_full_flow_requires_visible_phi_confirmation
+PASSED tests/test_medgemma_screening.py::test_real_client_path_aborts_without_backend
+PASSED tests/test_medgemma_screening.py::test_cli_case_dir_resolves_safe_case_paths
+PASSED tests/test_medgemma_screening.py::test_aggregation_any_positive_wins_with_its_confidence
+PASSED tests/test_medgemma_screening.py::test_aggregation_inconclusive_when_no_positive
+PASSED tests/test_medgemma_screening.py::test_aggregation_negative_only_when_all_negative_preserves_per_panel
+PASSED tests/test_medgemma_screening.py::test_aggregation_preserves_v2_pathology_target_flags
+PASSED tests/test_medgemma_screening.py::test_aggregation_of_mixed_v1_v2_panels_does_not_invent_v2_flags
+PASSED tests/test_medgemma_screening.py::test_volumetric_calls_model_once_per_panel_and_aggregates
+PASSED tests/test_medgemma_screening.py::test_volumetric_single_positive_panel_makes_case_positive
+PASSED tests/test_medgemma_screening.py::test_volumetric_technical_failure_in_middle_panel_fails_whole_case
+PASSED tests/test_medgemma_screening.py::test_authoritative_panels_rejects_hash_mismatch
+PASSED tests/test_medgemma_screening.py::test_authoritative_panels_rejects_failed_coverage_gate
+PASSED tests/test_medgemma_screening.py::test_baseline_uniform_9_still_produces_single_legacy_panel
+PASSED tests/test_medgemma_server.py::test_local_gateway_health_and_contract
+PASSED tests/test_medgemma_server.py::test_local_gateway_forwards_restricted_json_response_prefix
+PASSED tests/test_medgemma_server.py::test_local_gateway_scores_only_authorized_choices
+PASSED tests/test_medgemma_server.py::test_balanced_choice_rotates_every_label_through_every_code
+PASSED tests/test_medgemma_server.py::test_local_gateway_forwards_balanced_semantic_choices
+PASSED tests/test_medgemma_server.py::test_local_gateway_rejects_wrong_model
+PASSED tests/test_medgemma_server.py::test_local_gateway_rejects_non_png_payload
+PASSED tests/test_medgemma_spotlight.py::test_attenuation_preserves_liver_and_dims_only_context
+PASSED tests/test_medgemma_spotlight.py::test_attenuation_rejects_invalid_fraction[-0.01]
+PASSED tests/test_medgemma_spotlight.py::test_attenuation_rejects_invalid_fraction[0.51]
+PASSED tests/test_medgemma_spotlight.py::test_attenuation_rejects_invalid_fraction[True]
+PASSED tests/test_medgemma_spotlight.py::test_attenuation_rejects_invalid_fraction[0.1]
+PASSED tests/test_medgemma_spotlight.py::test_spotlight_panel_is_deterministic_and_has_no_metadata_or_yellow_contour
+PASSED tests/test_medgemma_volume_score_server.py::test_volume_score_endpoint_is_isolated_and_auditable
+PASSED tests/test_medgemma_volume_score_server.py::test_volume_score_contract_forbids_arbitrary_choices_prefix_and_phi
+PASSED tests/test_medgemma_volume_score_server.py::test_volume_score_endpoint_enforces_model_count_and_png_limits
+PASSED tests/test_medgemma_volume_score_server.py::test_score_volume_uses_one_restricted_next_token_softmax
+PASSED tests/test_medgemma_volume_score_server.py::test_score_volume_rejects_duplicate_first_tokens_and_nonfinite_logits
+PASSED tests/test_medgemma_volume_server.py::test_volume_messages_follow_official_interleaving
+PASSED tests/test_medgemma_volume_server.py::test_volume_endpoint_accepts_five_ordered_pngs
+PASSED tests/test_medgemma_volume_server.py::test_volume_endpoint_enforces_five_to_eighty_five_images
+PASSED tests/test_medgemma_volume_server.py::test_volume_endpoint_rejects_non_png_and_over_512
+PASSED tests/test_medgemma_volume_server.py::test_volume_endpoint_forbids_phi_bearing_extra_fields
+PASSED tests/test_medgemma_volume_server.py::test_volume_endpoint_rejects_wrong_model
+PASSED tests/test_medgemma_volume_server.py::test_volume_endpoint_enforces_aggregate_pixel_limit
+PASSED tests/test_medgemma_volumetric.py::test_panel_count_scales_without_upper_limit[1-1]
+PASSED tests/test_medgemma_volumetric.py::test_panel_count_scales_without_upper_limit[5-1]
+PASSED tests/test_medgemma_volumetric.py::test_panel_count_scales_without_upper_limit[9-1]
+PASSED tests/test_medgemma_volumetric.py::test_panel_count_scales_without_upper_limit[10-2]
+PASSED tests/test_medgemma_volumetric.py::test_panel_count_scales_without_upper_limit[36-4]
+PASSED tests/test_medgemma_volumetric.py::test_panel_count_scales_without_upper_limit[37-5]
+PASSED tests/test_medgemma_volumetric.py::test_panel_strategy_validation
+PASSED tests/test_medgemma_volumetric.py::test_effective_timeout_scales_with_panels
+PASSED tests/test_medgemma_volumetric.py::test_effective_timeout_uniform_is_single_panel_and_honours_floor
+PASSED tests/test_medgemma_volumetric.py::test_full_coverage_each_axial_slice_exactly_once
+PASSED tests/test_medgemma_volumetric.py::test_non_contiguous_axial_gaps_are_all_covered
+PASSED tests/test_medgemma_volumetric.py::test_index_offset_is_applied_to_global_indices
+PASSED tests/test_medgemma_volumetric.py::test_single_slice_mask_is_allowed
+PASSED tests/test_medgemma_volumetric.py::test_empty_mask_aborts
+PASSED tests/test_medgemma_volumetric.py::test_deterministic_filenames_and_order
+PASSED tests/test_medgemma_volumetric.py::test_tile_metadata_covers_three_orientations
+PASSED tests/test_medgemma_volumetric.py::test_last_panel_empty_axial_slots_do_not_count_as_coverage
+PASSED tests/test_medgemma_volumetric.py::test_no_phi_metadata_in_exported_png
+PASSED tests/test_medgemma_volumetric.py::test_gate_aborts_when_panel_exceeds_pixel_limit
+PASSED tests/test_medgemma_volumetric.py::test_gate_aborts_when_panel_exceeds_byte_limit
+PASSED tests/test_medsiglip_cli.py::test_medgemma_extra_declares_siglip_tokenizer_runtime_dependencies
+PASSED tests/test_medsiglip_cli.py::test_medsiglip_cli_atomic_writer_replaces_file
+PASSED tests/test_medsiglip_zero_shot.py::test_versioned_config_is_research_only_and_decision_disabled
+PASSED tests/test_medsiglip_zero_shot.py::test_extracts_nine_axial_and_two_orthogonal_tiles
+PASSED tests/test_medsiglip_zero_shot.py::test_panel_with_png_metadata_is_rejected
+PASSED tests/test_medsiglip_zero_shot.py::test_prompt_ensemble_scores_use_softmax_probability_mass
+PASSED tests/test_medsiglip_zero_shot.py::test_prompt_ensemble_softmax_is_invariant_to_logit_offset
+PASSED tests/test_medsiglip_zero_shot.py::test_prompt_ensemble_rejects_non_finite_logits
+PASSED tests/test_medsiglip_zero_shot.py::test_adjacent_evidence_requires_consecutive_tiles_and_is_not_decision
+PASSED tests/test_medsiglip_zero_shot.py::test_invalid_score_shape_is_rejected
+PASSED tests/test_monophase_candidate_dataset.py::test_derives_exact_grayscale_green_channel_and_verifies
+PASSED tests/test_monophase_candidate_dataset.py::test_rejects_wrong_declared_source_phase
+PASSED tests/test_monophase_candidate_dataset.py::test_missing_phase_becomes_case_level_technical_failure_when_configured
+PASSED tests/test_monophase_candidate_dataset.py::test_output_is_immutable
+PASSED tests/test_monophase_complementary_candidates.py::test_builds_three_real_sequences_with_exact_coverage
+PASSED tests/test_monophase_complementary_candidates.py::test_rejects_modified_source_hash
+PASSED tests/test_monophase_external_failure_audit.py::test_audit_reproduces_baseline_and_keeps_holdout_masks_closed
+PASSED tests/test_monophase_external_failure_audit.py::test_audit_refuses_modified_prediction_freeze
+PASSED tests/test_monophase_protocol.py::test_sequence_contract_preserves_real_sequence_without_dynamic_claims[T1_ARTERIAL-t1_arterial-arterial_appearance]
+PASSED tests/test_monophase_protocol.py::test_sequence_contract_preserves_real_sequence_without_dynamic_claims[T1_PORTAL-t1_venous-portal_venous_appearance]
+PASSED tests/test_monophase_protocol.py::test_sequence_contract_preserves_real_sequence_without_dynamic_claims[T1_DELAYED-t1_delayed-delayed_appearance]
+PASSED tests/test_monophase_protocol.py::test_sequence_contract_preserves_real_sequence_without_dynamic_claims[T2-t2-t2_signal_appearance]
+PASSED tests/test_monophase_protocol.py::test_sequence_contract_preserves_real_sequence_without_dynamic_claims[DWI-dwi-diffusion_weighted_signal_suspicion]
+PASSED tests/test_monophase_protocol.py::test_sequence_contract_preserves_real_sequence_without_dynamic_claims[ADC-adc-adc_signal_suspicion]
+PASSED tests/test_monophase_protocol.py::test_unknown_sequence_is_fail_closed_for_specific_medsiglip_bundle
+PASSED tests/test_monophase_protocol.py::test_explicitly_ineligible_series_cannot_use_specific_bundle
+PASSED tests/test_monophase_protocol.py::test_hierarchical_negative_can_report_named_benign_lesion
+PASSED tests/test_monophase_protocol.py::test_hierarchical_positive_hcc_is_consistent
+PASSED tests/test_monophase_protocol.py::test_hierarchical_disagreement_never_invents_resolution[NEGATIVE-hcc]
+PASSED tests/test_monophase_protocol.py::test_hierarchical_disagreement_never_invents_resolution[POSITIVE-hemangioma]
+PASSED tests/test_monophase_protocol.py::test_hierarchical_contract_rejects_unknown_subtype
+PASSED tests/test_monophase_visual_inference.py::test_accepts_exact_single_phase_contract
+PASSED tests/test_monophase_visual_inference.py::test_accepts_hierarchical_single_phase_bundle
+PASSED tests/test_monophase_visual_inference.py::test_rejects_triphasic_bundle
+PASSED tests/test_monophase_visual_inference.py::test_rejects_panel_hash_tampering
+PASSED tests/test_monophase_visual_inference.py::test_rejects_runtime_phase_that_does_not_match_bundle
+PASSED tests/test_mrsegmentator_chaos_runner.py::test_extract_liver_label_ignores_other_organs
+PASSED tests/test_mrsegmentator_chaos_runner.py::test_extract_liver_label_rejects_empty_liver
+PASSED tests/test_mrsegmentator_chaos_runner.py::test_publish_directory_retries_transient_windows_handle
+PASSED tests/test_mrsegmentator_chaos_runner.py::test_verify_run_detects_tampered_mask
+PASSED tests/test_multi_signal_production.py::test_external_fusion_is_signed_and_label_blind
+PASSED tests/test_multi_signal_production.py::test_external_fusion_rejects_wrong_base_bundle
+PASSED tests/test_multi_signal_production.py::test_fusion_bundle_detects_model_tampering
+PASSED tests/test_openswiss_monophase_atlas_candidates.py::test_builds_exact_monophase_tiles_without_labels
+PASSED tests/test_openswiss_monophase_atlas_candidates.py::test_rejects_tampered_frame
+PASSED tests/test_openswisshcc_alignment.py::test_dice_coefficient_exact_and_partial
+PASSED tests/test_openswisshcc_alignment.py::test_dice_rejects_empty_or_incompatible_masks
+PASSED tests/test_openswisshcc_alignment.py::test_selection_uses_best_method_and_identity_on_tie
+PASSED tests/test_openswisshcc_alignment.py::test_selection_fails_closed_below_gate
+PASSED tests/test_openswisshcc_alignment.py::test_selection_rejects_invalid_dice_and_threshold
+PASSED tests/test_openswisshcc_alignment.py::test_arterial_role_selection_covers_three_protocols
+PASSED tests/test_openswisshcc_alignment.py::test_arterial_role_selection_rejects_missing_or_unknown
+PASSED tests/test_openswisshcc_alignment.py::test_cache_reuse_rejects_path_traversal
+PASSED tests/test_openswisshcc_alignment.py::test_publish_directory_retries_transient_permission_error
+PASSED tests/test_openswisshcc_alignment.py::test_input_manifest_loader_allows_only_fixed_development_or_holdout_names
+PASSED tests/test_openswisshcc_axial_atlas.py::test_build_case_repacks_every_axial_tile_exactly_once
+PASSED tests/test_openswisshcc_axial_atlas.py::test_native_320px_tiles_are_preserved_without_resize
+PASSED tests/test_openswisshcc_axial_atlas.py::test_frame_count_is_deterministic[1-1]
+PASSED tests/test_openswisshcc_axial_atlas.py::test_frame_count_is_deterministic[4-1]
+PASSED tests/test_openswisshcc_axial_atlas.py::test_frame_count_is_deterministic[5-2]
+PASSED tests/test_openswisshcc_axial_atlas.py::test_frame_count_is_deterministic[9-3]
+PASSED tests/test_openswisshcc_axial_atlas.py::test_frame_count_is_deterministic[10-3]
+PASSED tests/test_openswisshcc_axial_atlas.py::test_frame_count_is_deterministic[37-10]
+PASSED tests/test_openswisshcc_axial_atlas.py::test_source_hash_tampering_aborts_before_output
+PASSED tests/test_openswisshcc_axial_atlas.py::test_missing_or_duplicate_axial_index_aborts
+PASSED tests/test_openswisshcc_axial_atlas.py::test_failed_source_coverage_gate_aborts
+PASSED tests/test_openswisshcc_axial_atlas.py::test_frame_limit_aborts
+PASSED tests/test_openswisshcc_axial_atlas.py::test_existing_destination_is_never_overwritten
+PASSED tests/test_openswisshcc_axial_atlas.py::test_cohort_and_gallery_are_blind_and_hash_verified
+PASSED tests/test_openswisshcc_axial_atlas.py::test_gallery_rejects_changed_case_manifest
+PASSED tests/test_openswisshcc_axial_atlas.py::test_cohort_failure_is_atomic
+PASSED tests/test_openswisshcc_axial_atlas.py::test_directory_publish_retries_transient_windows_lock
+PASSED tests/test_openswisshcc_axial_atlas.py::test_case_list_rejects_holdout_and_duplicates
+PASSED tests/test_openswisshcc_axial_atlas.py::test_signed_human_review_is_bound_to_gallery_hashes
+PASSED tests/test_openswisshcc_axial_atlas.py::test_review_requires_every_confirmation
+PASSED tests/test_openswisshcc_axial_atlas.py::test_review_revalidates_every_gallery_frame
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_mask_audit_distinguishes_any_from_full_visibility
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_mask_audit_can_prove_exact_full_coverage
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_mask_audit_rejects_invalid_geometry[represented0-crop0-duplicados]
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_mask_audit_rejects_invalid_geometry[represented1-crop1-fora dos limites]
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_mask_audit_rejects_invalid_geometry[represented2-crop2-fora dos limites]
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_holdout_is_always_rejected
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_wilson_metric_is_deterministic
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_fallback_crop_reconstruction_matches_panel_algorithm
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_freeze_reads_no_lesion_mask_or_label
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_run_audit_persists_exact_metrics_and_safety
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_run_audit_never_resamples_shifted_mask
+PASSED tests/test_openswisshcc_axial_atlas_audit.py::test_run_audit_rejects_mask_not_listed_in_authorized_manifest
+PASSED tests/test_openswisshcc_axial_atlas_chunk_evaluation.py::test_finite_accepts_real_scores[0]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_evaluation.py::test_finite_accepts_real_scores[1.5]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_evaluation.py::test_finite_accepts_real_scores[-2.0]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_evaluation.py::test_finite_rejects_non_numeric_or_non_finite[True]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_evaluation.py::test_finite_rejects_non_numeric_or_non_finite[nan]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_evaluation.py::test_finite_rejects_non_numeric_or_non_finite[inf]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_evaluation.py::test_finite_rejects_non_numeric_or_non_finite[1]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_is_deterministic_and_exact[5-expected0]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_is_deterministic_and_exact[9-expected1]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_is_deterministic_and_exact[10-expected2]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_is_deterministic_and_exact[11-expected3]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_is_deterministic_and_exact[20-expected4]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_rejects_invalid_counts[0]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_rejects_invalid_counts[1]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_rejects_invalid_counts[4]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_rejects_invalid_counts[-1]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_rejects_invalid_counts[True]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_partition_rejects_invalid_counts[1.5]
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_full_atlas_fits_frozen_request_budget
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_score_case_calls_each_chunk_once_and_aggregates_max
+PASSED tests/test_openswisshcc_axial_atlas_chunk_score.py::test_intermediate_chunk_failure_invalidates_case
+PASSED tests/test_openswisshcc_axial_atlas_evaluation.py::test_freeze_is_blind_and_binds_complete_score_vector
+PASSED tests/test_openswisshcc_axial_atlas_evaluation.py::test_freeze_rejects_prediction_hash_tampering
+PASSED tests/test_openswisshcc_axial_atlas_evaluation.py::test_freeze_rejects_argmax_divergence_even_with_updated_hash
+PASSED tests/test_openswisshcc_axial_atlas_evaluation.py::test_evaluation_requires_explicit_authorization
+PASSED tests/test_openswisshcc_axial_atlas_evaluation.py::test_evaluation_rejects_holdout_even_when_flag_is_true
+PASSED tests/test_openswisshcc_axial_atlas_evaluation.py::test_separable_scores_pass_reader_gate_but_not_final_qualification
+PASSED tests/test_openswisshcc_axial_atlas_evaluation.py::test_existing_protocol_cannot_be_silently_replaced
+PASSED tests/test_openswisshcc_axial_atlas_rag_evaluation.py::test_freeze_binds_rag_context_and_score_vector
+PASSED tests/test_openswisshcc_axial_atlas_rag_evaluation.py::test_freeze_rejects_prediction_tampering
+PASSED tests/test_openswisshcc_axial_atlas_rag_evaluation.py::test_evaluation_requires_new_explicit_authorization
+PASSED tests/test_openswisshcc_axial_atlas_rag_evaluation.py::test_evaluation_rejects_holdout_even_with_flag
+PASSED tests/test_openswisshcc_axial_atlas_rag_evaluation.py::test_separable_scores_pass_dev_gate_but_not_final_qualification
+PASSED tests/test_openswisshcc_axial_atlas_rag_score.py::test_rag_fingerprint_is_deterministic_and_excludes_timestamp
+PASSED tests/test_openswisshcc_axial_atlas_rag_score.py::test_rag_fingerprint_rejects_disabled_or_empty_context
+PASSED tests/test_openswisshcc_axial_atlas_rag_score.py::test_score_case_uses_frozen_rag_once_without_labels
+PASSED tests/test_openswisshcc_axial_atlas_rag_score.py::test_existing_prediction_rejects_rag_hash_tampering
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_bundle_accepts_native_640_and_768
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_bundle_rejects_tampered_frame
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_query_explains_rgb_and_venous_fallback
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_full_review_scope_is_required_and_hash_bound
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_pilot_review_scope_cannot_authorize_scoring
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_score_case_uses_one_request_and_persists_continuous_score
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_score_case_rejects_response_contract_error
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_existing_prediction_revalidates_log_odds_and_hashes
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_score_log_odds_rejects_nonfinite
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_frozen_protocol_declares_one_call_no_retry_and_180s
+PASSED tests/test_openswisshcc_axial_atlas_score.py::test_timing_selection_is_blind_deterministic_and_representation_balanced
+PASSED tests/test_openswisshcc_candidate.py::test_candidate_config_is_single_call_low_latency_pathology_target
+PASSED tests/test_openswisshcc_candidate.py::test_candidate_prompt_separates_pathology_from_benign_variants
+PASSED tests/test_openswisshcc_candidate_batch.py::test_case_ids_read_only_neutral_manifest
+PASSED tests/test_openswisshcc_candidate_batch.py::test_case_ids_reject_ground_truth_fields[label]
+PASSED tests/test_openswisshcc_candidate_batch.py::test_case_ids_reject_ground_truth_fields[truth]
+PASSED tests/test_openswisshcc_candidate_batch.py::test_case_ids_reject_ground_truth_fields[hcc]
+PASSED tests/test_openswisshcc_candidate_batch.py::test_case_ids_reject_ground_truth_fields[positive]
+PASSED tests/test_openswisshcc_candidate_batch.py::test_case_ids_reject_ground_truth_fields[negative]
+PASSED tests/test_openswisshcc_candidate_batch.py::test_case_ids_reject_duplicate_or_nonanonymous
+PASSED tests/test_openswisshcc_candidate_enhancement.py::test_candidate_enhancement_detects_dynamic_signal_without_labels
+PASSED tests/test_openswisshcc_candidate_enhancement.py::test_absent_candidate_is_retained_with_neutral_features
+PASSED tests/test_openswisshcc_candidate_enhancement.py::test_candidate_outside_shared_multiphase_fov_is_retained
+PASSED tests/test_openswisshcc_candidate_enhancement.py::test_candidate_outside_liver_is_rejected
+PASSED tests/test_openswisshcc_candidate_enhancement.py::test_candidate_geometry_mismatch_is_rejected
+PASSED tests/test_openswisshcc_candidate_localization_audit.py::test_manual_mask_alignment_accepts_only_header_roundoff
+PASSED tests/test_openswisshcc_candidate_localization_audit.py::test_manual_mask_alignment_rejects_size_and_spacing_changes
+PASSED tests/test_openswisshcc_candidate_localization_audit.py::test_component_matching_uses_volume_and_centroid_not_source_id
+PASSED tests/test_openswisshcc_candidate_localization_audit.py::test_component_matching_rejects_changed_centroid
+PASSED tests/test_openswisshcc_candidate_localization_audit.py::test_actual_visibility_is_exact_union_of_rendered_venous_regions
+PASSED tests/test_openswisshcc_candidate_localization_audit.py::test_holdout_path_is_always_rejected
+PASSED tests/test_openswisshcc_candidate_localization_audit.py::test_wilson_and_empty_metric_are_deterministic
+PASSED tests/test_openswisshcc_candidate_localization_audit.py::test_extraction_supports_multiple_masks_and_excludes_unrequested
+PASSED tests/test_openswisshcc_candidate_shape.py::test_empty_candidate_is_explicit_and_finite
+PASSED tests/test_openswisshcc_candidate_shape.py::test_tube_is_more_linear_than_compact_cube
+PASSED tests/test_openswisshcc_candidate_shape.py::test_weighted_linearity_uses_physical_spacing
+PASSED tests/test_openswisshcc_candidate_shape.py::test_components_are_aggregated_by_voxel_count
+PASSED tests/test_openswisshcc_candidate_shape.py::test_too_small_component_fails_closed
+PASSED tests/test_openswisshcc_candidate_shape.py::test_invalid_spacing_fails_closed
+PASSED tests/test_openswisshcc_candidate_shape_timing.py::test_percentile_higher_is_conservative
+PASSED tests/test_openswisshcc_candidate_volume.py::test_gallery_preview_uses_start_center_end_without_duplicates
+PASSED tests/test_openswisshcc_candidate_volume.py::test_localizer_summary_accepts_only_official_single_or_merged_schema
+PASSED tests/test_openswisshcc_candidate_volume.py::test_candidate_selection_uses_three_then_expands_to_coverage
+PASSED tests/test_openswisshcc_candidate_volume.py::test_candidate_selection_rejects_if_five_do_not_cover_75_percent
+PASSED tests/test_openswisshcc_candidate_volume.py::test_candidate_selection_can_be_frozen_to_exact_top_five
+PASSED tests/test_openswisshcc_candidate_volume.py::test_centered_indices_are_unique_and_shift_at_boundaries[0.0-expected0]
+PASSED tests/test_openswisshcc_candidate_volume.py::test_centered_indices_are_unique_and_shift_at_boundaries[8.0-expected1]
+PASSED tests/test_openswisshcc_candidate_volume.py::test_centered_indices_are_unique_and_shift_at_boundaries[4.2-expected2]
+PASSED tests/test_openswisshcc_candidate_volume.py::test_case_builds_exactly_29_source_only_rgb_frames
+PASSED tests/test_openswisshcc_candidate_volume.py::test_optional_low_contrast_group_is_omitted
+PASSED tests/test_openswisshcc_candidate_volume.py::test_invalid_venous_group_fails_the_gate
+PASSED tests/test_openswisshcc_candidate_volume.py::test_empty_localizer_uses_one_liver_centered_fallback
+PASSED tests/test_openswisshcc_candidate_volume.py::test_frame_hash_tampering_is_rejected
+PASSED tests/test_openswisshcc_candidate_volume.py::test_unregistered_original_phases_are_explicit_and_keep_complete_stack
+PASSED tests/test_openswisshcc_candidate_volume.py::test_original_dynamic_loader_prefers_ttc3_and_rejects_lesion_files
+PASSED tests/test_openswisshcc_candidate_volume.py::test_missing_registration_allows_fallback_but_partial_directory_aborts
+PASSED tests/test_openswisshcc_candidate_volume_evaluation.py::test_protocol_freezes_blind_vector_and_refuses_overwrite
+PASSED tests/test_openswisshcc_candidate_volume_evaluation.py::test_evaluation_aborts_before_reading_labels_without_authorization
+PASSED tests/test_openswisshcc_candidate_volume_evaluation.py::test_authorized_evaluation_is_nested_atomic_and_keeps_holdout_closed
+PASSED tests/test_openswisshcc_candidate_volume_evaluation.py::test_raw_inconclusive_is_error_for_both_classes
+PASSED tests/test_openswisshcc_candidate_volume_evaluation.py::test_loocv_and_repeated_fit_threshold_on_training_only
+PASSED tests/test_openswisshcc_candidate_volume_evaluation.py::test_blind_run_rejects_forbidden_label_before_validation
+PASSED tests/test_openswisshcc_candidate_volume_evaluation.py::test_protocol_signature_detects_tampering
+PASSED tests/test_openswisshcc_candidate_volume_fallback.py::test_fallback_requires_signed_plan_and_preserves_exploratory_disclosure
+PASSED tests/test_openswisshcc_candidate_volume_fallback.py::test_fallback_rejects_tampered_signature_or_unapproved_reason
+PASSED tests/test_openswisshcc_candidate_volume_full87.py::test_contact_sheet_is_deterministic_audit_only_and_uses_three_frames_per_group
+PASSED tests/test_openswisshcc_candidate_volume_full87.py::test_contact_sheet_preview_does_not_modify_source_frames
+PASSED tests/test_openswisshcc_candidate_volume_full87.py::test_contact_sheet_manifest_is_json_serializable
+PASSED tests/test_openswisshcc_candidate_volume_full87.py::test_contact_sheet_validator_rejects_tampering
+PASSED tests/test_openswisshcc_candidate_volume_review.py::test_approved_review_requires_every_explicit_confirmation
+PASSED tests/test_openswisshcc_candidate_volume_review.py::test_approved_review_is_signed_and_bound_to_exact_gallery
+PASSED tests/test_openswisshcc_candidate_volume_review.py::test_rejection_requires_notes_and_cannot_enable_scoring
+PASSED tests/test_openswisshcc_candidate_volume_review.py::test_review_record_refuses_overwrite
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_bundle_validator_checks_all_hashes_and_safety
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_human_review_is_required_and_cryptographically_bound
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_candidate_query_contains_frame_map_and_no_positive_assumption
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_aggregation_uses_maximum_positive_negative_log_odds
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_freeze_binds_bundle_review_model_prompt_and_time_gate
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_case_scores_each_candidate_once_and_publishes_only_complete_result
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_intermediate_failure_does_not_publish_partial_case
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_case_level_180_second_gate_prevents_publication
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_run_context_refuses_mixing_protocols_in_same_output
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_reused_prediction_revalidates_candidate_hash_and_log_odds
+PASSED tests/test_openswisshcc_candidate_volume_score.py::test_complete_progress_uses_distinct_summary_schema
+PASSED tests/test_openswisshcc_candidate_volume_timing.py::test_plan_selects_slowest_blind_case_for_each_frozen_scenario
+PASSED tests/test_openswisshcc_candidate_volume_timing.py::test_plan_records_missing_alignment_without_selecting_or_hiding_case
+PASSED tests/test_openswisshcc_candidate_volume_timing.py::test_plan_is_reproducible_and_refuses_divergent_overwrite
+PASSED tests/test_openswisshcc_candidate_volume_timing.py::test_plan_aborts_when_a_required_scenario_is_absent
+PASSED tests/test_openswisshcc_candidate_volume_timing_bundle.py::test_timing_bundle_requires_exact_frozen_scenario_order_and_counts
+PASSED tests/test_openswisshcc_candidate_volume_timing_bundle.py::test_timing_bundle_rejects_divergence_from_signed_plan[order]
+PASSED tests/test_openswisshcc_candidate_volume_timing_bundle.py::test_timing_bundle_rejects_divergence_from_signed_plan[count]
+PASSED tests/test_openswisshcc_candidate_volume_timing_bundle.py::test_timing_bundle_rejects_divergence_from_signed_plan[alignment]
+PASSED tests/test_openswisshcc_candidate_volume_timing_bundle.py::test_timing_bundle_rejects_divergence_from_signed_plan[fallback]
+PASSED tests/test_openswisshcc_candidate_volume_timing_run.py::test_projected_pipeline_adds_historical_preprocessing_and_fresh_reader
+PASSED tests/test_openswisshcc_candidate_volume_timing_run.py::test_plan_bundle_binding_requires_exact_cases_counts_and_time_gate
+PASSED tests/test_openswisshcc_candidate_volume_timing_run.py::test_plan_bundle_binding_rejects_reuse_or_signature_change[timing_execution_started-True]
+PASSED tests/test_openswisshcc_candidate_volume_timing_run.py::test_plan_bundle_binding_rejects_reuse_or_signature_change[source_timing_plan_signature-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc]
+PASSED tests/test_openswisshcc_config_variants.py::test_freeze_and_verify_bind_two_fallback_config_variants
+PASSED tests/test_openswisshcc_config_variants.py::test_case_validator_accepts_review_fallback_version_with_exact_hash
+PASSED tests/test_openswisshcc_configs.py::test_extra_config_is_selected_by_authorized_key_and_hash
+PASSED tests/test_openswisshcc_configs.py::test_extra_config_rejects_arbitrary_key_and_hash_mismatch
+PASSED tests/test_openswisshcc_configs.py::test_parse_extra_configs_requires_unique_key_value_pairs
+PASSED tests/test_openswisshcc_enhancement_evaluation.py::test_perfect_development_feature_is_reported_but_not_qualified
+PASSED tests/test_openswisshcc_enhancement_evaluation.py::test_tampered_feature_bundle_is_rejected
+PASSED tests/test_openswisshcc_enhancement_localizer.py::test_proposals_use_frozen_thresholds_and_remove_tiny_components
+PASSED tests/test_openswisshcc_enhancement_localizer.py::test_proposals_reject_nonfinite_map
+PASSED tests/test_openswisshcc_enhancement_localizer_audit.py::test_audit_reports_all_and_top5_recall_without_diagnostic_claim
+PASSED tests/test_openswisshcc_enhancement_localizer_audit.py::test_audit_rejects_tampered_proposal_hash
+PASSED tests/test_openswisshcc_enhancement_localizer_audit.py::test_audit_rejects_any_holdout_path
+PASSED tests/test_openswisshcc_enhancement_localizer_audit.py::test_audit_ignores_declared_labels_outside_frozen_cohort
+PASSED tests/test_openswisshcc_enhancement_maps.py::test_hotspot_increases_joint_enhancement_and_creates_component
+PASSED tests/test_openswisshcc_enhancement_maps.py::test_geometry_mismatch_is_rejected
+PASSED tests/test_openswisshcc_enhancement_maps.py::test_constant_phase_is_rejected
+PASSED tests/test_openswisshcc_enhancement_maps.py::test_cohort_builder_is_label_free_and_declares_unregistered_fallback
+PASSED tests/test_openswisshcc_enhancement_pilot_evaluation.py::test_freeze_is_signed_and_refuses_late_predictions
+PASSED tests/test_openswisshcc_enhancement_pilot_evaluation.py::test_evaluation_applies_any_positive_and_penalizes_inconclusives
+PASSED tests/test_openswisshcc_enhancement_pilot_evaluation.py::test_evaluation_refuses_holdout_path
+PASSED tests/test_openswisshcc_enhancement_proposal_selection.py::test_selects_exactly_five_largest_components_deterministically
+PASSED tests/test_openswisshcc_enhancement_score_preflight.py::test_preflight_records_exact_top5_and_stays_non_authorizing
+PASSED tests/test_openswisshcc_enhancement_score_preflight.py::test_preflight_rejects_legacy_75_percent_selection
+PASSED tests/test_openswisshcc_enhancement_score_preflight.py::test_preflight_rejects_tampered_localizer_provenance
+PASSED tests/test_openswisshcc_enhancement_score_preflight.py::test_preflight_rejects_holdout_path_before_validation
+PASSED tests/test_openswisshcc_enhancement_timing_projection.py::test_projection_is_conservative_and_never_qualifies_without_measurement
+PASSED tests/test_openswisshcc_enhancement_timing_projection.py::test_projection_rejects_tampered_historical_prediction
+PASSED tests/test_openswisshcc_enhancement_timing_projection.py::test_projection_refuses_holdout_output
+PASSED tests/test_openswisshcc_evaluation.py::test_evaluation_opens_truth_only_after_complete_inference_and_passes
+PASSED tests/test_openswisshcc_evaluation.py::test_inconclusive_and_timeout_are_penalized_in_primary_metrics
+PASSED tests/test_openswisshcc_evaluation.py::test_incomplete_inference_aborts_before_missing_ground_truth_is_opened
+PASSED tests/test_openswisshcc_evaluation.py::test_evaluation_rejects_unexpected_protected_counts
+PASSED tests/test_openswisshcc_fallback.py::test_fallback_config_is_single_panel_low_latency_pathology_target
+PASSED tests/test_openswisshcc_fallback.py::test_fallback_renders_without_alignment_or_truth
+PASSED tests/test_openswisshcc_fallback.py::test_fallback_rejects_ground_truth_in_neutral_manifest
+PASSED tests/test_openswisshcc_freeze.py::test_freeze_binds_effective_configs_and_panel_bytes
+PASSED tests/test_openswisshcc_freeze.py::test_freeze_detects_panel_change
+PASSED tests/test_openswisshcc_freeze.py::test_freeze_rejects_tampered_effective_hash
+PASSED tests/test_openswisshcc_freeze.py::test_freeze_refuses_incomplete_expected_cohort
+PASSED tests/test_openswisshcc_freeze_version.py::test_freeze_persists_explicit_experiment_version
+PASSED tests/test_openswisshcc_gallery.py::test_gallery_is_truth_free_non_authoritative_and_complete
+PASSED tests/test_openswisshcc_highdimensional.py::test_select_slice_indices_preserves_short_intervals_and_official_max85
+PASSED tests/test_openswisshcc_highdimensional.py::test_select_slice_indices_rejects_volume_with_fewer_than_five_slices
+PASSED tests/test_openswisshcc_highdimensional.py::test_scaled_slice_stays_grayscale_rgb_and_under_512
+PASSED tests/test_openswisshcc_highdimensional.py::test_lps_orientation_harmonizes_only_accumulated_float_metadata_noise
+PASSED tests/test_openswisshcc_highdimensional.py::test_atomic_publish_retries_transient_windows_permission_error
+PASSED tests/test_openswisshcc_highdimensional.py::test_build_stack_is_deterministic_auditable_and_reusable
+PASSED tests/test_openswisshcc_highdimensional.py::test_build_stack_honors_configured_time_safe_slice_cap
+PASSED tests/test_openswisshcc_highdimensional.py::test_build_stack_rejects_any_lesion_or_ground_truth_entry
+PASSED tests/test_openswisshcc_highdimensional.py::test_build_stack_rejects_hash_and_geometry_mismatch
+PASSED tests/test_openswisshcc_highdimensional.py::test_reuse_rejects_tampered_png
+PASSED tests/test_openswisshcc_highdimensional_batch.py::test_prepare_bundle_uses_sorted_blind_ids_and_cap
+PASSED tests/test_openswisshcc_highdimensional_batch.py::test_prepare_rejects_source_that_read_ground_truth
+PASSED tests/test_openswisshcc_highdimensional_batch.py::test_validate_and_freeze_batch_are_hash_bound_and_idempotent
+PASSED tests/test_openswisshcc_highdimensional_batch_inference.py::test_batch_runner_is_resumable_and_never_repeats_completed_case
+PASSED tests/test_openswisshcc_highdimensional_batch_inference.py::test_batch_runner_refuses_protocol_tampering
+PASSED tests/test_openswisshcc_highdimensional_batch_inference.py::test_batch_runner_refuses_nonpositive_chunk_size
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_explicit_authorization_is_required_before_any_validation
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_holdout_path_is_always_rejected
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_unauthorized_extra_label_is_rejected
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_single_explicit_technical_exclusion_is_allowed
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_wrong_explicit_technical_exclusion_is_rejected
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_excluded_case_cannot_still_belong_to_bundle
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_label_class_counts_are_frozen
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_inconclusive_counts_as_primary_error_and_outputs_are_atomic
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_gate_passes_only_when_both_metrics_and_time_pass
+PASSED tests/test_openswisshcc_highdimensional_evaluation.py::test_existing_output_is_never_overwritten
+PASSED tests/test_openswisshcc_highdimensional_inference.py::test_freeze_is_signed_idempotent_and_local_only
+PASSED tests/test_openswisshcc_highdimensional_inference.py::test_run_pilot_validates_health_payload_and_output
+PASSED tests/test_openswisshcc_highdimensional_inference.py::test_run_refuses_protocol_tampering
+PASSED tests/test_openswisshcc_holdout.py::test_holdout_api_cannot_accept_participants_or_labels
+PASSED tests/test_openswisshcc_holdout.py::test_archive_rejects_subject_outside_holdout
+PASSED tests/test_openswisshcc_holdout.py::test_archive_rejects_unsafe_member
+PASSED tests/test_openswisshcc_holdout.py::test_label_blind_preparation_copies_only_images_and_automatic_liver_masks
+PASSED tests/test_openswisshcc_holdout.py::test_missing_automatic_liver_masks_aborts_atomically
+PASSED tests/test_openswisshcc_holdout.py::test_existing_destination_is_never_overwritten
+PASSED tests/test_openswisshcc_holdout.py::test_audit_proves_complete_label_blind_tree
+PASSED tests/test_openswisshcc_holdout.py::test_audit_rejects_tampered_input
+PASSED tests/test_openswisshcc_holdout.py::test_audit_rejects_unmanifested_input
+PASSED tests/test_openswisshcc_holdout_evaluation.py::test_labels_cannot_open_without_explicit_authorization
+PASSED tests/test_openswisshcc_holdout_evaluation.py::test_materialized_labels_are_bound_to_frozen_predictions
+PASSED tests/test_openswisshcc_holdout_evaluation.py::test_same_domain_evaluation_reports_all_required_metrics
+PASSED tests/test_openswisshcc_holdout_evaluation.py::test_same_domain_time_gate_fails_above_180_seconds
+PASSED tests/test_openswisshcc_holdout_evaluation.py::test_evaluation_rejects_tampered_protected_label_bundle
+PASSED tests/test_openswisshcc_holdout_evaluation.py::test_wrong_authorized_signature_cannot_open_labels
+PASSED tests/test_openswisshcc_holdout_evaluation.py::test_auc_handles_ties_deterministically
+PASSED tests/test_openswisshcc_holdout_panels.py::test_frozen_multiphase_and_fallback_configs_are_accepted
+PASSED tests/test_openswisshcc_holdout_panels.py::test_config_rejects_nonfrozen_response_mode
+PASSED tests/test_openswisshcc_holdout_panels.py::test_safe_file_rejects_traversal
+PASSED tests/test_openswisshcc_holdout_review.py::test_holdout_review_requires_explicit_approval
+PASSED tests/test_openswisshcc_holdout_review.py::test_holdout_signed_review_roundtrip
+PASSED tests/test_openswisshcc_holdout_review.py::test_holdout_review_detects_panel_change
+PASSED tests/test_openswisshcc_holdout_review.py::test_holdout_review_detects_index_change
+PASSED tests/test_openswisshcc_holdout_review.py::test_holdout_review_rejects_fallback_outside_item_28
+PASSED tests/test_openswisshcc_holdout_review.py::test_holdout_review_detects_signature_tampering
+PASSED tests/test_openswisshcc_holdout_signals.py::test_context_preflight_stays_label_blind
+PASSED tests/test_openswisshcc_holdout_signals.py::test_context_fails_closed_before_model_creation_without_review
+PASSED tests/test_openswisshcc_holdout_signals.py::test_localizer_manifest_contains_only_venous_and_liver_mask
+PASSED tests/test_openswisshcc_holdout_signals.py::test_medgemma_uses_43_multiphase_and_one_fallback_scorer
+PASSED tests/test_openswisshcc_holdout_signals.py::test_medgemma_intermediate_failure_does_not_publish_partial_batch
+PASSED tests/test_openswisshcc_holdout_signals.py::test_prediction_freeze_signs_hashes_with_labels_closed
+PASSED tests/test_openswisshcc_holdout_signals.py::test_prediction_freeze_rejects_score_tampering
+PASSED tests/test_openswisshcc_inference.py::test_inference_writes_normal_report_without_ground_truth
+PASSED tests/test_openswisshcc_inference.py::test_inference_rejects_config_not_bound_to_candidate
+PASSED tests/test_openswisshcc_inference.py::test_inference_fails_closed_when_time_limit_is_exceeded
+PASSED tests/test_openswisshcc_inference.py::test_inference_rejects_unapproved_case
+PASSED tests/test_openswisshcc_inference.py::test_production_configs_are_prefilled_without_retries
+PASSED tests/test_openswisshcc_inference_batch.py::test_batch_routes_candidates_and_requires_freeze
+PASSED tests/test_openswisshcc_inference_batch.py::test_batch_records_external_timeout_and_continues
+PASSED tests/test_openswisshcc_inference_batch.py::test_batch_refuses_existing_run_directory
+PASSED tests/test_openswisshcc_inference_batch.py::test_batch_rejects_freeze_for_different_panel_bytes
+PASSED tests/test_openswisshcc_lesion_localizer.py::test_runner_persists_model_candidates_without_decision_or_ground_truth
+PASSED tests/test_openswisshcc_lesion_localizer.py::test_input_hash_change_is_rejected
+PASSED tests/test_openswisshcc_lesion_localizer.py::test_runner_supports_explicit_non_venous_sequence_roles
+PASSED tests/test_openswisshcc_lesion_localizer.py::test_dataset_lesion_mask_is_rejected
+PASSED tests/test_openswisshcc_lesion_localizer.py::test_duplicate_or_missing_selection_is_rejected
+PASSED tests/test_openswisshcc_lesion_localizer.py::test_time_gate_aborts_without_publishing_partial_run
+PASSED tests/test_openswisshcc_lesion_localizer_chunks.py::test_merge_is_complete_atomic_and_preserves_nested_masks
+PASSED tests/test_openswisshcc_lesion_localizer_chunks.py::test_missing_case_aborts_without_partial_publication
+PASSED tests/test_openswisshcc_lesion_localizer_chunks.py::test_tampered_mask_aborts
+PASSED tests/test_openswisshcc_lesion_localizer_chunks.py::test_planned_chunk_rejects_invalid_number
+PASSED tests/test_openswisshcc_lesion_localizer_evaluation.py::test_protocol_freezes_one_feature_before_labels
+PASSED tests/test_openswisshcc_lesion_localizer_evaluation.py::test_evaluation_aborts_before_label_loader_without_explicit_authorization
+PASSED tests/test_openswisshcc_lesion_localizer_evaluation.py::test_tampered_run_is_rejected_by_frozen_protocol
+PASSED tests/test_openswisshcc_lesion_localizer_evaluation.py::test_authorized_development_evaluation_is_atomic_and_never_qualified
+PASSED tests/test_openswisshcc_localizer_enhancement_roi.py::test_enhancement_roi_contains_four_dynamic_phases_without_ground_truth
+PASSED tests/test_openswisshcc_localizer_enhancement_roi.py::test_enhancement_roi_fallback_uses_liver_mask_centroid
+PASSED tests/test_openswisshcc_localizer_enhancement_roi.py::test_zero_registered_phase_is_explicitly_unavailable_not_fabricated
+PASSED tests/test_openswisshcc_localizer_enhancement_roi.py::test_panel_aborts_atomically_without_minimum_evidence
+PASSED tests/test_openswisshcc_localizer_path_length.py::test_atomic_mask_uses_short_temporary_basename
+PASSED tests/test_openswisshcc_localizer_roi.py::test_roi_gallery_uses_model_candidate_without_ground_truth
+PASSED tests/test_openswisshcc_localizer_roi.py::test_no_candidate_generates_explicit_fallback_panel
+PASSED tests/test_openswisshcc_localizer_roi_evaluation.py::test_validate_score_recomputes_mirrored_semantic_probability
+PASSED tests/test_openswisshcc_localizer_roi_evaluation.py::test_validate_score_rejects_persisted_mean_inconsistent_with_mappings
+PASSED tests/test_openswisshcc_localizer_roi_evaluation.py::test_selected_label_loader_validates_full_file_then_selects_pilot
+PASSED tests/test_openswisshcc_localizer_roi_evaluation.py::test_blind_run_is_rejected_before_any_ground_truth_access
+PASSED tests/test_openswisshcc_localizer_roi_gate_freeze.py::test_paired_review_binds_both_galleries_and_reviewer
+PASSED tests/test_openswisshcc_localizer_roi_gate_freeze.py::test_review_detects_png_tampering_after_approval
+PASSED tests/test_openswisshcc_localizer_roi_gate_freeze.py::test_review_rejects_different_candidate_center_even_with_valid_hashes
+PASSED tests/test_openswisshcc_localizer_roi_gate_freeze.py::test_freeze_binds_exact_4b_config_review_and_mirrored_protocol
+PASSED tests/test_openswisshcc_localizer_roi_gate_freeze.py::test_freeze_rejects_tampering
+PASSED tests/test_openswisshcc_localizer_roi_inference.py::test_runner_scores_four_questions_with_two_mirrored_mappings
+PASSED tests/test_openswisshcc_localizer_roi_inference.py::test_fallback_prompt_explicitly_states_no_candidate
+PASSED tests/test_openswisshcc_localizer_roi_inference.py::test_invalid_probabilities_abort_without_publishing_output
+PASSED tests/test_openswisshcc_localizer_roi_inference.py::test_scoring_timeout_aborts_atomically
+PASSED tests/test_openswisshcc_localizer_roi_timing.py::test_composite_sums_every_prepared_benchmark_stage
+PASSED tests/test_openswisshcc_localizer_roi_timing.py::test_composite_rejects_invalid_or_over_budget_stage
+PASSED tests/test_openswisshcc_localizer_roi_timing.py::test_regeneration_requires_byte_identical_approved_png
+PASSED tests/test_openswisshcc_multiphase_localizer.py::test_candidate_union_is_exact_and_reports_new_arterial_voxels
+PASSED tests/test_openswisshcc_multiphase_localizer.py::test_candidate_union_rejects_geometry_mismatch
+PASSED tests/test_openswisshcc_multisequence_batch.py::test_cohort_and_gallery_preserve_blinding_and_hashes
+PASSED tests/test_openswisshcc_multisequence_batch.py::test_gallery_rejects_tampered_panel
+PASSED tests/test_openswisshcc_multisequence_batch.py::test_cohort_rejects_ground_truth_field
+PASSED tests/test_openswisshcc_multisequence_chunks.py::test_signed_plan_partitions_and_merge_is_complete
+PASSED tests/test_openswisshcc_multisequence_chunks.py::test_missing_planned_case_aborts_without_partial_merge
+PASSED tests/test_openswisshcc_multisequence_evaluation.py::test_evaluation_opens_labels_only_after_blind_artifacts_and_reports_ci
+PASSED tests/test_openswisshcc_multisequence_evaluation.py::test_corrupt_blind_artifact_fails_before_missing_labels_are_opened
+PASSED tests/test_openswisshcc_multisequence_evaluation.py::test_evaluation_derives_class_counts_after_blind_validation
+PASSED tests/test_openswisshcc_multisequence_evaluation.py::test_signed_quality_exclusion_allows_full_ground_truth_audit
+PASSED tests/test_openswisshcc_multisequence_freeze.py::test_v9_config_is_exact_4b_no_retry_and_freeze_verifies
+PASSED tests/test_openswisshcc_multisequence_freeze.py::test_freeze_rejects_budget_above_180
+PASSED tests/test_openswisshcc_multisequence_gallery_paths.py::test_gallery_src_resolves_from_final_gallery_directory
+PASSED tests/test_openswisshcc_multisequence_gate.py::test_signed_review_verifies_and_detects_panel_change
+PASSED tests/test_openswisshcc_multisequence_gate.py::test_review_requires_every_confirmation
+PASSED tests/test_openswisshcc_multisequence_geometry.py::test_geometry_accepts_submicrometric_nifti_rounding
+PASSED tests/test_openswisshcc_multisequence_geometry.py::test_geometry_rejects_material_origin_shift
+PASSED tests/test_openswisshcc_multisequence_geometry.py::test_geometry_rejects_size_difference
+PASSED tests/test_openswisshcc_multisequence_inference.py::test_scores_only_runner_is_blind_atomic_and_records_missing_modality
+PASSED tests/test_openswisshcc_multisequence_inference.py::test_timeout_aborts_without_publishing_partial_run
+PASSED tests/test_openswisshcc_multisequence_inference.py::test_invalid_review_blocks_before_scoring
+PASSED tests/test_openswisshcc_multisequence_panel.py::test_generates_every_projected_trace_plane_once
+PASSED tests/test_openswisshcc_multisequence_panel.py::test_aborts_when_trace_does_not_cover_liver_physical_points
+PASSED tests/test_openswisshcc_multisequence_quality.py::test_blind_quality_review_signs_approved_and_excluded_without_labels
+PASSED tests/test_openswisshcc_multisequence_quality.py::test_quality_decision_rejects_clinical_or_extra_fields
+PASSED tests/test_openswisshcc_multisequence_quality.py::test_panel_change_invalidates_quality_review
+PASSED tests/test_openswisshcc_multisequence_quality_cohort.py::test_bundle_atomically_separates_primary_and_stress_without_changing_bytes
+PASSED tests/test_openswisshcc_multisequence_quality_cohort.py::test_bundle_failure_does_not_publish_partial_output
+PASSED tests/test_openswisshcc_preparation.py::test_split_is_disjoint_complete_and_balanced_as_expected
+PASSED tests/test_openswisshcc_preparation.py::test_labels_are_loaded_with_expected_dataset_distribution
+PASSED tests/test_openswisshcc_preparation.py::test_member_selection_excludes_inphase_and_rejects_holdout
+PASSED tests/test_openswisshcc_preparation.py::test_unsafe_zip_member_is_rejected
+PASSED tests/test_openswisshcc_preparation.py::test_full_preparation_separates_inputs_and_ground_truth
+PASSED tests/test_openswisshcc_preparation.py::test_existing_destination_is_never_overwritten
+PASSED tests/test_openswisshcc_registration.py::test_extracts_exact_whitelist_with_neutral_ids
+PASSED tests/test_openswisshcc_registration.py::test_missing_required_transform_aborts_atomically
+PASSED tests/test_openswisshcc_registration.py::test_path_traversal_is_rejected
+PASSED tests/test_openswisshcc_registration.py::test_existing_destination_is_not_overwritten
+PASSED tests/test_openswisshcc_registration.py::test_extracts_holdout_transforms_without_development_or_ground_truth
+PASSED tests/test_openswisshcc_remediation.py::test_triage_accepts_only_technical_codes
+PASSED tests/test_openswisshcc_remediation.py::test_triage_rejects_unknown_or_diagnostic_codes[Q]
+PASSED tests/test_openswisshcc_remediation.py::test_triage_rejects_unknown_or_diagnostic_codes[POSITIVE]
+PASSED tests/test_openswisshcc_remediation.py::test_triage_rejects_unknown_or_diagnostic_codes[NEGATIVE]
+PASSED tests/test_openswisshcc_remediation.py::test_triage_rejects_unknown_or_diagnostic_codes[D]
+PASSED tests/test_openswisshcc_remediation.py::test_triage_rejects_duplicate_case
+PASSED tests/test_openswisshcc_remediation.py::test_triage_rejects_ground_truth_flag
+PASSED tests/test_openswisshcc_review.py::test_review_is_separate_hash_bound_and_verifiable
+PASSED tests/test_openswisshcc_review.py::test_review_rejects_missing_explicit_confirmation
+PASSED tests/test_openswisshcc_review.py::test_review_fails_if_approved_panel_bytes_change
+PASSED tests/test_openswisshcc_review.py::test_review_fails_if_manifest_is_tampered
+PASSED tests/test_openswisshcc_review.py::test_review_fails_if_signed_methodology_is_tampered
+PASSED tests/test_openswisshcc_review.py::test_review_rejects_different_requested_case_set
+PASSED tests/test_openswisshcc_review.py::test_ready_case_ids_ignore_staging_and_gate_failures
+PASSED tests/test_openswisshcc_review.py::test_review_does_not_overwrite_existing_approval
+PASSED tests/test_openswisshcc_slice_pairwise.py::test_crop_axial_tiles_preserves_first_n_grid_cells
+PASSED tests/test_openswisshcc_slice_pairwise.py::test_crop_axial_tiles_rejects_invalid_indices[indices0]
+PASSED tests/test_openswisshcc_slice_pairwise.py::test_crop_axial_tiles_rejects_invalid_indices[indices1]
+PASSED tests/test_openswisshcc_slice_pairwise.py::test_crop_axial_tiles_rejects_invalid_indices[indices2]
+PASSED tests/test_openswisshcc_slice_pairwise.py::test_crop_axial_tiles_rejects_non_square_grid_cells
+PASSED tests/test_openswisshcc_v11_fusion.py::test_blind_bundle_has_three_signals_no_decision_and_conservative_time
+PASSED tests/test_openswisshcc_v11_fusion.py::test_protocol_freezes_one_primary_fusion_and_fixed_weights
+PASSED tests/test_openswisshcc_v11_fusion.py::test_bundle_rejects_label_contamination_before_publication
+PASSED tests/test_openswisshcc_v11_fusion.py::test_bundle_rejects_unexpected_case_exclusion
+PASSED tests/test_openswisshcc_v11_fusion.py::test_tampered_bundle_is_rejected_by_frozen_protocol
+PASSED tests/test_openswisshcc_v11_fusion.py::test_evaluation_aborts_before_reading_labels_without_new_authorization
+PASSED tests/test_openswisshcc_v11_fusion.py::test_authorized_synthetic_evaluation_is_nested_atomic_and_holdout_closed
+PASSED tests/test_openswisshcc_v11_fusion.py::test_ecdf_uses_only_supplied_reference
+PASSED tests/test_openswisshcc_v11_v13_complementarity.py::test_complementarity_and_oracle_are_counted_without_selecting_rule
+PASSED tests/test_openswisshcc_v11_v13_complementarity.py::test_inconclusive_is_never_counted_as_correct
+PASSED tests/test_openswisshcc_v11_v13_complementarity.py::test_invalid_vectors_are_rejected[case_ids0-truth0-v110-v130]
+PASSED tests/test_openswisshcc_v11_v13_complementarity.py::test_invalid_vectors_are_rejected[case_ids1-truth1-v111-v131]
+PASSED tests/test_openswisshcc_v11_v13_complementarity.py::test_invalid_vectors_are_rejected[case_ids2-truth2-v112-v132]
+PASSED tests/test_openswisshcc_v15_fusion.py::test_protocol_freezes_one_equal_reader_primary_and_secondary_cannot_replace_it
+PASSED tests/test_openswisshcc_v15_fusion.py::test_protocol_detects_tampered_signal_hash
+PASSED tests/test_openswisshcc_v15_fusion.py::test_protocol_detects_tampered_signature
+PASSED tests/test_openswisshcc_v15_fusion.py::test_evaluation_aborts_before_reading_labels_without_v15_authorization
+PASSED tests/test_openswisshcc_v15_fusion.py::test_authorized_synthetic_evaluation_is_nested_atomic_and_holdout_closed
+PASSED tests/test_openswisshcc_v15_fusion.py::test_raw_inconclusive_counts_as_error_for_both_classes
+PASSED tests/test_openswisshcc_v15_fusion.py::test_fold_scores_use_training_reference_not_test_distribution
+PASSED tests/test_openswisshcc_v15_fusion.py::test_blind_bundle_rejects_protected_label_field
+PASSED tests/test_openswisshcc_v15_fusion.py::test_blind_bundle_rejects_duplicate_case_id
+PASSED tests/test_openswisshcc_v15_fusion.py::test_build_bundle_joins_sources_without_ground_truth
+PASSED tests/test_openswisshcc_v20_fusion.py::test_weights_preserve_v11_ratio_and_add_twenty_percent_rag
+PASSED tests/test_openswisshcc_v20_fusion.py::test_fold_scores_fit_ecdf_only_on_training_indices
+PASSED tests/test_openswisshcc_v20_fusion.py::test_loocv_ordered_signal_is_strong_and_deterministic
+PASSED tests/test_openswisshcc_v20_fusion.py::test_repeated_validation_is_fully_nested
+PASSED tests/test_openswisshcc_v20_fusion.py::test_invalid_empty_ecdf_reference_fails_closed
+PASSED tests/test_openswisshcc_v23_baseline.py::test_verifies_complete_frozen_baseline
+PASSED tests/test_openswisshcc_v23_baseline.py::test_rejects_tampered_artifact
+PASSED tests/test_openswisshcc_v23_baseline.py::test_rejects_path_outside_workspace
+PASSED tests/test_openswisshcc_v23_error_audit.py::test_transition_classifies_corrections_and_regressions
+PASSED tests/test_openswisshcc_v23_error_audit.py::test_shape_rank_bands_are_predeclared_quartiles
+PASSED tests/test_openswisshcc_v23_error_audit.py::test_audit_flags_are_descriptive_and_do_not_change_prediction
+PASSED tests/test_openswisshcc_v23_error_audit.py::test_non_finite_audit_value_fails_closed
+PASSED tests/test_openswisshcc_v23_shape_fusion.py::test_declared_weights_sum_to_one
+PASSED tests/test_openswisshcc_v23_shape_fusion.py::test_fold_scores_use_training_reference_only
+PASSED tests/test_openswisshcc_v23_shape_fusion.py::test_loocv_separates_a_strong_synthetic_signal
+PASSED tests/test_openswisshcc_v23_shape_fusion.py::test_shape_changes_fusion_score_when_v11_is_constant
+PASSED tests/test_openswisshcc_v23_shape_fusion.py::test_frozen_calibrator_scores_without_labels
+PASSED tests/test_openswisshcc_v23_shape_fusion.py::test_frozen_calibrator_rejects_tampering
+PASSED tests/test_openswisshcc_v23_shape_fusion.py::test_external_signal_schema_is_exact
+PASSED tests/test_openswisshcc_v24_planarity_contrast.py::test_planarity_contrast_is_exact_and_label_free
+PASSED tests/test_openswisshcc_v24_planarity_contrast.py::test_planarity_contrast_rejects_invalid_geometry
+PASSED tests/test_openswisshcc_v24_planarity_contrast.py::test_candidate_weight_must_be_predeclared
+PASSED tests/test_openswisshcc_v24_planarity_contrast.py::test_weight_selection_does_not_read_excluded_case
+PASSED tests/test_openswisshcc_v24_planarity_contrast.py::test_predeclared_grid_includes_anchor_and_bounded_extensions
+PASSED tests/test_openswisshcc_v24_planarity_contrast.py::test_nested_loocv_is_deterministic
+PASSED tests/test_openswisshcc_v25_sphericity.py::test_inverse_sphericity_is_exact_and_label_free
+PASSED tests/test_openswisshcc_v25_sphericity.py::test_inverse_sphericity_rejects_invalid_geometry[-0.01]
+PASSED tests/test_openswisshcc_v25_sphericity.py::test_inverse_sphericity_rejects_invalid_geometry[1.01]
+PASSED tests/test_openswisshcc_v25_sphericity.py::test_inverse_sphericity_rejects_invalid_geometry[invalid]
+PASSED tests/test_openswisshcc_v25_sphericity.py::test_inverse_sphericity_rejects_invalid_geometry[None]
+PASSED tests/test_openswisshcc_v25_sphericity.py::test_candidate_weight_must_stay_inside_predeclared_grid
+PASSED tests/test_openswisshcc_v25_sphericity.py::test_weight_selection_does_not_read_excluded_case
+PASSED tests/test_openswisshcc_v25_sphericity.py::test_nested_loocv_is_deterministic
+PASSED tests/test_openswisshcc_v26_bbox_fill.py::test_bbox_fill_is_exact_and_label_free
+PASSED tests/test_openswisshcc_v26_bbox_fill.py::test_bbox_fill_rejects_invalid_geometry[-0.01]
+PASSED tests/test_openswisshcc_v26_bbox_fill.py::test_bbox_fill_rejects_invalid_geometry[1.01]
+PASSED tests/test_openswisshcc_v26_bbox_fill.py::test_bbox_fill_rejects_invalid_geometry[invalid]
+PASSED tests/test_openswisshcc_v26_bbox_fill.py::test_bbox_fill_rejects_invalid_geometry[None]
+PASSED tests/test_openswisshcc_v26_bbox_fill.py::test_candidate_weight_stays_inside_predeclared_grid
+PASSED tests/test_openswisshcc_v26_bbox_fill.py::test_weight_selection_does_not_read_excluded_case
+PASSED tests/test_openswisshcc_v26_bbox_fill.py::test_nested_loocv_is_deterministic
+PASSED tests/test_openswisshcc_v27_nested_recalibration.py::test_logistic_fit_separates_simple_balanced_data
+PASSED tests/test_openswisshcc_v27_nested_recalibration.py::test_scaler_replaces_constant_scale
+PASSED tests/test_openswisshcc_v27_nested_recalibration.py::test_inner_assignments_are_deterministic_and_stratified
+PASSED tests/test_openswisshcc_v27_nested_recalibration.py::test_outer_selection_never_needs_test_label
+PASSED tests/test_openswisshcc_v27_nested_recalibration.py::test_prediction_marks_failure_without_fabricating_score
+PASSED tests/test_openswisshcc_v27_nested_recalibration.py::test_primary_family_contains_all_predeclared_groups
+PASSED tests/test_openswisshcc_v27_nested_recalibration.py::test_probability_validation_rejects_invalid_value
+PASSED tests/test_openswisshcc_volume_score.py::test_freeze_volume_score_protocol_is_signed_and_refuses_overwrite
+PASSED tests/test_openswisshcc_volume_score.py::test_score_response_rejects_invalid_probabilities_choice_and_tokens[<lambda>-finita]
+PASSED tests/test_openswisshcc_volume_score.py::test_score_response_rejects_invalid_probabilities_choice_and_tokens[<lambda>-somam 1]
+PASSED tests/test_openswisshcc_volume_score.py::test_score_response_rejects_invalid_probabilities_choice_and_tokens[<lambda>-argmax]
+PASSED tests/test_openswisshcc_volume_score.py::test_score_response_rejects_invalid_probabilities_choice_and_tokens[<lambda>-distintos]
+PASSED tests/test_openswisshcc_volume_score.py::test_score_response_rejects_invalid_probabilities_choice_and_tokens[<lambda>-empate]
+PASSED tests/test_openswisshcc_volume_score.py::test_score_response_accepts_fixed_order_tie
+PASSED tests/test_openswisshcc_volume_score.py::test_blind_batch_is_resumable_and_never_sends_labels
+PASSED tests/test_openswisshcc_volume_score.py::test_blind_batch_refuses_tampered_existing_score
+PASSED tests/test_openswisshcc_volume_score.py::test_determinism_pilot_requires_two_equal_planned_replicates
+PASSED tests/test_openswisshcc_volume_score.py::test_determinism_pilot_persists_failure_before_aborting
+PASSED tests/test_openswisshcc_volume_score.py::test_batch_rejects_nonpositive_chunk_and_nonlocal_endpoint
+PASSED tests/test_openswisshcc_volumetric.py::test_volumetric_fallback_hashes_complete_collection_and_exact_coverage
+PASSED tests/test_openswisshcc_volumetric.py::test_volumetric_candidate_reuses_only_intact_complete_collection
+PASSED tests/test_openswisshcc_volumetric.py::test_volumetric_candidate_rejects_truth_in_neutral_input_manifest
+PASSED tests/test_openswisshcc_volumetric_batch.py::test_batch_publishes_only_complete_reviewed_cohort
+PASSED tests/test_openswisshcc_volumetric_batch.py::test_batch_rejects_existing_destination
+PASSED tests/test_openswisshcc_volumetric_evaluation.py::test_case_signals_preserve_panel_probability_evidence
+PASSED tests/test_openswisshcc_volumetric_evaluation.py::test_threshold_search_finds_perfect_separation_when_present
+PASSED tests/test_openswisshcc_volumetric_evaluation.py::test_binary_metrics_uses_both_gates
+PASSED tests/test_openswisshcc_volumetric_evaluation.py::test_loocv_and_repeated_cv_do_not_report_apparent_fit_only
+PASSED tests/test_openswisshcc_volumetric_gallery.py::test_gallery_lists_and_signs_every_panel_without_approval
+PASSED tests/test_openswisshcc_volumetric_gallery.py::test_gallery_rejects_tampered_nonpreview_panel
+PASSED tests/test_openswisshcc_volumetric_gate.py::test_review_binds_every_panel_manifest_and_exact_coverage
+PASSED tests/test_openswisshcc_volumetric_gate.py::test_review_fails_closed_if_non_preview_panel_changes
+PASSED tests/test_openswisshcc_volumetric_gate.py::test_candidate_rejects_incomplete_coverage
+PASSED tests/test_openswisshcc_volumetric_gate.py::test_candidate_rejects_missing_panel
+PASSED tests/test_openswisshcc_volumetric_gate.py::test_review_requires_all_explicit_human_confirmations
+PASSED tests/test_openswisshcc_volumetric_gate.py::test_freeze_binds_configs_collection_and_aggregation_rule
+PASSED tests/test_openswisshcc_volumetric_gate.py::test_freeze_detects_config_change_by_hash
+PASSED tests/test_openswisshcc_volumetric_inference.py::test_case_calls_every_panel_and_aggregates_any_positive
+PASSED tests/test_openswisshcc_volumetric_inference.py::test_intermediate_failure_publishes_no_final_report
+PASSED tests/test_openswisshcc_volumetric_inference.py::test_batch_summary_is_blinded_and_reusable
+PASSED tests/test_openswisshcc_volumetric_medsiglip.py::test_batch_scores_every_panel_without_labels_or_decision
+PASSED tests/test_openswisshcc_volumetric_pairwise.py::test_pairwise_scores_every_panel_without_decision_or_labels
+PASSED tests/test_openswisshcc_volumetric_pairwise.py::test_axial_indices_can_derive_legacy_contiguous_interval
+PASSED tests/test_openswisshcc_volumetric_pairwise.py::test_axial_indices_fail_closed[source0]
+PASSED tests/test_openswisshcc_volumetric_pairwise.py::test_axial_indices_fail_closed[source1]
+PASSED tests/test_openswisshcc_volumetric_pairwise.py::test_axial_indices_fail_closed[source2]
+PASSED tests/test_openswisshcc_volumetric_pairwise.py::test_axial_indices_fail_closed[source3]
+PASSED tests/test_operational_timing.py::test_operational_timing_gate_uses_exact_unrounded_180_seconds
+PASSED tests/test_operational_timing.py::test_operational_timing_without_report_never_passes_budget
+PASSED tests/test_operational_timing.py::test_operational_timing_rejects_invalid_durations[-0.1]
+PASSED tests/test_operational_timing.py::test_operational_timing_rejects_invalid_durations[nan]
+PASSED tests/test_operational_timing.py::test_operational_timing_rejects_invalid_durations[inf]
+PASSED tests/test_operational_timing.py::test_operational_timing_is_persisted_atomically
+PASSED tests/test_operational_timing.py::test_individual_dicom_flow_persists_success_timing
+PASSED tests/test_operational_timing.py::test_individual_dicom_flow_persists_early_failure_timing
+PASSED tests/test_public_independent_cohort.py::test_build_separates_inference_sources_and_protected_labels
+PASSED tests/test_public_independent_cohort.py::test_protocol_hashes_exact_artifacts_and_declares_confounding
+PASSED tests/test_public_independent_cohort.py::test_subject_series_are_grouped_exactly_once
+PASSED tests/test_public_independent_cohort.py::test_case_ids_and_order_are_deterministic_across_output_locations
+PASSED tests/test_public_independent_cohort.py::test_source_file_change_changes_fingerprint
+PASSED tests/test_public_independent_cohort.py::test_rejects_role_mismatch_before_writing_output
+PASSED tests/test_public_independent_cohort.py::test_rejects_unsafe_path_and_missing_minimum
+PASSED tests/test_public_independent_cohort.py::test_refuses_overwrite_of_frozen_bundle
+PASSED tests/test_public_independent_cohort.py::test_preflight_verifies_artifacts_and_sources_without_parsing_labels
+PASSED tests/test_public_independent_cohort.py::test_preflight_rejects_manifest_and_source_tampering
+PASSED tests/test_public_independent_cohort.py::test_preflight_rejects_wrong_expected_signature
+PASSED tests/test_public_independent_v21_calibrator.py::test_score_external_signals_is_deterministic_and_label_blind
+PASSED tests/test_public_independent_v21_calibrator.py::test_score_external_signals_accepts_canonical_sorted_signal_keys
+PASSED tests/test_public_independent_v21_calibrator.py::test_score_external_signals_rejects_protected_fields
+PASSED tests/test_public_independent_v21_calibrator.py::test_score_external_signals_rejects_calibrator_tampering
+PASSED tests/test_public_independent_v21_calibrator.py::test_score_external_signals_enforces_time_gate
+PASSED tests/test_public_independent_v21_calibrator.py::test_freeze_uses_existing_threshold_without_reading_labels
+PASSED tests/test_public_independent_v21_consolidation.py::test_consolidation_reports_point_gates_but_refuses_pooled_metric
+PASSED tests/test_public_independent_v21_consolidation.py::test_consolidation_rejects_dataset_confounding_hidden
+PASSED tests/test_public_independent_v21_consolidation.py::test_consolidation_rejects_different_calibrators
+PASSED tests/test_public_independent_v21_evaluation.py::test_positive_evaluation_requires_explicit_ground_truth_authorization
+PASSED tests/test_public_independent_v21_evaluation.py::test_positive_only_evaluation_reports_sensitivity_but_not_specificity
+PASSED tests/test_public_independent_v21_evaluation.py::test_positive_evaluation_rejects_changed_protected_audit
+PASSED tests/test_public_independent_v21_evaluation.py::test_protocol_freeze_does_not_read_protected_audit
+PASSED tests/test_public_independent_v21_evaluation.py::test_positive_evaluation_rejects_signature_not_explicitly_authorized
+PASSED tests/test_public_independent_v21_negative_evaluation.py::test_negative_evaluation_requires_explicit_ground_truth_authorization
+PASSED tests/test_public_independent_v21_negative_evaluation.py::test_negative_only_evaluation_reports_specificity_but_not_sensitivity
+PASSED tests/test_public_independent_v21_negative_evaluation.py::test_protocol_freeze_hashes_but_does_not_parse_protected_labels
+PASSED tests/test_public_independent_v21_negative_evaluation.py::test_negative_evaluation_rejects_unapproved_signature
+PASSED tests/test_public_independent_v21_negative_evaluation.py::test_negative_evaluation_rejects_non_negative_selected_label
+PASSED tests/test_quest_certificate_server.py::test_certificate_server_exposes_only_expected_routes
+PASSED tests/test_quest_certificate_server.py::test_certificate_handler_has_no_directory_listing
+PASSED tests/test_quest_dynamic_certificate.py::test_stable_ca_survives_ip_change_and_leaf_is_reissued
+PASSED tests/test_quest_dynamic_certificate.py::test_legacy_trusted_certificate_is_migrated_as_same_ca
+PASSED tests/test_quest_dynamic_certificate.py::test_invalid_lan_addresses_are_rejected
+PASSED tests/test_quest_dynamic_launcher.py::test_network_detection_prefers_real_gateway_and_rejects_apipa
+PASSED tests/test_quest_dynamic_launcher.py::test_docker_start_always_refreshes_current_ip_certificate
+PASSED tests/test_quest_dynamic_launcher.py::test_docker_desktop_is_started_and_waited_for_automatically
+PASSED tests/test_quest_dynamic_launcher.py::test_one_click_launcher_uses_docker_qr_and_local_subnet_firewall
+PASSED tests/test_quest_dynamic_launcher.py::test_access_qr_has_short_url_but_no_session_token_or_remote_asset
+PASSED tests/test_quest_dynamic_launcher.py::test_public_certificate_server_uses_stable_ca_and_never_key
+PASSED tests/test_quest_http_launcher.py::test_quest_http_launcher_is_explicitly_development_only
+PASSED tests/test_rag_chunking.py::test_chunk_document_preserves_metadata_and_token_ceiling
+PASSED tests/test_rag_chunking.py::test_chunk_document_is_deterministic
+PASSED tests/test_rag_chunking.py::test_chunk_document_rejects_missing_required_metadata
+PASSED tests/test_rag_chunking.py::test_rough_token_count_counts_words_and_punctuation
+PASSED tests/test_rag_chunking.py::test_chunk_document_rejects_invalid_overlap
+PASSED tests/test_rag_chunking.py::test_long_unpunctuated_section_is_hard_windowed_under_limit
+PASSED tests/test_rag_chunking.py::test_validate_chunks_rejects_tampered_hash
+PASSED tests/test_rag_dataset_index.py::test_chaos_document_never_claims_absolute_normality
+PASSED tests/test_rag_dataset_index.py::test_benign_anatomic_variant_is_flagged_as_non_positive
+PASSED tests/test_rag_dataset_index.py::test_lld_mmri_positive_document_marks_not_dicom_original
+PASSED tests/test_rag_dataset_index.py::test_hcc_datasets_are_positive_target_examples
+PASSED tests/test_rag_dataset_index.py::test_document_metadata_excludes_raw_paths_and_uids
+PASSED tests/test_rag_dataset_index.py::test_iter_records_rejects_leaked_uid
+PASSED tests/test_rag_dataset_index.py::test_cli_writes_documents_jsonl
+PASSED tests/test_rag_dataset_index.py::test_build_documents_rejects_duplicate_doc_id
+PASSED tests/test_rag_index.py::test_tokenize_is_lowercase_and_stable
+PASSED tests/test_rag_index.py::test_build_bm25_index_and_search
+PASSED tests/test_rag_index.py::test_search_bm25_supports_category_filter
+PASSED tests/test_rag_index.py::test_build_bm25_index_tracks_but_skips_chunks_without_indexable_terms
+PASSED tests/test_rag_index.py::test_build_rag_index_cli_completes
+PASSED tests/test_rag_index.py::test_build_bm25_index_aborts_when_chunk_file_missing
+PASSED tests/test_rag_index.py::test_build_bm25_index_aborts_when_chunk_hash_differs
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_01_tokenize_empty_text_returns_empty_list
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_02_tokenize_keeps_hyphenated_terms_lowercase
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_03_tokenize_unicode_accents_are_stable
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_04_build_rejects_non_positive_k1
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_05_build_rejects_negative_b
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_06_build_rejects_b_above_one
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_07_build_rejects_missing_corpus_manifest
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_08_build_rejects_invalid_corpus_schema
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_09_build_rejects_empty_manifest_chunks
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_10_build_rejects_manifest_entry_without_path
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_11_build_rejects_manifest_entry_without_chunk_id
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_12_build_rejects_chunk_path_traversal
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_13_build_rejects_chunk_id_mismatch
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_14_build_rejects_duplicate_chunk_ids
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_15_to_22_build_rejects_missing_required_chunk_fields[doc_id]
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_15_to_22_build_rejects_missing_required_chunk_fields[title]
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_15_to_22_build_rejects_missing_required_chunk_fields[section]
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_15_to_22_build_rejects_missing_required_chunk_fields[text]
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_15_to_22_build_rejects_missing_required_chunk_fields[sha256]
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_15_to_22_build_rejects_missing_required_chunk_fields[categories]
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_15_to_22_build_rejects_missing_required_chunk_fields[priority]
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_15_to_22_build_rejects_missing_required_chunk_fields[url]
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_23_build_rejects_corpus_with_only_unindexable_chunks
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_24_index_records_skipped_chunk_counts
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_25_search_rejects_non_positive_top_k
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_26_search_rejects_empty_query
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_27_search_unknown_terms_returns_empty_list
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_28_search_category_filter_can_remove_all_results
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_29_search_category_filter_accepts_any_overlap
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_30_search_is_case_insensitive
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_31_search_tie_breaks_by_chunk_id
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_32_search_honors_top_k_limit
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_33_load_rejects_invalid_schema
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_34_load_rejects_missing_documents
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_35_load_rejects_missing_terms
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_36_cli_returns_nonzero_for_missing_corpus
+PASSED tests/test_rag_index_hardening.py::test_rag_hardening_37_manifest_and_index_sha_are_stable_length
+PASSED tests/test_rag_retrieval_eval.py::test_retrieval_eval_passes_with_category_doc_and_term_hits
+PASSED tests/test_rag_retrieval_eval.py::test_retrieval_eval_fails_when_expected_category_is_absent
+PASSED tests/test_rag_retrieval_eval.py::test_retrieval_eval_fails_when_expected_doc_is_absent
+PASSED tests/test_rag_retrieval_eval.py::test_retrieval_eval_treats_expected_doc_as_auxiliary_by_default
+PASSED tests/test_rag_retrieval_eval.py::test_retrieval_eval_fails_when_expected_terms_are_absent
+PASSED tests/test_rag_retrieval_eval.py::test_retrieval_eval_records_empty_results
+PASSED tests/test_rag_retrieval_eval.py::test_retrieval_eval_accepts_top_k_override
+PASSED tests/test_rag_retrieval_eval.py::test_render_markdown_report_contains_summary_and_rows
+PASSED tests/test_rag_retrieval_eval.py::test_eval_cli_writes_json_and_markdown_reports
+PASSED tests/test_rag_retrieval_eval.py::test_eval_cli_returns_nonzero_when_acceptance_fails
+PASSED tests/test_rag_retrieval_eval.py::test_eval_cli_no_fail_returns_zero_when_acceptance_fails
+PASSED tests/test_rag_retrieval_eval.py::test_eval_cli_rejects_invalid_top_k
+PASSED tests/test_rag_retrieval_eval.py::test_validate_eval_spec_rejects_wrong_schema
+PASSED tests/test_rag_retrieval_eval.py::test_validate_eval_spec_rejects_duplicate_query_ids
+PASSED tests/test_rag_retrieval_eval.py::test_validate_eval_spec_rejects_query_without_categories
+PASSED tests/test_rag_retrieval_eval.py::test_validate_eval_spec_rejects_unindexable_query
+PASSED tests/test_rag_retrieval_eval.py::test_real_retrieval_eval_references_existing_manifest_categories_and_docs
+PASSED tests/test_rag_sidecar.py::test_build_rag_context_recovers_sources_with_audit
+PASSED tests/test_rag_sidecar.py::test_build_rag_context_disabled_is_explicit
+PASSED tests/test_rag_sidecar.py::test_build_rag_context_fails_closed_when_index_is_missing
+PASSED tests/test_rag_sidecar.py::test_build_rag_context_rejects_path_traversal
+PASSED tests/test_rag_sidecar.py::test_rag_prompt_addendum_contains_safety_rules
+PASSED tests/test_rag_sidecar.py::test_append_rag_to_prompt_hashes_and_limits
+PASSED tests/test_rag_sidecar.py::test_append_rag_to_prompt_fails_when_prompt_exceeds_limit
+PASSED tests/test_rag_sidecar.py::test_persist_rag_context_writes_json_atomically
+PASSED tests/test_raw_dicom_phase_resolver.py::test_resolves_explicit_phase_semantics_and_materializes
+PASSED tests/test_raw_dicom_phase_resolver.py::test_resolves_numbered_postcontrast_series_by_temporal_order
+PASSED tests/test_raw_dicom_phase_resolver.py::test_ignores_subtraction_series_with_duplicate_source_times
+PASSED tests/test_raw_dicom_phase_resolver.py::test_prefers_contrast_tagged_series_over_ambiguous_pre_post_labels
+PASSED tests/test_raw_dicom_phase_resolver.py::test_manifest_does_not_persist_phi_or_raw_descriptions
+PASSED tests/test_raw_dicom_phase_resolver.py::test_rejects_multiple_eligible_studies
+PASSED tests/test_raw_dicom_phase_resolver.py::test_rejects_unlabeled_noncontrast_series
+PASSED tests/test_raw_dicom_phase_resolver.py::test_single_series_failure_is_typed_for_safe_monophase_fallback
+PASSED tests/test_raw_dicom_phase_resolver.py::test_ambiguous_multiphase_failure_is_not_single_phase_eligible
+PASSED tests/test_raw_dicom_phase_resolver.py::test_rejects_duplicate_temporal_order
+PASSED tests/test_raw_dicom_phase_resolver.py::test_non_mr_files_are_ignored
+PASSED tests/test_raw_dicom_phase_resolver.py::test_classic_slices_are_sorted_by_physical_position_not_filename
+PASSED tests/test_raw_phase_equivalence.py::test_selection_key_is_order_sensitive_and_deterministic
+PASSED tests/test_raw_phase_equivalence.py::test_positive_metrics_count_failures_as_false_negatives
+PASSED tests/test_raw_phase_review.py::test_render_panel_is_deterministic_and_uses_common_window
+PASSED tests/test_raw_phase_review.py::test_gallery_is_label_blind_and_records_exclusion
+PASSED tests/test_raw_phase_review.py::test_existing_gallery_is_not_overwritten
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_crop_geometry_matches_the_reference_arm_exactly
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_gate_is_the_prespecified_baseline_plus_two_points
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_crop_geometry_is_square_and_centred_on_the_lesion
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_crop_geometry_rejects_a_lesion_too_small_to_be_meaningful
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_single_slice_lesion_yields_one_slice_not_a_crash
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_window_is_robust_to_outliers_and_ignores_background
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_window_returns_zeros_when_there_is_no_signal
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_resampling_preserves_physical_position_not_voxel_index
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_support_marks_uncovered_region_when_source_field_of_view_is_smaller
+PASSED tests/test_roi_ceiling_t2dwi_embedding_pilot.py::test_minimum_coverage_threshold_is_explicit
+PASSED tests/test_segmentation_contract.py::test_native_contract_is_phi_safe_and_preserves_geometry
+PASSED tests/test_segmentation_contract.py::test_experimental_paths_cannot_overwrite_production
+PASSED tests/test_segmentation_contract.py::test_quality_manifest_validates_binary_mask_on_reference_grid
+PASSED tests/test_segmentation_contract.py::test_empty_or_nonbinary_visualization_mask_is_rejected
+PASSED tests/test_segmentation_contract.py::test_mask_with_different_grid_is_rejected
+PASSED tests/test_segmentation_contract.py::test_non_3d_input_is_rejected
+PASSED tests/test_segmentation_contract.py::test_atomic_writer_only_writes_authorized_manifest
+PASSED tests/test_segmentation_contract.py::test_research_default_config_has_safe_fallback_and_protects_classifier_artifacts
+PASSED tests/test_segmentation_contract.py::test_only_complete_safe_receipt_authorizes_shadow_mask
+PASSED tests/test_segmentation_shadow.py::test_selection_prefers_registered_arterial_and_falls_back
+PASSED tests/test_segmentation_shadow.py::test_shadow_writes_only_v2_artifacts_and_preserves_production
+PASSED tests/test_segmentation_shadow.py::test_shadow_refuses_overwrite_and_cleans_partial_candidate
+PASSED tests/test_segmentation_shadow.py::test_protected_fusion_accepts_small_nearby_extension_and_rejects_large_growth
+PASSED tests/test_segmentation_shadow.py::test_secondary_is_quality_triggered_and_agreement_is_deterministic
+PASSED tests/test_segmentation_shadow.py::test_secondary_failure_preserves_valid_primary_mask
+PASSED tests/test_segmentation_subprocess.py::test_runtime_is_isolated_and_reuses_installed_weights
+PASSED tests/test_segmentation_subprocess.py::test_runtime_recovers_nul_corruption_and_preserves_evidence
+PASSED tests/test_segmentation_subprocess.py::test_runtime_preserves_valid_prediction_counter
+PASSED tests/test_stage1_ingest.py::test_ingest_preserves_geometry_and_anonymizes
+PASSED tests/test_stage1_ingest.py::test_ingest_rejects_too_few_slices
+PASSED tests/test_stage2_normalize.py::test_zscore_produces_zero_mean_unit_std
+PASSED tests/test_stage2_normalize.py::test_constant_volume_aborts
+PASSED tests/test_stage2_normalize.py::test_unknown_method_aborts
+PASSED tests/test_stages_units.py::test_refine_removes_small_objects
+PASSED tests/test_stages_units.py::test_refine_does_not_zero_solid_mask
+PASSED tests/test_stages_units.py::test_mesh_from_full_mask_is_nonempty
+PASSED tests/test_stages_units.py::test_mesh_from_empty_mask_is_none
+PASSED tests/test_stages_units.py::test_taubin_smoothing_preserves_volume
+PASSED tests/test_start_medgemma_script.py::test_start_medgemma_uses_configurable_windows_venv
+PASSED tests/test_start_medgemma_script.py::test_start_medgemma_launches_hidden_and_runs_local_only_preflight
+PASSED tests/test_synthetic_external_stress_v1.py::test_plan_has_exact_counts_and_declares_dependencies
+PASSED tests/test_synthetic_external_stress_v1.py::test_required_masks_are_three_per_unique_donor
+PASSED tests/test_synthetic_external_stress_v1.py::test_download_masks_is_public_revision_bound
+PASSED tests/test_synthetic_external_stress_v1.py::test_lesion_free_synthesis_removes_focal_hotspot_and_preserves_background
+PASSED tests/test_synthetic_external_stress_v1.py::test_implant_is_inside_liver_and_changes_each_phase
+PASSED tests/test_synthetic_external_stress_v1_eval.py::test_summary_keeps_construction_metrics_explicit_and_counts_failures_as_errors
+PASSED tests/test_synthetic_external_stress_v1_eval.py::test_checkpoint_recovery_collapses_only_identical_duplicates
+PASSED tests/test_totalsegmentator_liver_cohort_runner.py::test_verify_total_mr_run_detects_tampered_receipt
+PASSED tests/test_totalsegmentator_runtime.py::test_isolated_runtime_never_uses_global_config
+PASSED tests/test_totalsegmentator_runtime.py::test_isolated_runtime_preserves_counter
+PASSED tests/test_totalsegmentator_runtime.py::test_isolated_runtime_recovers_corrupt_config_with_backup
+PASSED tests/test_totalsegmentator_runtime.py::test_isolated_runtime_requires_dataset589_weights
+PASSED tests/test_v23_external_validation.py::test_minimum_class_size_is_predeclared
+PASSED tests/test_v23_external_validation.py::test_every_consumed_dataset_is_forbidden
+PASSED tests/test_v23_external_validation.py::test_labels_require_exact_balanced_inventory
+PASSED tests/test_v23_external_validation.py::test_labels_reject_underpowered_class
+PASSED tests/test_v23_external_validation.py::test_labels_reject_case_mismatch
+PASSED tests/test_v23_external_validation.py::test_images_reject_consumed_dataset_before_reading_files
+PASSED tests/test_v23_external_validation.py::test_images_reject_known_study_fingerprint_before_reading_files
+PASSED tests/test_v23_external_validation.py::test_images_reject_lesion_mask_role
+PASSED tests/test_v23_retrospective_multicohort.py::test_contract_freezes_claim_and_exact_v23
+PASSED tests/test_v23_retrospective_multicohort.py::test_primary_metric_cannot_be_built_from_single_class_sources
+PASSED tests/test_v23_retrospective_multicohort.py::test_failure_and_noncomputable_cases_are_errors
+PASSED tests/test_v23_retrospective_multicohort.py::test_chaos_is_never_exact_v23_qualification
+PASSED tests/test_v23_retrospective_multicohort.py::test_verify_rejects_tampering
+PASSED tests/test_v23_retrospective_multicohort.py::test_readiness_only_checks_directory_presence
+PASSED tests/test_v23_retrospective_multicohort.py::test_existing_contract_is_idempotent_but_not_overwritten
+PASSED tests/test_v23_retrospective_multicohort_phase2.py::test_repeated_folds_are_deterministic_and_stratified
+PASSED tests/test_v23_retrospective_multicohort_phase2.py::test_selected_arterial_and_ttc_arterial_are_both_exact_v23_compatible
+PASSED tests/test_v23_retrospective_multicohort_phase2.py::test_phase2_binds_cases_without_labels_in_public_inventory
+PASSED tests/test_v23_retrospective_multicohort_phase2.py::test_phase2_rejects_duplicate_patient
+PASSED tests/test_v23_retrospective_multicohort_phase2.py::test_missing_phase_is_recorded_not_fabricated
+PASSED tests/test_v23_retrospective_multicohort_phase2.py::test_verify_rejects_inventory_tampering
+PASSED tests/test_v23_retrospective_multicohort_phase2.py::test_verify_rejects_fold_assignment_tampering
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_v11_loader_keeps_only_exact_v11_signals
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_v11_loader_rejects_ground_truth_leak
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_alignment_contract_requires_exact_partition
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_alignment_contract_rejects_case_in_both_groups
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_saved_candidate_shape_is_reproducible
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_safe_declared_file_rehashes_content
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_safe_declared_file_rejects_lesion_input
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_development_shapes_reject_out_of_range_linearity
+PASSED tests/test_v23_retrospective_multicohort_phase3.py::test_phase3_summary_signature_detects_tampering
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_references_use_only_training_ids
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_score_preserves_frozen_80_20_weights
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_fit_threshold_receives_training_truth_only
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_technical_failure_is_error_for_each_class
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_roc_auc_handles_ties_and_excludes_undefined_scores
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_bootstrap_is_deterministic
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_prediction_record_never_contains_label
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_fold_rows_reject_invalid_assignment_count
+PASSED tests/test_v23_retrospective_multicohort_phase4.py::test_confusion_gate_requires_both_metrics
+PASSED tests/test_v24_liver_enriched_evaluation.py::test_combined_score_uses_frozen_80_20_weights
+PASSED tests/test_v24_liver_enriched_evaluation.py::test_prediction_keeps_technical_failure_without_fabricated_score
+PASSED tests/test_v24_liver_enriched_evaluation.py::test_prediction_threshold_is_deterministic
+PASSED tests/test_v24_liver_enriched_inference.py::test_choice_probabilities_are_strictly_validated
+PASSED tests/test_v24_liver_enriched_inference.py::test_choice_probabilities_reject_invalid_sets[value0]
+PASSED tests/test_v24_liver_enriched_inference.py::test_choice_probabilities_reject_invalid_sets[value1]
+PASSED tests/test_v24_liver_enriched_inference.py::test_choice_probabilities_reject_invalid_sets[value2]
+PASSED tests/test_v24_liver_enriched_inference.py::test_choice_probabilities_reject_invalid_sets[value3]
+PASSED tests/test_v24_liver_enriched_inference.py::test_protocol_cases_preserve_frozen_order_and_panel_hashes
+PASSED tests/test_v24_liver_enriched_inference.py::test_v24_inference_contract_is_choice_signal_and_180_seconds
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_pilot_selection_includes_all_fallbacks_and_is_deterministic
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_pilot_selection_rejects_too_many_fallbacks
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_fallback_config_replicates_only_real_venous_phase
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_modes_require_exact_eligible_partition
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_modes_reject_holdout_label_leak
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_verify_protocol_rejects_signature_tampering
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_candidate_fusion_is_predeclared_fixed_80_20
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_approval_is_signed_and_keeps_inference_locked
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_approval_rejects_blank_reviewer
+PASSED tests/test_v24_liver_enriched_openswisshcc.py::test_full_checkpoint_record_rejects_missing_panel
+PASSED tests/test_verify_medsiglip_phase13.py::test_phase13_verification_config_pins_phase5
+PASSED tests/test_viewer_artifacts.py::test_reference_generator_accepts_singleton_4d_volume
+PASSED tests/test_viewer_artifacts.py::test_reference_generator_centres_all_orientations_on_segmented_candidate
+PASSED tests/test_viewer_artifacts.py::test_acquisition_summary_discloses_interpolation
+PASSED tests/test_viewer_artifacts.py::test_nearest_relationships_only_exist_with_manual_lesion
+PASSED tests/test_viewer_artifacts.py::test_nearest_relationships_accept_unconfirmed_candidate_source
+PASSED tests/test_viewer_artifacts.py::test_lesion_overlap_reports_dominant_couinaud_segment
+PASSED tests/test_viewer_presets.py::test_viewer_exposes_reproducible_visual_presets_without_new_inference
+PASSED tests/test_viewer_presets.py::test_rendering_profile_toggle_preserves_protected_baseline_contract
+PASSED tests/test_viewer_presets.py::test_segments_preset_requires_segment_meshes
+PASSED tests/test_viewer_presets.py::test_viewer_state_accepts_only_known_visual_presets
+PASSED tests/test_viewer_presets.py::test_realistic_tissue_is_the_default_visual_language_and_respects_occlusion
+PASSED tests/test_viewer_presets.py::test_reference_frames_synchronize_to_orthogonal_3d_clipping_without_inference
+PASSED tests/test_viewer_presets.py::test_viewer_state_validates_reference_sync_fields
+PASSED tests/test_viewer_presets.py::test_remote_viewer_loads_liver_first_and_references_lazily
+PASSED tests/test_viewer_presets.py::test_structure_selection_is_visual_auditable_and_does_not_replace_measurement
+PASSED tests/test_viewer_presets.py::test_viewer_state_validates_selected_structure_role
+PASSED tests/test_viewer_presets.py::test_selected_structure_has_contextual_focus_isolation_and_restore_actions
+PASSED tests/test_viewer_presets.py::test_anatomical_quick_views_are_fixed_and_do_not_request_new_inference
+PASSED tests/test_viewer_presets.py::test_saved_review_views_capture_reproducible_visual_state
+PASSED tests/test_viewer_presets.py::test_selected_mesh_can_be_measured_in_three_lps_dimensions
+PASSED tests/test_viewer_presets.py::test_clipping_plane_follows_xr_model_transform_and_preserves_anatomy
+PASSED tests/test_viewer_presets.py::test_reference_sync_restores_previous_manual_clipping_state
+PASSED tests/test_viewer_presets.py::test_saved_views_support_local_ab_comparison_without_persisting_pixels
+PASSED tests/test_viewer_presets.py::test_selected_3d_structure_moves_2d_reference_to_nearest_physical_plane
+PASSED tests/test_viewer_presets.py::test_viewer_presents_mask_volumetry_quality_range_and_downloads
+PASSED tests/test_viewer_xr.py::test_triangle_budgets_prioritize_liver_and_candidate
+PASSED tests/test_viewer_xr.py::test_small_mesh_keeps_authoritative_source
+PASSED tests/test_viewer_xr.py::test_decimated_mesh_is_published_only_after_fidelity_gate
+PASSED tests/test_viewer_xr.py::test_failed_lod_gate_falls_back_without_partial_asset
+PASSED tests/test_viewer_xr.py::test_webxr_client_preserves_desktop_and_exposes_quest_controls
+PASSED tests/test_viewer_xr.py::test_uxvr_spatial_v2_preserves_every_existing_action_contract
+PASSED tests/test_viewer_xr.py::test_uxvr_spatial_v2_is_legible_contextual_and_offline
+PASSED tests/test_viewer_xr.py::test_uxvr_spatial_v2_avoids_redundant_texture_uploads_and_heavy_glass
+PASSED tests/test_viewer_xr.py::test_uxvr_spatial_v2_uses_neutral_clinical_glass_palette
+PASSED tests/test_visual_subtype.py::test_subtipo_nomeado_quando_a_massa_esta_nas_classes_conhecidas
+PASSED tests/test_visual_subtype.py::test_subtipo_recusado_quando_a_massa_vai_para_unspecified
+PASSED tests/test_visual_subtype.py::test_limiar_e_uma_fronteira_estrita
+PASSED tests/test_visual_subtype.py::test_negativo_com_lesao_benigna_ainda_nomeia_o_achado
+PASSED tests/test_visual_subtype.py::test_negativo_cuja_classe_mais_provavel_e_o_alvo_e_sinalizado
+PASSED tests/test_visual_subtype.py::test_positivo_indeterminado_explica_o_motivo
+PASSED tests/test_visual_subtype.py::test_positivo_determinado_traz_rotulo_legivel
+PASSED tests/test_visual_subtype.py::test_modo_visual_e_reconhecido_no_exame_individual
+PASSED tests/test_visual_subtype.py::test_volume_hepatico_fora_da_faixa_gera_aviso
+PASSED tests/test_visual_subtype.py::test_volume_hepatico_tipico_nao_gera_aviso
+PASSED tests/test_visual_subtype.py::test_aviso_de_volume_nao_reprova_o_caso
+PASSED tests/test_volumetry.py::test_volumetry_uses_mask_voxels_and_physical_spacing
+PASSED tests/test_volumetry.py::test_volumetry_rejects_mask_on_different_geometry
+PASSED tests/test_volumetry.py::test_candidate_volume_is_explicitly_unconfirmed
+PASSED tests/test_volumetry.py::test_eight_couinaud_masks_must_exactly_partition_liver
+PASSED tests/test_volumetry.py::test_incomplete_couinaud_partition_is_not_published_as_usable
+PASSED tests/test_volumetry.py::test_volumetry_persists_json_and_csv_atomically
+PASSED tests/test_volumetry.py::test_volumetry_reports_technical_range_and_quality_from_adaptive_receipt
+PASSED tests/test_volumetry.py::test_single_mask_volumetry_is_transparently_graded_b
+PASSED tests/test_volumetry.py::test_independent_verifier_detects_csv_tampering
+PASSED tests/test_webapp.py::test_graceful_payload_shape
+PASSED tests/test_webapp.py::test_friendly_messages_are_human_and_nonclinical
+PASSED tests/test_webapp.py::test_find_best_series_empty_when_no_dicom
+PASSED tests/test_webapp.py::test_find_best_series_prefers_profile_modality
+PASSED tests/test_webapp.py::test_find_best_series_empty_when_only_incompatible_modality
+PASSED tests/test_webapp.py::test_series_selection_metadata_is_sanitized
+PASSED tests/test_webapp.py::test_load_report_accepts_valid_report_regardless_of_returncode
+PASSED tests/test_webapp.py::test_load_report_rejects_missing_or_incomplete
+PASSED tests/test_webapp.py::test_screening_diagnostics_are_sanitized_and_persisted
+PASSED tests/test_webapp.py::test_success_status_overrides_report_envelope_status
+PASSED tests/test_webapp.py::test_viewer_result_exposes_review_url_only_when_model_is_ready
+PASSED tests/test_webapp.py::test_model_endpoints_and_manual_approval
+PASSED tests/test_webapp.py::test_rgb_panel_catalog_only_serves_authorized_case_panels
+PASSED tests/test_webapp.py::test_xr_session_is_short_lived_role_scoped_and_restart_resilient
+PASSED tests/test_webapp.py::test_quest_short_page_lists_only_recent_viewer_ready_jobs
+PASSED tests/test_webapp.py::test_quest_short_page_is_dynamic_and_has_no_hardcoded_job
+PASSED tests/test_webapp.py::test_xr_client_event_accepts_only_bounded_diagnostic_payload
+PASSED tests/test_webapp.py::test_viewer_allowlist_includes_hash_protected_xr_lod
+PASSED tests/test_webapp.py::test_viewer_v2_checks_assets_and_requires_auditable_review
+PASSED tests/test_webapp.py::test_candidate_review_requires_mr_comparison_and_explicit_roi_decision
+PASSED tests/test_webapp.py::test_candidate_localizer_is_not_requested_without_focal_finding
+PASSED tests/test_webapp.py::test_seg_done_requires_volume_and_mask
+PASSED tests/test_webapp.py::test_analyze_creates_job_and_status_is_queryable
+PASSED tests/test_webapp.py::test_completed_job_state_survives_process_restart
+PASSED tests/test_webapp.py::test_completed_job_restore_fails_closed_after_asset_tampering
+PASSED tests/test_webapp.py::test_individual_screening_config_recusa_caminho_arbitrario
+PASSED tests/test_webapp.py::test_analyze_roda_sempre_o_classificador_visual
+PASSED tests/test_webapp.py::test_analyze_accepts_only_authorized_enhanced_3d_flag
+PASSED tests/test_webapp.py::test_enhanced_3d_requested_fails_before_processing_when_unavailable
+PASSED tests/test_webapp.py::test_segmentation_visualization_capability_is_fail_closed
+PASSED tests/test_webapp.py::test_analyze_recusa_pedido_de_modo_mais_fraco
+PASSED tests/test_webapp.py::test_paginas_nao_oferecem_escolha_de_modo
+PASSED tests/test_webapp.py::test_exame_individual_accepts_dicom_bruto_e_expoe_resolucao_de_fases
+PASSED tests/test_webapp.py::test_visual_job_falls_back_only_for_insufficient_dynamic_phases
+PASSED tests/test_webapp.py::test_visual_job_routes_explicit_delayed_monophase_to_medsiglip
+PASSED tests/test_webapp.py::test_visual_job_keeps_ambiguous_raw_study_fail_closed
+PASSED tests/test_webapp.py::test_monophase_config_is_low_latency_rag_and_forbids_dynamic_claims
+PASSED tests/test_webapp.py::test_monophase_viewer_result_preserves_input_assessment
+PASSED tests/test_webapp.py::test_delayed_medsiglip_runs_only_as_persisted_advisory
+PASSED tests/test_webapp.py::test_medsiglip_advisory_rejects_non_delayed_sequence_without_inference
+PASSED tests/test_webapp.py::test_monophase_viewer_result_exposes_secondary_reader_without_changing_report
+PASSED tests/test_webapp.py::test_benchmark_metrics_keep_failures_and_inconclusives_visible
+PASSED tests/test_webapp.py::test_benchmark_target_requires_both_classes_at_75_percent
+PASSED tests/test_webapp.py::test_benchmark_metrics_return_none_when_class_is_absent
+PASSED tests/test_webapp.py::test_benchmark_upload_maps_files_to_cases
+PASSED tests/test_webapp.py::test_benchmark_manifest_accepts_authorized_rag_scenarios
+PASSED tests/test_webapp.py::test_benchmark_manifest_accepts_visual_scenario
+PASSED tests/test_webapp.py::test_benchmark_manifest_accepts_pathology_and_subtype_and_derives_consistency
+PASSED tests/test_webapp.py::test_benchmark_manifest_rejects_inconsistent_or_unprotected_subtype
+PASSED tests/test_webapp.py::test_ground_truth_subtype_is_attached_only_after_inference
+PASSED tests/test_webapp.py::test_benchmark_frontend_exposes_dual_metrics_without_removing_binary_mode
+PASSED tests/test_webapp.py::test_provenance_summary_flags_unknown_and_in_sample
+PASSED tests/test_webapp.py::test_provenance_summary_clean_only_when_all_out_of_sample
+PASSED tests/test_webapp.py::test_provenance_summary_treats_missing_verdict_as_unknown
+PASSED tests/test_webapp.py::test_visual_scenario_rejects_unauthorized_key
+PASSED tests/test_webapp.py::test_visual_scenario_requires_trained_bundle
+PASSED tests/test_webapp.py::test_authorized_visual_phase_resolution_ignores_regular_case
+PASSED tests/test_webapp.py::test_authorized_visual_phase_resolution_uses_only_server_config
+PASSED tests/test_webapp.py::test_visual_benchmark_finalization_does_not_require_medgemma_config
+PASSED tests/test_webapp.py::test_visual_upload_preserves_opaque_series_tree_for_authorized_adapter
+PASSED tests/test_webapp.py::test_benchmark_upload_accepts_more_than_default_starlette_file_cap
+PASSED tests/test_webapp.py::test_benchmark_case_uses_absolute_case_dir_and_scores
+PASSED tests/test_webapp.py::test_benchmark_upload_rejects_unmapped_file
+PASSED tests/test_webapp.py::test_benchmark_report_downloads_json_and_csv
+PASSED tests/test_webapp.py::test_web_benchmark_persists_auditable_run_outputs
+PASSED tests/test_webapp.py::test_web_benchmark_builds_dual_report_without_leaking_subtype_to_inference
+PASSED tests/test_webapp.py::test_gate_anatomico_recusa_mascara_implausivel
+PASSED tests/test_webapp.py::test_gate_anatomico_devolve_qualidade_quando_aprova
+PASSED tests/test_webapp.py::test_os_dois_caminhos_usam_o_mesmo_gate
+PASSED tests/test_webapp.py::test_registro_de_backends_ignora_entrada_invalida_sem_derrubar
+PASSED tests/test_webapp.py::test_backend_nao_registrado_e_recusado_em_vez_de_rebaixado
+PASSED tests/test_webapp.py::test_endpoint_de_backends_so_reporta_o_que_respondeu
+PASSED tests/test_webapp.py::test_analyze_recusa_backend_desconhecido
+PASSED tests/test_webapp.py::test_config_de_embedding_mps_so_difere_em_execucao
+PASSED tests/test_webapp.py::test_aviso_de_fragmentacao_so_aparece_quando_ha_fragmento
+PASSED tests/test_webapp.py::test_aviso_de_fragmentacao_declara_quanto_saiu_da_cena
+PASSED tests/test_webapp.py::test_aviso_de_fragmentacao_e_informativo_quando_o_descarte_e_irrelevante
+PASSED tests/test_webapp.py::test_uniao_de_fases_nunca_toca_a_mascara_de_classificacao
+PASSED tests/test_webapp.py::test_uniao_de_fases_degrada_para_venosa_quando_tudo_falha
+PASSED tests/test_webapp.py::test_uniao_de_fases_descarta_fase_com_geometria_divergente
+PASSED tests/test_webapp.py::test_aviso_de_volume_usa_a_uniao_quando_disponivel
+PASSED tests/test_webapp.py::test_aviso_de_volume_sem_uniao_mantem_comportamento_anterior
+PASSED tests/test_webapp.py::test_mascara_uniao_e_construida_depois_da_classificacao_no_codigo
+PASSED tests/test_webapp.py::test_shadow_3d_roda_depois_da_classificacao_e_antes_da_malha
+PASSED tests/test_webapp.py::test_uniao_de_fases_usa_as_chaves_reais_do_multiphase_ingest
+PASSED tests/test_windows_spawn_guard.py::test_spawn_guard_blocks_only_child_and_restores_environment
+PASSED tests/test_windows_spawn_guard.py::test_spawn_guard_restores_environment_after_exception
+SKIPPED [1] tests/test_lld_mmri_v23_predictions.py:122: exige o calibrador congelado em casos/, que não é versionado (dado derivado de paciente)
+SKIPPED [1] tests/test_lld_mmri_v23_predictions.py:142: exige o calibrador congelado em casos/, que não é versionado (dado derivado de paciente)
+SKIPPED [1] tests/test_lld_mmri_v23_predictions.py:153: exige o calibrador congelado em casos/, que não é versionado (dado derivado de paciente)
+FAILED tests/test_learning_monophase_slice_candidates.py::test_windows_publish_fallback_copies_manifest_last_and_verifies_hashes
+FAILED tests/test_operational_timing_relative_workspace.py::test_relative_workspace_still_exposes_operational_timing_artifact
+2 failed, 1605 passed, 3 skipped, 78 warnings in 39.86s
+PYTEST_EXIT_CODE=1

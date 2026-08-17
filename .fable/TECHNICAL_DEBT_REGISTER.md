@@ -1,0 +1,19 @@
+# Registro de dívida técnica
+
+Nenhum item foi corrigido nesta missão. `CONFIDENCE` refere-se à evidência de engenharia, não à gravidade clínica.
+
+| ID | Location | Category | Description / evidence | Confidence | Risk | Impact | Route | Phase | Gate | Status |
+|---|---|---|---|---|---|---|---|---|---|---|
+| TD-001 | `webapp/server.py` | coupling | 3.610 linhas no snapshot `9683eaa`; API, upload, subprocessos, jobs, benchmark, viewer/XR e persistência no mesmo módulo | HIGH | MEDIUM→HIGH | blast radius/testability | ARCHITECTURE_REFACTOR | 08/09 | conforme fluxo | OPEN |
+| TD-002 | `dtwin/stages.py` | coupling | 1.243 linhas no snapshot `9683eaa` e sete estágios com DICOM, masks, mesh/export | HIGH | HIGH | geometria/3D | PIPELINE | 09 | HG-03/05/10 | OPEN |
+| TD-003 | `tools/` + `dtwin/benchmark/` | experimental sprawl | 307 scripts e grande família versionada v11–v27; intenção nem sempre visível sem docs | HIGH | MEDIUM/HIGH | seleção errada de workflow | DEAD_CODE_DUPLICATION | 01 | possível HG-06/08 | OPEN |
+| TD-004 | `pyproject.toml`/CI | quality gates | CI só doctor+pytest; sem lint/typing/coverage/property/mutation/audit | HIGH | MEDIUM | defeitos mecânicos/adversariais | TESTS_BUILD_ENVIRONMENT | 07 | none para report | OPEN |
+| TD-005 | dependencies | reproducibility | ranges amplos e extras; nenhum lock integral de runtime/hardware | HIGH | MEDIUM/HIGH | drift | DEPENDENCIES | 00/10 | HG-09 se modelo | OPEN |
+| TD-006 | `README.md` vs profile/code | stale docs | README chama Couinaud/vasculatura “fora de escopo”, mas `profiles/figado.yaml` os habilita | HIGH | MEDIUM | onboarding incorreto | ARCHITECTURE | 10 | none para docs | OPEN |
+| TD-007 | atomic/hash helpers | duplication | múltiplos `_write_json_atomic`, `_atomic_text`, `_atomic_npy`, canonical hashes | HIGH | MEDIUM | semânticas divergentes | CACHE_ARTIFACTS | 08 | promote if artifacts scientific | OPEN |
+| TD-008 | geometry helpers | duplication | `_same_geometry/_geometry_compatible` em múltiplos módulos | HIGH | HIGH | tolerâncias inconsistentes | GEOMETRY | 09 | HG-03 | OPEN |
+| TD-009 | `configs/` | config proliferation | 121 configs, muitas experimentais; status production/legacy nem sempre machine-readable | HIGH | MEDIUM/HIGH | execução errada | CONFIG_PROFILES | 02 | HG-01/09 | OPEN |
+| TD-010 | local ignored dirs | operational hygiene | múltiplos `.tmp*`, environments e grandes artefatos coexistem com repo | HIGH | MEDIUM | storage/confusion | BUILD_ENVIRONMENT | 08 | HG-11 se dados | OPEN |
+| TD-011 | `webapp/server.py:2554` | TODO | comentário registra fallback lento/CPU e detecção problemática; requer reprodução | MEDIUM | MEDIUM | performance/failure | PERFORMANCE | 03 | maybe HG-05 | OPEN |
+| TD-012 | manuscript evidence IDs | provenance | resultados E016…E154 não estão mapeados aqui a comandos/artefatos/commits | HIGH | HIGH | reproduzibilidade científica | AUDIT_PROVENANCE | 02/06 | HG-01 | OPEN |
+| TD-013 | docs/tool naming | product drift | ARGOS/OREN/Volyrcs e caminhos históricos coexistem | HIGH | LOW/MEDIUM | confusão operacional | STATIC_MECHANICAL | 08 | none unless semantics | OPEN |

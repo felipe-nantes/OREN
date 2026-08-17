@@ -1,0 +1,835 @@
+schema: fable-scientific-contract-registry-v1
+project: ARGOS_OREN
+generated_from:
+  repository: C:/Users/profurg/Desktop/sander/argos-main
+  manuscript: C:/Users/profurg/Downloads/Manuscrito_Integrado_v1_ARGOS_OREN.pdf
+  inspected_on: "2026-08-17"
+semantics:
+  confirmed_does_not_mean_clinically_validated: true
+  observed_behavior_is_not_automatically_a_scientific_contract: true
+  contract_change_requires_hg_01: true
+ratification:
+  date: "2026-08-17"
+  approver: "Felipe Nantes (fnantes07@gmail.com) — HUMAN_DECISIONS.md, bloco 1"
+  scope: "SCI-001..013, GEO-001, GEO-003, GEO-004, DOM-001 congelados; GEO-002, SW-001 e DOM-002 resolvidos por decisão (ver cada entrada)"
+  evidence: "RUNTIME_EDGES.md (wave 3: 15 MATCH, 1 MATCH_TRANSITIVE); tasks/TASK-2026-08-17-PH01-CARTO-03_EVIDENCE.md"
+  frozen: true
+contracts:
+  - id: ARGOS-SCI-001
+    name: Limite não clínico do estudo e do produto atual
+    value:
+      research_only: true
+      clinical_use_allowed: false
+      allowed_claim: desempenho metodológico retrospectivo nas coortes disponíveis
+      prohibited_claims:
+        - diagnóstico autônomo
+        - segurança ou benefício clínico
+        - validação prospectiva
+        - validação externa independente do holdout consumido
+        - anatomia verdadeira
+        - gêmeo digital
+        - planejamento cirúrgico
+        - transferibilidade universal
+    unit: null
+    category: CLINICAL_CLAIM
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito pp. 1, 5, 10, 18-19"
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:25-31
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:137-145
+      - configs/training/hybrid_v1_protocol.yaml:40-45
+      - dtwin/stages.py:1189-1202
+    status: CONFIRMED
+    rationale: As duas fontes restringem explicitamente a inferência a engenharia e pesquisa retrospectiva; nenhuma evidência autoriza uso assistencial.
+    affected_modules:
+      - benchmark
+      - learning
+      - pipeline
+      - viewer
+      - webapp
+    affected_files:
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json
+      - configs/training/hybrid_v1_protocol.yaml
+      - profiles/figado.yaml
+      - dtwin/stages.py
+      - webapp/server.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_v23_retrospective_multicohort.py
+      - tests/test_engine_finalize.py
+
+  - id: ARGOS-SCI-002
+    name: População e denominador principal multicohort
+    value:
+      analysis_unit: exame
+      patient_grouping_required: true
+      total_exams: 467
+      positive_exams: 220
+      negative_exams: 247
+      computable_exams_declared_in_manuscript: 451
+      technical_failures_declared_in_manuscript: 16
+      cohorts:
+        lld_mmri:
+          exams: 335
+          technically_processable: 321
+          technical_failures: 14
+        openswisshcc_development:
+          exams: 88
+        openswisshcc_consumed_holdout:
+          exams: 44
+    unit: exame
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito pp. 2-3, 6, 11 e 22"
+      - configs/training/hybrid_v1_protocol.lock.json:11-27
+      - configs/training/hybrid_v1_protocol.lock.json:35-53
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:32-77
+    status: CONFIRMED
+    rationale: Os totais, polaridades e três parcelas do denominador estão congelados; 451/16 permanecem declarados no manuscrito e devem ser reconciliados por ledger antes de nova publicação.
+    affected_modules:
+      - learning.protocol
+      - learning.splits
+      - learning.medsiglip_multiclass_classifier
+      - benchmark.metrics
+    affected_files:
+      - configs/training/hybrid_v1_protocol.lock.json
+      - configs/training/hybrid_v1_nested_splits.json
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json
+      - dtwin/learning/protocol.py
+      - dtwin/learning/splits.py
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_learning_protocol.py
+      - tests/test_learning_splits.py
+
+  - id: ARGOS-SCI-003
+    name: Validação cruzada aninhada e agrupada por paciente
+    value:
+      strategy: nested_patient_grouped_cross_validation
+      outer_folds: 5
+      inner_folds: 4
+      seed: 20260724
+      outer_predictions_only: true
+      threshold_selection: inner_oof_only
+      preprocessing_fit_scope: training_fold_only
+    unit: fold
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito pp. 9-10, §2.6"
+      - configs/training/hybrid_v1_protocol.lock.json:62-73
+      - dtwin/learning/splits.py:100-152
+      - dtwin/learning/medsiglip_multiclass_classifier.py:1134-1143
+    status: CONFIRMED
+    rationale: Impede seleção e avaliação do mesmo paciente no mesmo ciclo e define a estimativa interna honesta usada no manuscrito.
+    affected_modules:
+      - learning.splits
+      - learning.protocol
+      - learning.medsiglip_classifier
+      - learning.medsiglip_multiclass_classifier
+      - learning.robustness
+    affected_files:
+      - configs/training/hybrid_v1_protocol.yaml
+      - configs/training/hybrid_v1_protocol.lock.json
+      - configs/training/hybrid_v1_nested_splits.json
+      - dtwin/learning/splits.py
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_learning_splits.py
+      - tests/test_learning_protocol.py
+      - tests/test_learning_medsiglip_multiclass_classifier.py
+
+  - id: ARGOS-SCI-004
+    name: Falhas permanecem no denominador principal
+    value:
+      technical_failure_counts_as_error: true
+      noncomputable_counts_as_error: true
+      timeout_counts_as_error: true
+      invalid_response_counts_as_error: true
+      inconclusive_counts_as_error: true
+      decisions_only_metrics_are_secondary: true
+    unit: política de contagem
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 10, §2.7; p. 25, Quadro 1"
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:123-135
+      - dtwin/benchmark/metrics.py:143-287
+    status: CONFIRMED
+    rationale: Evita superestimar robustez operacional removendo falhas depois da execução.
+    affected_modules:
+      - benchmark.metrics
+      - benchmark.reporting
+      - learning.medsiglip_multiclass_classifier
+    affected_files:
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json
+      - configs/training/hybrid_v1_protocol.yaml
+      - configs/training/hybrid_v1_protocol.lock.json
+      - dtwin/benchmark/metrics.py
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_benchmark_metrics.py
+      - tests/test_v23_retrospective_multicohort.py
+      - tests/test_learning_medsiglip_multiclass_classifier.py
+
+  - id: ARGOS-SCI-005
+    name: Gate operacional interno de sensibilidade e especificidade
+    value:
+      minimum_sensitivity: 0.75
+      minimum_specificity: 0.75
+      purpose: governança interna de continuidade
+      clinical_cutoff: false
+      threshold_change_after_result_observation_allowed: false
+    unit: proporção
+    category: DOMAIN_POLICY
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito pp. 8, 10, 22 e 28"
+      - configs/training/hybrid_v1_protocol.yaml:25-31
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:15-23
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:123-139
+    status: CONFIRMED
+    rationale: O projeto o define repetidamente como meta operacional não clínica e proíbe ajuste após observar o resultado.
+    affected_modules:
+      - benchmark.metrics
+      - learning.medsiglip_classifier
+      - learning.medsiglip_multiclass_classifier
+      - webapp.benchmark
+    affected_files:
+      - configs/training/hybrid_v1_protocol.yaml
+      - configs/training/hybrid_v1_protocol.lock.json
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json
+      - dtwin/benchmark/metrics.py
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_benchmark_metrics.py
+      - tests/test_v23_retrospective_multicohort.py
+      - tests/test_learning_protocol.py
+
+  - id: ARGOS-SCI-006
+    name: Holdout OpenSwissHCC consumido e reporting por coorte
+    value:
+      openswisshcc_holdout_exams: 44
+      prior_project_exposure: true
+      external_independent_validation: false
+      results_must_be_reported_per_cohort: true
+      worst_cohort_result_required: true
+      pooled_cross_dataset_metric_is_descriptive_only: true
+      single_class_sources_cannot_form_primary_metric: true
+    unit: exame
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 6, §2.2; pp. 22-23; p. 27"
+      - configs/training/hybrid_v1_protocol.lock.json:19-22
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:25-29
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:140-145
+    status: CONFIRMED
+    rationale: Reutilização iterativa impede claim externo; estratificação impede que a média agregada oculte domínio.
+    affected_modules:
+      - learning.protocol
+      - learning.robustness
+      - benchmark.reporting
+    affected_files:
+      - configs/training/hybrid_v1_protocol.lock.json
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json
+      - dtwin/learning/robustness.py
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_v23_retrospective_multicohort.py
+      - tests/test_learning_robustness.py
+
+  - id: ARGOS-SCI-007
+    name: Mapping multiclasse da Etapa C para endpoint binário
+    value:
+      source_classes:
+        - fnh
+        - hcc
+        - hemangioma
+        - hepatic_cyst
+        - negative_unspecified
+        - positive_unspecified
+      positive_classes:
+        - hcc
+        - positive_unspecified
+      unspecified_subtype_must_not_be_fabricated: true
+    unit: classe
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 6, §2.2"
+      - configs/training/medsiglip_multiclass_v1.yaml:14-42
+      - dtwin/learning/medsiglip_multiclass_classifier.py:1254-1266
+    status: CONFIRMED
+    rationale: Mantém a granularidade realmente documentada em cada coorte e preserva o endpoint binário sem inventar subtipo.
+    affected_modules:
+      - learning.medsiglip_multiclass_classifier
+      - learning.visual_inference
+      - benchmark.subtype_metrics
+    affected_files:
+      - configs/training/medsiglip_multiclass_v1.yaml
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+      - dtwin/learning/visual_inference.py
+      - dtwin/benchmark/subtype_metrics.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_learning_medsiglip_multiclass_classifier.py
+      - tests/test_visual_subtype.py
+
+  - id: ARGOS-SCI-008
+    name: Isolamento de ground truth e anti-gaming na inferência
+    value:
+      no_ground_truth_in_inference: true
+      no_lesion_mask_in_inference: true
+      protected_labels_never_sent_to_feature_extractor: true
+      no_relabeling_from_model_output: true
+      missing_phase_cannot_be_fabricated: true
+      no_case_removal_after_protocol_freeze: true
+      failed_experiments_must_be_retained: true
+    unit: política
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito pp. 6, 10 e 25"
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:15-23
+      - configs/training/hybrid_v1_protocol.yaml:39-45
+      - dtwin/learning/visual_inference.py:160-166
+    status: CONFIRMED
+    rationale: Evita leakage, fabricação de informação ausente, remoção pós-hoc e realimentação de artefatos supervisionados.
+    affected_modules:
+      - learning.protocol
+      - learning.embeddings
+      - learning.visual_inference
+      - localization
+      - benchmark
+    affected_files:
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json
+      - configs/training/hybrid_v1_protocol.yaml
+      - dtwin/learning/protocol.py
+      - dtwin/learning/visual_inference.py
+      - dtwin/learning/localized_candidate_supervision.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_v23_retrospective_multicohort.py
+      - tests/test_learning_protocol.py
+      - tests/test_learning_visual_inference.py
+      - tests/test_localized_candidate_supervision.py
+
+  - id: ARGOS-SCI-009
+    name: Identidade da representação MedSigLIP congelada
+    value:
+      model_id: google/medsiglip-448
+      revision: 9cea28a1a1195f665105faa6e8544c112fd960a4
+      image_size_pixels: 448
+      device_dtype: float16
+      batch_size: 4
+      pooling: vision_pooler_output
+      l2_normalize: true
+      output_dtype: float32
+      output_dimensions: 1152
+      local_files_only: true
+    unit: embedding
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 7, §2.4"
+      - configs/training/medsiglip_frozen_v1.yaml:2-13
+      - dtwin/learning/medsiglip_embeddings.py:65-76
+      - dtwin/learning/medsiglip_embeddings.py:117-179
+    status: CONFIRMED
+    rationale: Modelo, revisão, preprocessamento e representação são parte da identidade científica dos embeddings e do cache.
+    affected_modules:
+      - learning.medsiglip_embeddings
+      - learning.medsiglip_classifier
+      - learning.medsiglip_multiclass_classifier
+      - cache
+    affected_files:
+      - configs/training/medsiglip_frozen_v1.yaml
+      - dtwin/learning/medsiglip_embeddings.py
+      - dtwin/learning/medsiglip_classifier.py
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_learning_medsiglip_embeddings.py
+
+  - id: ARGOS-GEO-001
+    name: Seleção trifásica e grade venosa de referência
+    value:
+      required_phases:
+        - t1_arterial
+        - t1_venous
+        - t1_delayed
+      derived_series_excluded_when_identifiable:
+        - subtraction
+        - MPR
+        - MIP
+      reference_phase: t1_venous
+      intensity_interpolator: linear
+      support_interpolator: nearest_neighbor
+      transform_for_harmonization: identity_in_physical_space
+      missing_phase_fabrication_allowed: false
+    unit: espaço físico LPS da imagem
+    category: GEOMETRIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 7, §2.4"
+      - dtwin/learning/raw_dicom_phase_resolver.py:45-57
+      - dtwin/learning/multiphase_ingest.py:42-63
+      - dtwin/learning/multiphase_ingest.py:194-216
+      - dtwin/learning/multiphase_ingest.py:245-321
+    status: CONFIRMED
+    rationale: Painéis multifásicos e máscaras precisam compartilhar uma grade física conhecida; séries derivadas não podem competir com a aquisição original.
+    affected_modules:
+      - learning.raw_dicom_phase_resolver
+      - learning.multiphase_ingest
+      - panels
+      - segmentation
+      - classification
+    affected_files:
+      - dtwin/learning/raw_dicom_phase_resolver.py
+      - dtwin/learning/multiphase_ingest.py
+      - dtwin/benchmark/openswisshcc_alignment.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_raw_dicom_phase_resolver.py
+      - tests/test_learning_multiphase_ingest.py
+      - tests/test_openswisshcc_alignment.py
+
+  - id: ARGOS-GEO-002
+    name: Gate geométrico entre fases
+    value:
+      openswiss_cohort_alignment_gate:
+        scope: alinhamento das coortes OpenSwissHCC (benchmark/manuscrito)
+        metric: dice_between_automatic_liver_masks
+        minimum: 0.80
+        governs: dtwin/benchmark/openswisshcc_alignment.py
+      product_raw_dicom_ingest_gate:
+        scope: ingest DICOM bruto do produto (fluxo web)
+        metric: fraction_of_venous_reference_grid_covered
+        minimum: 0.50
+        governs: dtwin/learning/multiphase_ingest.py
+      same_metric: false
+      scoped_as_two_contracts: true
+    unit: proporção
+    category: GEOMETRIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 7, §2.4"
+      - dtwin/benchmark/openswisshcc_alignment.py:60-92
+      - dtwin/benchmark/openswisshcc_alignment.py:432-457
+      - dtwin/learning/multiphase_ingest.py:61-63
+      - dtwin/learning/multiphase_ingest.py:308-317
+    status: CONFIRMED
+    rationale: >
+      Resolvido em 2026-08-17 (HG-01, HUMAN_DECISIONS.md item 1): são DOIS gates
+      com escopos distintos — Dice 0.80 governa o alinhamento das coortes
+      OpenSwissHCC; cobertura 0.50 governa o ingest bruto do produto. Nenhum
+      substitui o outro; nenhuma mudança de código decorrente.
+    affected_modules:
+      - benchmark.openswisshcc_alignment
+      - learning.multiphase_ingest
+      - panels
+      - classification
+    affected_files:
+      - dtwin/benchmark/openswisshcc_alignment.py
+      - dtwin/learning/multiphase_ingest.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_openswisshcc_alignment.py
+      - tests/test_learning_multiphase_ingest.py
+
+  - id: ARGOS-SCI-010
+    name: Segmentação hepática primária por TotalSegmentator MRI
+    value:
+      engine: totalsegmentator_mri
+      task: total_mr
+      target_label: liver
+      primary_classification_mask: mask_organ.nii.gz
+      visualization_shadow_may_replace_classification_input: false
+    unit: máscara binária 3D
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 7, §2.4"
+      - profiles/figado.yaml:26-30
+      - configs/segmentation_visualization_v2.yaml:12-26
+    status: CONFIRMED
+    rationale: O modelo/task definem a máscara usada pelo caminho primário; alternativas de visualização são shadow e não podem mudar a classificação.
+    affected_modules:
+      - segmentation
+      - pipeline.stage3
+      - panels
+      - classification
+      - volumetry
+    affected_files:
+      - profiles/figado.yaml
+      - configs/segmentation_visualization_v2.yaml
+      - dtwin/stages.py
+      - dtwin/segmentation_contract.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_webapp.py
+      - tests/test_segmentation_contract.py
+      - tests/test_segmentation_shadow.py
+      - tests/test_lld_mmri_v23_preparation.py
+
+  - id: ARGOS-SCI-011
+    name: Localização candidata pós-inferência e sem feedback
+    value:
+      execution_order: after_frozen_binary_inference
+      used_by_classifier: false
+      output_semantics: automatic_unconfirmed_candidate
+      human_review_required: true
+      confirmed_lesion_claim_allowed: false
+    unit: região candidata
+    category: DOMAIN_POLICY
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito pp. 7, 9, 13, 16 e 18"
+      - profiles/figado.yaml:61-70
+      - dtwin/learning/visual_inference.py:160-166
+      - dtwin/volumetry.py:52-55
+    status: CONFIRMED
+    rationale: Separa cobertura/localização de discriminação e impede explicação causal ou diagnóstico fabricado.
+    affected_modules:
+      - localization
+      - learning.visual_inference
+      - pipeline.stage3
+      - pipeline.stage5
+      - volumetry
+      - viewer
+    affected_files:
+      - profiles/figado.yaml
+      - dtwin/learning/visual_inference.py
+      - dtwin/stages.py
+      - dtwin/volumetry.py
+      - webapp/server.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_learning_visual_inference.py
+      - tests/test_segmentation_contract.py
+      - tests/test_volumetry.py
+      - tests/test_webapp.py
+
+  - id: ARGOS-SCI-012
+    name: Piso de massa para emissão de subtipo nomeado
+    value:
+      named_lesion_probability_mass_minimum: 0.50
+      below_floor_behavior: refuse_subtype
+      conditioned_on_binary_positive_path: true
+    unit: proporção de probabilidade
+    category: DOMAIN_POLICY
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 9, §2.5.5"
+      - dtwin/learning/visual_inference.py:49
+      - dtwin/learning/visual_inference.py:169-207
+    status: CONFIRMED
+    rationale: Evita nomear subtipo ao renormalizar probabilidade residual quando a massa está em classes não especificadas.
+    affected_modules:
+      - learning.visual_inference
+      - benchmark.subtype_metrics
+      - webapp
+    affected_files:
+      - dtwin/learning/visual_inference.py
+      - dtwin/benchmark/subtype_metrics.py
+      - webapp/server.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_visual_subtype.py
+
+  - id: ARGOS-GEO-003
+    name: Escopo quantitativo permitido da camada 3D
+    value:
+      purpose:
+        - auditoria
+        - visualização
+        - navegação
+      quality_claim: fidelity_to_source_mask
+      anatomical_accuracy_claim: false
+      true_anatomy_claim: false
+      surgical_use_claim: false
+      digital_twin_claim: false
+      coordinate_system: LPS
+    unit: espaço físico
+    category: GEOMETRIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito pp. 9, 14, 18 e 24"
+      - profiles/figado.yaml:114-122
+      - dtwin/stages.py:1189-1202
+      - dtwin/viewer_artifacts.py:89-179
+    status: CONFIRMED
+    rationale: As métricas comparam a malha à máscara e não fornecem referência anatômica independente.
+    affected_modules:
+      - pipeline.stage6
+      - pipeline.stage7
+      - viewer_artifacts
+      - volumetry
+      - viewer
+    affected_files:
+      - profiles/figado.yaml
+      - dtwin/stages.py
+      - dtwin/viewer_artifacts.py
+      - dtwin/volumetry.py
+      - viewer/app.js
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_engine_finalize.py
+      - tests/test_stages_units.py
+      - tests/test_viewer_artifacts.py
+      - tests/test_volumetry.py
+
+  - id: ARGOS-GEO-004
+    name: Volume autoritativo derivado da máscara em espaço físico
+    value:
+      formula: voxel_count_times_spacing_x_times_spacing_y_times_spacing_z_divided_by_1000
+      source: binary_mask_in_physical_space
+      output_unit: mL
+      mesh_is_authoritative: false
+      geometry_mismatch_behavior: abort
+    unit: mL
+    category: GEOMETRIC_CONTRACT
+    source_type:
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - dtwin/volumetry.py:151-210
+      - dtwin/volumetry.py:425-460
+      - dtwin/volumetry.py:559-590
+    status: CONFIRMED
+    rationale: É a definição dimensional explícita e verificável implementada; a medida continua condicionada à correção da máscara.
+    affected_modules:
+      - volumetry
+      - pipeline.stage7
+      - viewer
+      - webxr
+    affected_files:
+      - dtwin/volumetry.py
+      - dtwin/stages.py
+      - dtwin/viewer_artifacts.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_volumetry.py
+      - tests/test_engine_finalize.py
+
+  - id: ARGOS-DOM-001
+    name: Guarda de componente principal para visualização hepática
+    value:
+      largest_component_fraction_minimum_for_isolation: 0.90
+      behavior_below_minimum: preserve_all_components
+      behavior_at_or_above_minimum: keep_largest_component
+      holes_filled_after_component_decision: true
+      applies_to:
+        - organ_visualization_mask
+      does_not_apply_to:
+        - lesions
+        - vessels
+    unit: fração de voxels da máscara
+    category: DOMAIN_POLICY
+    source_type:
+      - SOURCE_A_REPOSITORY
+      - SOURCE_D_PROJECT_DOCUMENT
+    source_location:
+      - dtwin/stages.py:158-208
+      - dtwin/stages.py:714-765
+      - docs/188_DIAGNOSTICO_E_PLANO_VISUALIZACAO_3D.md:122-125
+      - docs/188_DIAGNOSTICO_E_PLANO_VISUALIZACAO_3D.md:287-297
+    status: CONFIRMED
+    rationale: A regra foi documentada a partir de 321 máscaras; abaixo de 0,90, 20/321 casos perderiam mais de 10% se a remoção fosse cega.
+    affected_modules:
+      - pipeline.stage5
+      - pipeline.stage6
+      - volumetry
+      - viewer
+    affected_files:
+      - dtwin/stages.py
+      - docs/188_DIAGNOSTICO_E_PLANO_VISUALIZACAO_3D.md
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_engine_finalize.py
+
+  - id: ARGOS-SW-001
+    name: Mecanismo de integridade do bundle de produção
+    value:
+      manifest_integrity: canonical_sha256_of_manifest_body
+      model_integrity: sha256_of_model_file
+      keyed_signature: false
+      signer_identity: null
+      authentication_guarantee: false
+    unit: hash SHA-256
+    category: SOFTWARE_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 10, §2.8; p. 16, item 9; p. 25, Quadro 1"
+      - dtwin/learning/visual_inference.py:75-95
+      - tests/test_learning_visual_inference.py:30-73
+    status: CONFIRMED
+    rationale: >
+      Resolvido em 2026-08-17 (HG-01, HUMAN_DECISIONS.md item 2): o contrato é
+      integridade por SHA-256 canônico sem claim de autenticação; "assinado" no
+      manuscrito é pendência editorial a corrigir na próxima revisão textual.
+    affected_modules:
+      - learning.visual_inference
+      - learning.medsiglip_multiclass_classifier
+      - artifacts
+      - provenance
+    affected_files:
+      - dtwin/learning/visual_inference.py
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+      - dtwin/learning/protocol.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_learning_visual_inference.py
+
+  - id: ARGOS-SCI-013
+    name: Estatística de proporções e robustez da Etapa C
+    value:
+      proportion_confidence_interval: Wilson_95_percent
+      patient_grouped_bootstrap_resamples: 2000
+      auc_role: secondary_descriptive
+      auc_confidence_interval_reported: false
+      paired_superiority_claim_without_paired_test_allowed: false
+    unit: reamostragem por grupo de paciente
+    category: SCIENTIFIC_CONTRACT
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito pp. 9-10, §2.6; pp. 12 e 19"
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json:123-135
+      - dtwin/benchmark/metrics.py:15-39
+      - dtwin/learning/robustness.py:176-215
+      - dtwin/learning/robustness.py:362-395
+    status: CONFIRMED
+    rationale: Mantém IC adequado para proporções, resampling no nível correto e impede superioridade/equivalência não testada.
+    affected_modules:
+      - benchmark.metrics
+      - learning.robustness
+      - learning.medsiglip_multiclass_classifier
+      - reporting
+    affected_files:
+      - configs/benchmark/v23_retrospective_multicohort_contract_v1.json
+      - dtwin/benchmark/metrics.py
+      - dtwin/learning/robustness.py
+      - dtwin/learning/medsiglip_multiclass_classifier.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it:
+      - tests/test_benchmark_metrics.py
+      - tests/test_learning_robustness.py
+
+  - id: ARGOS-DOM-002
+    name: Desidentificação antes dos artefatos e revisão de PHI queimada
+    value:
+      identifiers_removed_before_downstream_artifacts: true
+      dicom_headers_dropped_by_nifti_conversion: true
+      burned_in_phi_detection_automatic: false
+      human_burned_in_review_required: true
+      current_raw_phase_materialization_copies_original_dicom_bytes: true
+      demo_auto_assumes_human_phi_confirmation: true
+    unit: política de privacidade
+    category: DOMAIN_POLICY
+    source_type:
+      - SOURCE_B_MANUSCRIPT
+      - SOURCE_A_REPOSITORY
+    source_location:
+      - "Manuscrito p. 7, §2.4; p. 25, Quadro 1"
+      - dtwin/stages.py:386-408
+      - dtwin/learning/raw_dicom_phase_resolver.py:294-326
+      - webapp/server.py:15-17
+    status: CONFIRMED
+    rationale: >
+      Resolvido em 2026-08-17 (HG-01, HUMAN_DECISIONS.md item 3): o comportamento
+      atual foi RATIFICADO como contrato — NIfTI descarta headers; o resolver
+      retém DICOM original; revisão humana de PHI queimada é obrigatória e não
+      automática; demo autoassume confirmação humana documentada.
+    affected_modules:
+      - dicom_ingest
+      - learning.raw_dicom_phase_resolver
+      - pipeline.stage1
+      - webapp.upload
+      - artifacts
+    affected_files:
+      - dtwin/stages.py
+      - dtwin/learning/raw_dicom_phase_resolver.py
+      - dtwin/learning/multiphase_ingest.py
+      - webapp/server.py
+    clinical_threshold: false
+    mutable_by_fable: false
+    human_approval_required: true
+    tests_that_protect_it: []
