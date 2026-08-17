@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pytest
 
@@ -41,6 +43,10 @@ def test_untyped_manifest_requires_explicit_label_blind_flags():
     ) is True
 
 
+@pytest.mark.skipif(
+    os.name != "nt",
+    reason="fallback de publicação só existe sob os.name=='nt' (monophase_slice_candidates.py); em POSIX o PermissionError simulado propaga por construção",
+)
 def test_windows_publish_fallback_copies_manifest_last_and_verifies_hashes(
     tmp_path, monkeypatch
 ):
