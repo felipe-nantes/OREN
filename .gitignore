@@ -113,3 +113,7 @@ graphify-out/20??-??-??/
 
 # Arquivos temporarios criados pelo Microsoft Office
 ~$*.docx
+
+# Exportacoes locais do Drive (podem conter material de paciente) -- nunca versionar
+docs/drive/
+docs/drive.zip
