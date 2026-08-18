@@ -1,15 +1,19 @@
 # Estado persistente
 
-LAST_UPDATED: 2026-08-17 (tarde) America/Sao_Paulo  
+LAST_UPDATED: 2026-08-18 (manhã) America/Sao_Paulo — sessão iniciada em 2026-08-17 e continuada em 18/08  
 PACK_SCHEMA: argos-fable-engineering-pack-v1  
 BASE_COMMIT: `9683eaa796d01e946597f3fe1351556aa8fcb141`  
 BRANCH: `main` (sessão executada no worktree `claude/fable-engineering-phase-00-b0172f`, mesmo HEAD)  
-CURRENT_PHASE: `PHASE_01_CARTOGRAPHY` → **DONE** (2026-08-17, waves 1-4)  
-CURRENT_WAVE: `wave-4-depmap-cards-exit-review` = DONE  
-CURRENT_MODULE: `cross-cutting`  
-LAST_COMPLETED_TASK: `TASK-2026-08-17-PH01-CARTO-04` (20 edges estáticos VERIFIED; 259/259 paths dos module cards existem; exit review: PHASE_01 DONE)  
-NEXT_RECOMMENDED_TASK: `iniciar PHASE_02_CONTRACTS (aguardando autorização humana para nova fase)`  
-STATUS: `DONE` (fase 01) / avanço de fase aguarda o humano
+CURRENT_PHASE: `PHASE_03_CHARACTERIZATION` (IN_PROGRESS; autorizada pelo humano em 2026-08-17)  
+CURRENT_WAVE: `ph03-wave-3-dicom-phase-selection` = DONE (waves 1-3 concluídas)  
+CURRENT_MODULE: `DICOM_MULTIPHASE_INGEST / TEST_SUITE`  
+LAST_COMPLETED_TASK: `TASK-2026-08-18-PH03-CHAR-03` (7 characterization tests da seleção de fases DICOM com fixtures sintéticas; 19 passed no host com os 12 existentes; 3 ambiguidades/warts encaminhadas como candidatas HG-02)  
+NEXT_RECOMMENDED_TASK: `PHASE_03 wave 4 — characterization da P0 #4 (mask→volumetry provenance: qual máscara é medida, shadow/union, gates de aprovação)`  
+STATUS: `IN_PROGRESS` (fase 03)
+
+TESTES NOVOS NÃO COMMITADOS: `tests/test_characterization_geometry_equality.py`, `tests/test_characterization_nested_splits.py`, `tests/test_characterization_dicom_phase_selection.py` (commit quando solicitado).
+
+COMMITS DESTA DATA (main, sem push): `7efa2dc` (pack versionado), `0ba6f01` (skipif), `bd278b5` (graphify code-only).
 
 ## Snapshot observado
 
@@ -61,7 +65,7 @@ Abertos:
 - Com o skipif aplicado, o CI ubuntu-latest deve ficar verde; estado real do CI segue não verificado (gh ausente).
 - Imagem runtime não contém `git`, mas 6 testes da suíte dependem do binário — divergência ambiente-imagem vs ambiente-teste.
 - `webapp/seg_worker.py` (42 linhas) é estaticamente órfão — nenhuma referência de entrada; o runtime copia `dtwin/seg_worker.py` (29 linhas, conteúdo divergente) via `dtwin/segmentation_subprocess.py:94-95`. Candidato a legacy; remoção só com prova de reachability runtime e autorização.
-- Docker Desktop 4.86.0: TODO encerramento deixa sockets Unix irremovíveis e o próximo arranque crasha; workaround = renomear `%LOCALAPPDATA%\Docker\run` e `%LOCALAPPDATA%\docker-secrets-engine` antes de iniciar (3 ocorrências em 2026-08-17). Correção definitiva sugerida: atualizar Docker Desktop ou reboot.
+- Docker Desktop 4.86.0 — ambiente de baseline instável, DUAS falhas distintas: (a) sockets Unix órfãos irremovíveis a cada encerramento (workaround: renomear `%LOCALAPPDATA%\Docker\run` e `%LOCALAPPDATA%\docker-secrets-engine`); (b) configs JSON truncados para bytes NUL pelo crash — em 2026-08-18 foram encontrados `~/.docker/daemon.json` (124/124 NUL), `~/.docker/windows-daemon.json` (28/28 NUL) e transitoriamente `settings-store.json`; todos movidos para `*.corrupt-20260818` e recriados pelo Docker. Impacto de reprodutibilidade: o ambiente canônico de baseline exige este saneamento manual; recomendação = atualizar Docker Desktop ou reboot antes de rodar baselines.
 
 ## OPEN_RISKS
 

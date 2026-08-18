@@ -2,6 +2,28 @@
 
 Este arquivo organiza contratos não numéricos e aponta os contratos científicos versionados. `OBSERVED_BEHAVIOR` não é aprovação.
 
+## Verificação 2026-08-17 (TASK-2026-08-17-PH02-CONTRACTS-01)
+
+Owner de todos os contratos: **Felipe Nantes** (aprovador dos gates). Os científicos foram ratificados/congelados em `HUMAN_DECISIONS.md`. Verificação dos 15 não científicos contra o código (mecanismo existe e opera como declarado; não é prova de execução exaustiva):
+
+| Contrato | Evidência verificada | Teste protetor localizado | Status |
+|---|---|---|---|
+| SW-ATOMIC-01 | `benchmark/reporting.py:11-19` (`_atomic_text` tmp+replace); `learning/protocol.py:37-50` (`atomic_write_json` com `os.replace`) | test_benchmark_metrics.py e correlatos citam atomicidade | VERIFIED (cobertura de parcial-exposto a aprofundar na fase 03) |
+| SW-FAIL-CLOSED-01 | `raise PipelineError`: core.py ×8, benchmark/runner.py ×11, webapp/server.py ×13 | espalhado pela suíte (asserts de raise) | VERIFIED_OBSERVED |
+| SW-ARTIFACT-01 | `learning/visual_inference.py:78-84` (assinatura+hash do bundle); `webapp/server.py:880-884` (`sha256_of` por artefato); `medsiglip_embeddings.py:154,308,439` (dimensão/manifests) | tests/test_learning_visual_inference.py:30-73 | VERIFIED |
+| SW-HTTP-01 | `medgemma_client.py:777,850,861` (contrato `dtwin-medgemma-v1` verificado no health e declarado no payload) | tests/test_medgemma_client.py, test_medgemma_server.py | VERIFIED |
+| SW-XR-01 | `webapp/server.py:1673-1690` (sessão por token hasheado SHA-256, expiração → 401), `:1720` (QR sem token em logs), `:1807-1863` (roles com pattern/limite); allowlist/hash `:789-884` | tests/test_viewer_xr.py, test_webapp.py, test_viewer_presets.py | VERIFIED |
+| GEO-IMAGE-01 | princípio implementado via GEO-CONVERT/GEO-MASK (abaixo) | — (princípio) | VERIFIED_BY_COMPOSITION |
+| GEO-CONVERT-01 | `core.py:90` (`CopyInformation` na conversão) | tests/test_core_geometry.py (proteção parcial, como já registrado) | VERIFIED (gap: round-trip property test — fase 04) |
+| GEO-MASK-01 | `segmentation_contract.py:79-109` (`image_geometry`, `same_geometry` tol 1e-5); `volumetry.py:161-164` (abort); `webapp/server.py:907-908` | tests/test_segmentation_contract.py, test_volumetry.py | VERIFIED |
+| GEO-LABEL-01 | `sitkNearestNeighbor` em multiphase_ingest.py:211 e 6+ módulos benchmark/ | tests/test_learning_multiphase_ingest.py | VERIFIED_OBSERVED (auditoria exaustiva de todo call de resample = fase 04) |
+| GEO-MESH-01 | `figado.yaml:122` (LPS); volume autoritativo por voxels = ARGOS-GEO-004 ratificado (`volumetry.py:161-170`) | tests/test_volumetry.py, test_engine_finalize.py | VERIFIED |
+| POL-RESEARCH-01 | `stages.py:1229` (`acknowledge_research_only`); `server.py:1058,1227,1529,1625` (`research_only: True` nos payloads) | tests/test_engine_finalize.py, test_webapp.py | VERIFIED |
+| POL-PHI-01 | `.gitignore:20-21,43-55` (casos/, flywheel/, labels protegidos fora do git) | — (política de repo; revisão humana) | VERIFIED_OBSERVED |
+| POL-ENDPOINT-01 | `visual_inference.py:160-166` (`ground_truth_used/lesion_mask_used/changes_frozen_decision: False`); `figado.yaml:64-70` | tests/test_learning_visual_inference.py | VERIFIED (= ARGOS-SCI-011 ratificado) |
+| POL-VOLUME-01 | `volumetry.py:52` (`automatic_unconfirmed_candidate`) | tests/test_volumetry.py | VERIFIED |
+| POL-FAILURE-01 | = ARGOS-SCI-004 ratificado (lock.json:24-28; metrics.py) | tests/test_benchmark_metrics.py | VERIFIED |
+
 ## Software contracts
 
 - `SW-ATOMIC-01`: publicação JSON/CSV/NPY/artefato declarada atômica não pode expor parcial como sucesso. Evidência: `dtwin/benchmark/reporting.py`, `dtwin/learning/protocol.py`, `dtwin/learning/medsiglip_embeddings.py`, `dtwin/volumetry.py`.

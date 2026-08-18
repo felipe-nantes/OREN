@@ -1,6 +1,6 @@
 # PHASE 03 — Characterization
 
-STATUS: NOT_STARTED
+STATUS: IN_PROGRESS (2026-08-17 — autorizada pelo humano; wave 1 = TASK-2026-08-17-PH03-CHAR-01: geometry equality P0 #1)
 
 OBJECTIVE: protect unknown legacy behavior without calling it correct.  
 INPUTS: module contracts/gaps, baseline, minimal fixtures.  
