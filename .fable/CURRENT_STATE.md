@@ -5,11 +5,11 @@ PACK_SCHEMA: argos-fable-engineering-pack-v1
 BASE_COMMIT: `9683eaa796d01e946597f3fe1351556aa8fcb141`  
 BRANCH: `main` (sessão executada no worktree `claude/fable-engineering-phase-00-b0172f`, mesmo HEAD)  
 CURRENT_PHASE: `PHASE_03_CHARACTERIZATION` (IN_PROGRESS; autorizada pelo humano em 2026-08-17)  
-CURRENT_WAVE: `ph03-wave-3-dicom-phase-selection` = DONE (waves 1-3 concluídas)  
-CURRENT_MODULE: `DICOM_MULTIPHASE_INGEST / TEST_SUITE`  
-LAST_COMPLETED_TASK: `TASK-2026-08-18-PH03-CHAR-03` (7 characterization tests da seleção de fases DICOM com fixtures sintéticas; 19 passed no host com os 12 existentes; 3 ambiguidades/warts encaminhadas como candidatas HG-02)  
-NEXT_RECOMMENDED_TASK: `PHASE_03 wave 4 — characterization da P0 #4 (mask→volumetry provenance: qual máscara é medida, shadow/union, gates de aprovação)`  
-STATUS: `IN_PROGRESS` (fase 03)
+CURRENT_WAVE: `ph03-review-01-hg-candidates` = DONE (waves 1-4 + revisão de HG concluídas)  
+CURRENT_MODULE: `DICOM_MULTIPHASE_INGEST / CORE_IO_GEOMETRY / TEST_SUITE`  
+LAST_COMPLETED_TASK: `TASK-2026-08-18-PH03-REVIEW-01` (5 candidatas HG-02/HG-03 revisadas com o humano: 4 mantidas como risco documentado em TD-008/TD-014; 1 corrigida — erro de geometria no resolver DICOM ganhou código próprio `geometry_incompatible_series`, sem mudar seleção)  
+NEXT_RECOMMENDED_TASK: `Aguardar instrução humana — os 4 P0s da fila LONG_PLAN estão caracterizados e as candidatas HG revisadas; próximos passos possíveis: fase 04 (invariants/property tests), ou commit dos testes/correção pendentes`  
+STATUS: `IN_PROGRESS` (fase 03; P0s da fila concluídos, HG-candidates revisadas)
 
 TESTES DE CHARACTERIZATION: commitados em `8c31c76` (2026-08-18, junto com evidências em `5087041`).
 

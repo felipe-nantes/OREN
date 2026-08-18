@@ -219,6 +219,8 @@ def _select(series: list[RawSeries]) -> tuple[dict[str, RawSeries], str, float]:
     for item in series:
         studies[item.study_hash].append(item)
 
+    geometry_rejected_a_complete_candidate = False
+
     explicit_candidates: list[dict[str, RawSeries]] = []
     for items in studies.values():
         by_role: dict[str, list[RawSeries]] = defaultdict(list)
@@ -234,6 +236,8 @@ def _select(series: list[RawSeries]) -> tuple[dict[str, RawSeries], str, float]:
             chosen = {role: by_role[role][0] for role in REQUIRED_PHASES}
             if _geometry_compatible(list(chosen.values())):
                 explicit_candidates.append(chosen)
+            else:
+                geometry_rejected_a_complete_candidate = True
     if len(explicit_candidates) == 1:
         return explicit_candidates[0], "explicit_dicom_phase_semantics", 1.0
     if len(explicit_candidates) > 1:
@@ -255,7 +259,10 @@ def _select(series: list[RawSeries]) -> tuple[dict[str, RawSeries], str, float]:
         contrast_tagged = [item for item in dynamic if item.contrast_present]
         if len(contrast_tagged) >= 3:
             dynamic = contrast_tagged
-        if len(dynamic) < 3 or not _geometry_compatible(dynamic):
+        if len(dynamic) < 3:
+            continue
+        if not _geometry_compatible(dynamic):
+            geometry_rejected_a_complete_candidate = True
             continue
         # Temporal order must be grounded in Acquisition/Series time or, as a
         # fallback, in distinct SeriesNumber values. Ties are rejected.
@@ -282,6 +289,14 @@ def _select(series: list[RawSeries]) -> tuple[dict[str, RawSeries], str, float]:
         raise RawPhaseResolutionError(
             "Mais de um estudo possui séries T1 pós-contraste temporalmente elegíveis.",
             code="ambiguous_ordered_multiphase_studies",
+        )
+    if geometry_rejected_a_complete_candidate:
+        raise RawPhaseResolutionError(
+            "Um conjunto de fases com papéis/contagem suficientes foi encontrado, mas foi "
+            "rejeitado por geometria incompatível entre as séries (linhas, colunas ou "
+            "orientação divergentes). Confira se todas as séries do exame pertencem à mesma "
+            "aquisição e grade.",
+            code="geometry_incompatible_series",
         )
     raise RawPhaseResolutionError(
         "Não foi possível identificar arterial, venosa e tardia com segurança nos metadados DICOM. "

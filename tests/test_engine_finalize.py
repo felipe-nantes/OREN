@@ -255,6 +255,47 @@ def test_estagio5_descarta_uniao_com_geometria_divergente(tmp_path):
     assert abs(int(resultado.sum()) - volume_venosa) < volume_venosa * 0.2
 
 
+def test_observed_estagio5_aceita_uniao_com_direction_divergente(tmp_path):
+    """OBSERVED_BEHAVIOR (PHASE_03, candidata HG-03): a defesa de geometria do
+    estágio 5 compara Size/Spacing/Origin contra a venosa, mas NÃO Direction --
+    a mesma cegueira já caracterizada em webapp.server._mesma_geometria_sitk
+    (tests/test_characterization_geometry_equality.py) e nos comparadores
+    estritos, agora numa terceira ocorrência independente, dentro do próprio
+    stage5_refine. Uma união com Direction divergente (ex.: eixo Z invertido)
+    passa pela defesa e é aceita como fonte da malha -- não é rebaixada para
+    a venosa como aconteceria com Spacing/Origin divergentes."""
+    import SimpleITK as sitk
+
+    from dtwin.core import Case
+    from dtwin.stages import stage5_refine
+
+    case = Case(root=tmp_path)
+    venosa = make_sphere_mask((30, 30, 30), (15, 15, 15), 6).astype(np.uint8)
+    uniao = make_sphere_mask((30, 30, 30), (15, 15, 15), 9).astype(np.uint8)  # maior, distinguível
+
+    img_venosa = sitk.GetImageFromArray(venosa)
+    img_venosa.SetDirection((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0))
+    sitk.WriteImage(img_venosa, str(case.mask_organ))
+
+    img_uniao = sitk.GetImageFromArray(uniao)
+    img_uniao.SetDirection((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0))  # só Direction diverge
+    sitk.WriteImage(img_uniao, str(case.mask_organ_union))
+
+    lesao_vazia = sitk.GetImageFromArray(np.zeros((30, 30, 30), dtype=np.uint8))
+    lesao_vazia.CopyInformation(img_venosa)
+    sitk.WriteImage(lesao_vazia, str(case.mask_lesion))
+
+    stage5_refine(case, {"refino": {}})
+
+    resultado = sitk.GetArrayFromImage(sitk.ReadImage(str(case.mask_organ_clean))) > 0
+    volume_venosa, volume_uniao = int(venosa.sum()), int(uniao.sum())
+    # Se a defesa pegasse Direction, o resultado bateria com a venosa (como no
+    # teste de Spacing divergente). Em vez disso, bate com a união maior --
+    # confirmando que Direction diverge sem disparar o fallback.
+    assert abs(int(resultado.sum()) - volume_uniao) < volume_uniao * 0.2
+    assert abs(int(resultado.sum()) - volume_venosa) > volume_venosa * 0.2
+
+
 def test_regiao_classificada_so_existe_quando_ha_uniao(tmp_path):
     """Sem união, a região classificada seria idêntica ao órgão inteiro --
     overlay sobre si mesmo, ruído puro (docs/189 §5.2)."""

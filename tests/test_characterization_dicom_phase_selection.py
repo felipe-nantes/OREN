@@ -116,10 +116,11 @@ def test_observed_nome_da_pasta_sozinho_determina_o_papel_explicito(tmp_path):
     assert resultado.confidence == 1.0
 
 
-def test_observed_geometria_incompativel_mascara_o_motivo_como_insuficiencia(tmp_path):
-    """OBSERVED_BEHAVIOR: com Rows divergente entre as fases, o gate de
-    geometria reprova o estudo, mas o erro emitido é `insufficient_dynamic_phases`
-    — o motivo geométrico real não aparece no código de erro."""
+def test_geometria_incompativel_tem_codigo_de_erro_proprio(tmp_path):
+    """Correção deliberada (2026-08-18, HG-02 diagnóstico — não muda seleção):
+    com Rows divergente entre as fases, o gate de geometria reprova o estudo
+    e o erro emitido é `geometry_incompatible_series`, distinto do genérico
+    `insufficient_dynamic_phases` — a causa real fica visível para triagem."""
     raw, estudo = tmp_path / "raw", generate_uid()
     for numero, descricao, hora, linhas in (
         (7, "T1 ARTERIAL", "120100", 64),
@@ -131,7 +132,7 @@ def test_observed_geometria_incompativel_mascara_o_motivo_como_insuficiencia(tmp
 
     with pytest.raises(RawPhaseResolutionError) as excecao:
         resolve_raw_dicom_phases(raw, tmp_path / "resolved")
-    assert excecao.value.code == "insufficient_dynamic_phases"
+    assert excecao.value.code == "geometry_incompatible_series"
 
 
 def test_observed_series_sagitais_nao_sao_elegiveis(tmp_path):
