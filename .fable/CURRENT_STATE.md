@@ -51,7 +51,7 @@ aceitação #6 ("nenhum launcher exige Docker") agora 100% cumprido.**
 
 Suíte completa final: **1626 passed, 0 failed, 4 skipped** (98,32s).
 
-Pronto para commit: 17 arquivos (4 modificados, 2 reescritos, 9 removidos,
+Commitado em `e4dd3cc` (17 arquivos: 4 modificados, 2 reescritos, 9 removidos,
 2 testes novos + doc do pack), sem push.
 
 ## Snapshot observado
