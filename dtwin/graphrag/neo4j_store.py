@@ -58,13 +58,27 @@ class Neo4jStore:
     def __init__(self, config: GraphRagConfig):
         try:
             from neo4j import GraphDatabase
+            from neo4j.exceptions import Neo4jError, ServiceUnavailable
         except ImportError as exc:
             raise PipelineError("Pacote neo4j não instalado. Instale o extra GraphRAG antes de usar Neo4j real.") from exc
         self._database = config.neo4j.database
-        self._driver = GraphDatabase.driver(
+        driver = GraphDatabase.driver(
             config.neo4j.uri,
             auth=(config.neo4j.user, config.neo4j.password),
         )
+        try:
+            driver.verify_connectivity()
+        except (ServiceUnavailable, Neo4jError, OSError) as exc:
+            driver.close()
+            raise PipelineError(
+                "Não foi possível conectar ao Neo4j nativo em "
+                f"{config.neo4j.uri!r}. GraphRAG é opcional e falha explicitamente "
+                "quando o serviço não está disponível: instale/inicie o Neo4j "
+                "localmente (ex.: Neo4j Desktop ou 'neo4j.exe console'), confirme "
+                "que ele escuta em bolt://localhost:7687 e que a variável de "
+                f"ambiente {config.neo4j.password_env!r} está definida."
+            ) from exc
+        self._driver = driver
 
     def close(self) -> None:
         self._driver.close()

@@ -11,9 +11,48 @@ LAST_COMPLETED_TASK: `TASK-2026-08-18-PH03-CHAR-03` (7 characterization tests da
 NEXT_RECOMMENDED_TASK: `PHASE_03 wave 4 — characterization da P0 #4 (mask→volumetry provenance: qual máscara é medida, shadow/union, gates de aprovação)`  
 STATUS: `IN_PROGRESS` (fase 03)
 
-TESTES NOVOS NÃO COMMITADOS: `tests/test_characterization_geometry_equality.py`, `tests/test_characterization_nested_splits.py`, `tests/test_characterization_dicom_phase_selection.py` (commit quando solicitado).
+TESTES DE CHARACTERIZATION: commitados em `8c31c76` (2026-08-18, junto com evidências em `5087041`).
 
-COMMITS DESTA DATA (main, sem push): `7efa2dc` (pack versionado), `0ba6f01` (skipif), `bd278b5` (graphify code-only).
+COMMITS ANTERIORES (main, sem push): `7efa2dc` (pack versionado), `0ba6f01` (skipif), `bd278b5` (graphify code-only), `8c31c76` (characterization waves 1-3), `5087041` (evidências PH02/PH03), `42a8514` (.gitignore docs/drive).
+
+## Migração arquitetural: Docker → nativo (TASK-2026-08-18-MIGR-01)
+
+Trilha SEPARADA da PHASE_03 (não mistura trabalho científico com engenharia de
+infraestrutura, por instrução explícita). Status: **Waves 0-5 CONCLUÍDAS —
+migração completa, sem ressalvas.** Documento completo: `.fable/MIGRATION_DOCKER_TO_NATIVE.md`.
+
+- Achado estruturante: `dtwin/`, `webapp/`, `viewer/` já eram 100% livres de
+  Docker antes desta task — o acoplamento vivia só na infraestrutura.
+- `run_win.ps1` consolidado: defesa em profundidade (HF offline) + preflight
+  informativo do Neo4j (opcional, não bloqueante).
+- `dtwin/graphrag/neo4j_store.py`: falha explícita e acionável quando o Neo4j
+  nativo não está disponível (antes: exceção genérica do driver).
+- `tools/medgemma_server_v14.py`: branch `ARGOS_CONTAINER`→`0.0.0.0` removido
+  (endurece para loopback-only; sem Docker não há exceção).
+- 5 tools Docker-only + `tests/test_docker_integration.py` +
+  `configs/graphrag_neo4j_docker.yaml` (órfã) removidos, com paridade nativa
+  provada em `tests/test_native_runtime.py` (12 testes) e
+  `tests/test_portable_distribution.py` (2 testes preservados).
+- Suíte completa: 1 failed (pré-existente, ambiental) / 1626 passed / 4 skipped.
+- 3 human gates resolvidos com o usuário: PH-01 (flags de privacidade mortas no
+  GraphRAG docker — documentadas e descartadas), PH-02 (distribuição portátil
+  ARM64 preservada, fora do escopo), PH-03 (isolamento de rede do Graphify —
+  risco residual aceito e documentado).
+
+**GAP DO QUEST FECHADO (2026-08-18, decisão humana)**: fluxo nativo em duas
+etapas (`run_win.ps1` numa janela, `run_quest_win.ps1` em outra). O launcher
+"um clique" (`tools/start_oren_quest_dynamic.ps1`) foi reescrito: em vez de
+Docker, verifica precondições via health check nativo e falha com mensagem
+acionável se gateway/webapp não estiverem no ar. Isso tornou
+`tools/{start_argos_docker.ps1, ensure_docker_desktop.ps1,
+setup_docker_windows.ps1, initialize_argos_docker.ps1}` órfãos — removidos.
+`tests/test_quest_dynamic_launcher.py` atualizado (5 passed). **Critério de
+aceitação #6 ("nenhum launcher exige Docker") agora 100% cumprido.**
+
+Suíte completa final: **1626 passed, 0 failed, 4 skipped** (98,32s).
+
+Pronto para commit: 17 arquivos (4 modificados, 2 reescritos, 9 removidos,
+2 testes novos + doc do pack), sem push.
 
 ## Snapshot observado
 

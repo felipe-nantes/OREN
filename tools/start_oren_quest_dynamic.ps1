@@ -17,13 +17,28 @@ if (-not $SkipFirewall) {
     if ($LASTEXITCODE -ne 0) { throw "Falha ao liberar acesso local no firewall." }
 }
 
-$startArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'tools\start_argos_docker.ps1', '-NoBuild')
-if ($SkipMedGemmaStart) { $startArgs += '-SkipMedGemmaStart' }
-& powershell @startArgs
-if ($LASTEXITCODE -ne 0) { throw "OREN nao iniciou corretamente." }
+# Runtime nativo: este launcher NAO sobe gateway/webapp mais (isso era
+# responsabilidade do Docker Compose). Ele publica o QR de acesso para uma
+# instancia OREN Quest que ja esteja rodando nativamente. Fluxo em duas
+# etapas: (1) .\run_win.ps1 numa janela (gateway MedGemma + webapp desktop);
+# (2) .\run_quest_win.ps1 em outra janela (webapp HTTPS :8443 p/ o Quest).
+# Este script eh o atalho da etapa 3: detectar a rede e publicar o QR.
+if (-not $SkipMedGemmaStart) {
+  try {
+    $gatewayHealth = Invoke-RestMethod -Uri "http://127.0.0.1:8001/health" -TimeoutSec 3
+    if ($gatewayHealth.status -ne "ready") { throw "gateway nao pronto" }
+  } catch {
+    throw "Gateway MedGemma (:8001) nao esta pronto. Execute .\run_win.ps1 numa janela antes de usar este atalho."
+  }
+}
+try {
+  Invoke-RestMethod -Uri "https://127.0.0.1:8443/api/health" -TimeoutSec 3 -SkipCertificateCheck | Out-Null
+} catch {
+  throw "Webapp HTTPS do Quest (:8443) nao esta no ar. Execute .\run_quest_win.ps1 em outra janela antes de usar este atalho."
+}
 
-# Rele a rede depois do Docker iniciar para evitar publicar um endereco obsoleto
-# se o adaptador reconectou durante a inicializacao.
+# Rele a rede apos confirmar que o webapp esta pronto, para nao publicar um
+# endereco obsoleto se o adaptador reconectou nesse meio-tempo.
 $network = Get-OrenQuestNetwork
 $questUrl = "https://$($network.IPAddress):8443/quest/"
 $statePath = Join-Path $repo '.local\quest_https\certificate-state.json'

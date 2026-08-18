@@ -65,6 +65,26 @@ if ($LASTEXITCODE -ne 0) {
 }
 Ok "venv, config, dependencias, CUDA e pesos do 4B presentes."
 
+# Defesa em profundidade: o codigo ja passa local_files_only=True em todo
+# call site de carregamento de modelo (dtwin/learning/medsiglip_embeddings.py,
+# tools/setup_medgemma.py); estas env vars replicam o modo offline global que
+# o Docker aplicava, sem depender delas para correcao.
+$env:HF_HUB_OFFLINE = "1"
+$env:TRANSFORMERS_OFFLINE = "1"
+
+# --- 0b) Neo4j/GraphRAG (opcional, informativo) ----------------------
+Say "Neo4j/GraphRAG (opcional)"
+try {
+  $probe = New-Object System.Net.Sockets.TcpClient
+  $probe.Connect("127.0.0.1", 7687)
+  $probe.Close()
+  Ok "Neo4j respondendo em bolt://localhost:7687 (GraphRAG utilizavel)."
+} catch {
+  Write-Host "    Neo4j nao detectado em bolt://localhost:7687 -- OK, GraphRAG e opcional." -ForegroundColor DarkYellow
+  Write-Host "    Para habilitar: instale/inicie o Neo4j localmente e defina NEO4J_PASSWORD." -ForegroundColor DarkYellow
+  Write-Host "    Ferramentas GraphRAG (dtwin/graphrag/*) falham com erro explicito se voce as usar sem o servico." -ForegroundColor DarkYellow
+}
+
 # --- 1) Gateway MedGemma 4B (:8001) ---------------------------------
 Say "Gateway MedGemma 4B (:$GatewayPort)"
 $already = $false

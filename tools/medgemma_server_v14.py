@@ -317,12 +317,10 @@ def main(argv=None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8001)
     args = parser.parse_args(argv)
+    # Runtime nativo apenas: a interface fica restrita a loopback, sem excecao
+    # (o Docker antigo abria 0.0.0.0 dentro da rede privada do container; sem
+    # Docker essa excecao deixa de existir).
     allowed_hosts = {"127.0.0.1", "localhost", "::1"}
-    # A interface continua inacessivel pela LAN: em Docker ela pode escutar em
-    # todas as interfaces DO CONTAINER somente quando a flag interna e explicita
-    # esta ativa; o Compose apenas a expoe na rede privada argos_internal.
-    if os.environ.get("ARGOS_CONTAINER") == "1":
-        allowed_hosts.add("0.0.0.0")
     if args.host not in allowed_hosts:
         print("[ABORTADO] O backend local só pode escutar em loopback.")
         return 1

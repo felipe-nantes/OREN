@@ -1,5 +1,7 @@
 # ARGOS/OREN em Docker — arquitetura e validação ponta a ponta
 
+> **STATUS (2026-08-18): fluxo principal aposentado.** O caminho oficial de execução do ARGOS/OREN passou a ser nativo (`run_win.ps1` no Windows, `run_mac.sh` no Mac) — ver `.fable/MIGRATION_DOCKER_TO_NATIVE.md` para a migração completa. Este documento descreve a arquitetura Docker histórica; a distribuição portátil ARM64 (`docs/232_DOCKER_PORTATIL_MAC_E_OUTROS.md`) permanece ativa e fora do escopo dessa aposentadoria.
+
 ## Decisão técnica
 
 O ARGOS foi organizado em Docker Compose sem incorporar DICOMs, pesos ou
