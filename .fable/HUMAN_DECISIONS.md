@@ -21,3 +21,36 @@ Formato mínimo de HUMAN_GATES.md. Aprovador em todas: **Felipe Nantes (fnantes0
 - Ambiente oficial de baseline executável = container Docker (`argos-runtime:local`) — PHASE_00.
 - Ferramentas estáticas: instalação adiada — PHASE_00.
 - Autorização das fases: PHASE_00 (implícita no pack), PHASE_01, e blocos de decisão desta página.
+
+## Bloco 3 — 2026-08-18 (PHASE_06)
+
+9. **APROVO tolerâncias numéricas por backend para TASK-2026-08-18-PH06-REG-02**
+   (fecha o item 8 de 2026-08-17), aprovador Felipe Nantes, 2026-08-18:
+   - **LOGIC** (splits/digests/contagens/voxel_count/denominadores): igualdade
+     EXATA obrigatória entre backends; divergência = bug.
+   - **NUMERICAL escalar CPU** (Wilson, volumes, coberturas, médias):
+     tolerância relativa ≤ 1e-12.
+   - **NUMERICAL array CPU** (resample/harmonização): zero voxels divergentes
+     (>1e-9 rel) no escopo de versões testado; mudança de major de
+     numpy/SimpleITK exige re-executar a sonda antes de aceitar novos números.
+   - **GPU/CUDA**: EM ABERTO — não medida; igualdade bitwise não assumida.
+   Evidência: delta observado = ZERO (bitwise) entre Windows/py3.13/numpy2.5 e
+   Linux/py3.11/numpy2.2 (`evidence/PH06/probe_*.json`).
+
+## Bloco 4 — 2026-08-18 (protocolo context-efficient)
+
+10. **Ferramentas estáticas revertidas** (fecha o restante do adiamento de
+    2026-08-17): ruff 0.16.3, mypy 2.3.1 e ast-grep-cli 0.45.1 instalados no
+    `.venv-win`. Baseline ruff capturado em
+    `evidence/TOOLING/ruff_baseline_2026-08-18.txt` (~900 achados, dominados
+    por estilo; correções ficam para PHASE_07/08). Ainda ausentes: coverage,
+    pip-audit, mutmut, pytest-benchmark (instalar quando a PHASE_07 exigir).
+11. **SAFETY_KERNEL.md autorizado e redigido** exclusivamente a partir do
+    conteúdo ratificado (HUMAN_GATES, STOP_CONDITIONS, SCI-001/GEO-003/
+    SCI-005/SCI-006, POL-PHI-01, DOM-002, tolerâncias do item 9), com hashes
+    das fontes canônicas. Não cria regras novas; pendente de revisão do
+    operador.
+12. **Migração de formato autorizada e executada**: `CURRENT_STATE.yaml` e
+    `ROUTER.yaml` são os canônicos; os `.md` viraram stubs de ponteiro
+    (histórico preservado no git). Inconsistências de header acumuladas no
+    CURRENT_STATE.md foram normalizadas na migração.

@@ -1,0 +1,47 @@
+﻿{
+  "environment": {
+    "numpy": "2.2.2",
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "python": "3.11.11",
+    "simpleitk": "2.5.6"
+  },
+  "logic_splits_sha256": "6f699dbaa1f1f05c4eadda2b844ba2d011901e7badeb78b54aa22534bb30706d",
+  "numerical_harmonize": {
+    "checksum_exact": "7c877c01df72fe1d087d94cf6e684c012789c4d488c58e25bdc95c4f2acaec60",
+    "coverage": "0.9722222222222222",
+    "mean": "148.9618206191481",
+    "sum": "6928512.200637817"
+  },
+  "numerical_volumetry": {
+    "left_right_mm": "None",
+    "volume_ml": "18.876766606903413",
+    "voxel_count": 7153,
+    "voxel_volume_mm3": "2.6389999450445143"
+  },
+  "numerical_wilson": {
+    "0/50": {
+      "high": "0.0713",
+      "low": "0.0"
+    },
+    "1/10": {
+      "high": "0.4042",
+      "low": "0.0179"
+    },
+    "220/467": {
+      "high": "0.5164",
+      "low": "0.4262"
+    },
+    "466/467": {
+      "high": "0.9996",
+      "low": "0.988"
+    },
+    "500/1000": {
+      "high": "0.5309",
+      "low": "0.4691"
+    },
+    "81/263": {
+      "high": "0.3662",
+      "low": "0.2553"
+    }
+  }
+}

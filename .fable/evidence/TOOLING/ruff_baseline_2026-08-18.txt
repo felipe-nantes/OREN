@@ -1,0 +1,46 @@
+401	I001   	[-] unsorted-imports
+108	RUF100 	[*] unused-noqa
+ 89	UP035  	[-] deprecated-import
+ 83	F401   	[*] unused-import
+ 50	UP009  	[*] utf8-encoding-declaration
+ 36	RUF046 	[-] unnecessary-cast-to-int
+ 24	RUF022 	[*] unsorted-dunder-all
+ 18	ISC004 	[ ] implicit-string-concatenation-in-collection-literal
+ 16	C408   	[ ] unnecessary-collection-call
+ 15	BLE001 	[ ] blind-except
+ 13	RUF059 	[ ] unused-unpacked-variable
+ 11	RUF007 	[ ] zip-instead-of-pairwise
+ 10	C401   	[ ] unnecessary-generator-set
+ 10	UP012  	[*] unnecessary-encode-utf8
+  9	PIE808 	[*] unnecessary-range-start
+  7	B023   	[ ] function-uses-loop-variable
+  7	F841   	[ ] unused-variable
+  7	RUF012 	[ ] mutable-class-default
+  6	PLW1510	[ ] subprocess-run-without-check
+  6	S112   	[ ] try-except-continue
+  6	TRY004 	[ ] type-check-without-type-error
+  4	F541   	[*] f-string-missing-placeholders
+  4	SIM102 	[ ] collapsible-if
+  4	SIM117 	[ ] multiple-with-statements
+  3	B009   	[*] get-attr-with-constant
+  3	FURB122	[*] for-loop-writes
+  3	FURB192	[ ] sorted-min-max
+  3	PLR0402	[*] manual-from-import
+  2	FURB177	[ ] implicit-cwd
+  2	PIE810 	[ ] multiple-starts-ends-with
+  2	PLC0206	[ ] dict-index-missing-items
+  2	PLC0208	[*] iteration-over-set
+  2	TRY203 	[ ] useless-try-except
+  2	UP034  	[*] extraneous-parentheses
+  2	UP037  	[*] quoted-annotation
+  1	B017   	[ ] assert-raises-exception
+  1	FURB167	[*] regex-flag-alias
+  1	PLR1711	[*] useless-return
+  1	RET501 	[*] unnecessary-return-none
+  1	RUF015 	[ ] unnecessary-iterable-allocation-for-first-element
+  1	S110   	[ ] try-except-pass
+  1	SIM114 	[*] if-with-same-arms
+  1	SIM115 	[ ] open-file-with-context-handler
+  1	SIM401 	[ ] if-else-block-instead-of-dict-get
+Found 979 errors.
+[*] 798 fixable with the `--fix` option (117 hidden fixes can be enabled with the `--unsafe-fixes` option).

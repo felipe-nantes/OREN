@@ -1,6 +1,6 @@
 # PHASE 06 — Scientific regression
 
-STATUS: NOT_STARTED
+STATUS: DONE (2026-08-18 — waves 1-2 + exit review em TASK-2026-08-18-PH06-REG-03_EVIDENCE.md; 451/16 reconciliado; tolerâncias medidas e ratificadas; blockers declarados)
 
 OBJECTIVE: protect scientifically meaningful outputs without overfitting snapshots.  
 INPUTS: approved protocol, minimal licensed cohorts/phantoms, frozen outputs.  

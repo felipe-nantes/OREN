@@ -1,0 +1,114 @@
+schema: argos-fable-router-v2
+migrated_from: ROUTER.md (2026-08-18, autorização do operador; conteúdo preservado integralmente)
+nota: >
+  Antes de análise profunda ou edição, gere templates/TASK_CARD.md. Routing é
+  cumulativo: ative a rota primária, suas transitivas e qualquer rota indicada
+  pelo downstream real. Simulações e validação: ROUTER_VALIDATION.md.
+
+algoritmo:
+  - "1. Extraia outcome, paths/símbolos, verbo (explain/diagnose/change/benchmark) e restrições."
+  - "2. Resolva paths com Graphify query e busca direta; confira que existem."
+  - "3. Escolha módulo primário em modules/INDEX.md; trace imports, subprocess, HTTP, artifacts e scientific dependency."
+  - "4. Ative os triggers; se duas rotas forem plausíveis, carregue ambas até excluir uma por evidência."
+  - "5. Preencha impactos científico, geométrico, estatístico, privacidade, segurança e performance."
+  - "6. Risco final = maior risco direto/transitivo; consulte contracts/human gates."
+  - "7. Defina baseline/testes/evidence antes de editar; em STOP condition, emita STOP_REPORT."
+
+contexto_base_sempre_carregado:
+  - CLAUDE.md
+  - START_HERE.md
+  - TASK_PROTOCOL.md
+  - ROUTER.yaml (este arquivo)
+  - CURRENT_STATE.yaml
+  - SAFETY_KERNEL.md
+condicional_obrigatorio:
+  - "SCIENTIFIC_CONTRACTS.yaml + HUMAN_GATES.md sempre que houver qualquer possibilidade científica/geométrica"
+
+trigger_matrix:
+  - {triggers: [import, typing, spelling, "pure helper"], primary: STATIC_MECHANICAL, transitive: [TESTS_BUILD_ENVIRONMENT]}
+  - {triggers: [DICOM, series, phase, slice, UID, MPR, MIP], primary: DICOM, transitive: [DEIDENTIFICATION, GEOMETRY, PIPELINE]}
+  - {triggers: [anonymize, PHI, "private tag", burned-in], primary: DEIDENTIFICATION, transitive: [PRIVACY, SECURITY, AUDIT_PROVENANCE]}
+  - {triggers: [origin, spacing, direction, affine, LPS, RAS, flip], primary: GEOMETRY, transitive: [TESTS_BUILD_ENVIRONMENT, RECONSTRUCTION_3D, SEGMENTATION]}
+  - {triggers: [harmonize, resample, "reference grid", interpolator], primary: HARMONIZATION_RESAMPLING, transitive: [GEOMETRY, REGISTRATION, SEGMENTATION]}
+  - {triggers: [fixed, moving, transform, registration], primary: REGISTRATION, transitive: [GEOMETRY, HARMONIZATION_RESAMPLING]}
+  - {triggers: [mask, model, task, component, morphology, fusion], primary: SEGMENTATION, transitive: [GEOMETRY, HARMONIZATION_RESAMPLING, VOLUMETRY, RECONSTRUCTION_3D]}
+  - {triggers: [panel, crop, tile, RGB, window, FOV], primary: PANELS, transitive: [GEOMETRY, EMBEDDINGS, MODEL_LOADING, ML_CLASSIFICATION]}
+  - {triggers: [embedding, vector, norm, dimension, cache], primary: EMBEDDINGS, transitive: [MODEL_LOADING, CACHE_ARTIFACTS, LOGGING_AUDIT_PROVENANCE]}
+  - {triggers: [cache, hash, resume, partial, corrupt, artifact], primary: CACHE_ARTIFACTS, transitive: [LOGGING_AUDIT_PROVENANCE, MEMORY_CONCURRENCY, "producer relevante"]}
+  - {triggers: [weights, revision, device, dtype, offline], primary: MODEL_LOADING, transitive: [CACHE_ARTIFACTS, LOGGING_AUDIT_PROVENANCE, EMBEDDINGS, ML_CLASSIFICATION]}
+  - {triggers: [score, classifier, prediction, aggregation], primary: ML_CLASSIFICATION, transitive: [CROSS_VALIDATION, METRICS_STATISTICS, MODEL_LOADING]}
+  - {triggers: [fold, group, leakage, OOF, nested, "fit boundary"], primary: CROSS_VALIDATION, transitive: [METRICS_STATISTICS, LOGGING_AUDIT_PROVENANCE]}
+  - {triggers: [threshold, sensitivity, specificity, AUC, CI, denominator], primary: METRICS_STATISTICS, transitive: [CROSS_VALIDATION, LOGGING_AUDIT_PROVENANCE]}
+  - {triggers: [candidate, ROI, top-k, box], primary: LOCALIZATION, transitive: [GEOMETRY, SEGMENTATION, ML_CLASSIFICATION]}
+  - {triggers: [subtype, FNH, HCC, cyst, hemangioma], primary: SUBTYPING, transitive: [ML_CLASSIFICATION, CROSS_VALIDATION, METRICS_STATISTICS]}
+  - {triggers: [volume, mL, voxels, dimensions], primary: VOLUMETRY, transitive: [GEOMETRY, SEGMENTATION, RECONSTRUCTION_3D]}
+  - {triggers: [mesh, STL, VTP, smoothing, decimation, topology], primary: RECONSTRUCTION_3D, transitive: [GEOMETRY, VOLUMETRY, FRONTEND, WEBXR]}
+  - {triggers: [end-to-end, stage, pipeline], primary: PIPELINE, transitive: [ORCHESTRATION, "todos os estágios envolvidos"]}
+  - {triggers: [job, thread, subprocess, retry, fallback], primary: ORCHESTRATION, transitive: [MEMORY_CONCURRENCY, CACHE_ARTIFACTS, PIPELINE]}
+  - {triggers: [API, upload, UI, viewer], primary: FRONTEND, transitive: [SECURITY, PRIVACY, PIPELINE]}
+  - {triggers: [Quest, WebXR, MR, hands, "XR token"], primary: WEBXR, transitive: [FRONTEND, SECURITY, RECONSTRUCTION_3D, PERFORMANCE]}
+  - {triggers: [logs, manifest, hash, provenance, audit], primary: LOGGING_AUDIT_PROVENANCE, transitive: [SECURITY, PRIVACY, CACHE_ARTIFACTS]}
+  - {triggers: [speed, VRAM, RAM, timeout, batch], primary: PERFORMANCE, transitive: [MEMORY_CONCURRENCY, REPRODUCIBILITY], nota: "promover se o output mudar"}
+  - {triggers: [thread, race, backpressure, OOM], primary: MEMORY_CONCURRENCY, transitive: [ORCHESTRATION, CACHE_ARTIFACTS]}
+  - {triggers: [auth, token, "path traversal", "dependency attack"], primary: SECURITY, transitive: [PRIVACY, FRONTEND, DOCKER_DEPLOYMENT]}
+  - {triggers: [privacy, "data retention", consent], primary: PRIVACY, transitive: [DEIDENTIFICATION, SECURITY]}
+  - {triggers: [refactor, extract, boundary, module], primary: ARCHITECTURE_REFACTOR, transitive: [DEPENDENCIES, TESTS_BUILD_ENVIRONMENT, "rotas semânticas tocadas"]}
+  - {triggers: [dead, unused, duplicate, remove], primary: DEAD_CODE_DUPLICATION, transitive: [DEPENDENCIES, STATIC_MECHANICAL, TESTS_BUILD_ENVIRONMENT]}
+  - {triggers: [package, version, lock, "import cycle"], primary: DEPENDENCIES, transitive: [TESTS_BUILD_ENVIRONMENT, MODEL_LOADING]}
+  - {triggers: [tests, CI, coverage, mutation, lint], primary: TESTS_BUILD_ENVIRONMENT, transitive: ["rota semântica alvo"]}
+  - {triggers: [Docker, Mac, Windows, launch, install], primary: DOCKER_DEPLOYMENT, transitive: [DEPENDENCIES, SECURITY, LOGGING_AUDIT_PROVENANCE], nota: "carregar REPRODUCIBILITY.md; runtime oficial é NATIVO desde 2026-08-18 (MIGR-01)"}
+  - {triggers: [RAG, BM25, Neo4j, context], primary: RAG_GRAPHRAG, transitive: [DATASETS_REGISTRY, PRIVACY, CACHE_ARTIFACTS]}
+  - {triggers: [dataset, registry, manifest, license], primary: DATASETS_REGISTRY, transitive: [PRIVACY, LOGGING_AUDIT_PROVENANCE, DICOM, GEOMETRY]}
+  - {triggers: [YAML, profile, config, default], primary: CONFIG_PROFILES, transitive: ["rotas semânticas de cada chave"], nota: "nunca 'só YAML'"}
+
+aliases:
+  HARMONIZATION: HARMONIZATION_RESAMPLING
+  RESAMPLING: HARMONIZATION_RESAMPLING
+  CACHE: CACHE_ARTIFACTS
+  ARTIFACTS: CACHE_ARTIFACTS
+  CLASSIFICATION: ML_CLASSIFICATION
+  THRESHOLDING: METRICS_STATISTICS
+  METRICS: METRICS_STATISTICS
+  STATISTICS: METRICS_STATISTICS
+  "3D": RECONSTRUCTION_3D
+  LOGGING: LOGGING_AUDIT_PROVENANCE
+  AUDIT: LOGGING_AUDIT_PROVENANCE
+  PROVENANCE: LOGGING_AUDIT_PROVENANCE
+  MEMORY: MEMORY_CONCURRENCY
+  CONCURRENCY: MEMORY_CONCURRENCY
+  ARCHITECTURE: ARCHITECTURE_REFACTOR
+  DEAD_CODE: DEAD_CODE_DUPLICATION
+  DUPLICATION: DEAD_CODE_DUPLICATION
+  TESTS: TESTS_BUILD_ENVIRONMENT
+  BUILD_ENVIRONMENT: TESTS_BUILD_ENVIRONMENT
+
+path_routing:
+  "dtwin/core.py": {risco: "HIGH se geometria", rotas: [DICOM, GEOMETRY, PIPELINE], modulo: CORE_IO_GEOMETRY}
+  "dtwin/stages.py": {risco: HIGH, rotas: [PIPELINE, "todos os estágios afetados"]}
+  "dtwin/learning/raw_dicom_phase_resolver.py": {risco: HIGH, rotas: [DICOM, DEIDENTIFICATION, GEOMETRY], gate: HG-02}
+  "dtwin/learning/multiphase_ingest.py": {risco: HIGH, rotas: [DICOM, HARMONIZATION_RESAMPLING, REGISTRATION]}
+  "dtwin/segmentation_subprocess.py|seg_worker.py|segmentation_contract.py": {risco: HIGH, rotas: [SEGMENTATION, GEOMETRY, VOLUMETRY]}
+  "dtwin/medgemma_panel*.py|learning/exam_to_panels.py": {risco: HIGH, rotas: [PANELS, EMBEDDINGS, MODEL_LOADING]}
+  "dtwin/learning/medsiglip_embeddings.py": {risco: HIGH, rotas: [EMBEDDINGS, MODEL_LOADING, CACHE_ARTIFACTS]}
+  "dtwin/learning/medsiglip_*classifier.py|splits.py|protocol.py": {risco: HIGH, rotas: [ML_CLASSIFICATION, CROSS_VALIDATION, METRICS_STATISTICS]}
+  "dtwin/benchmark/metrics.py|reporting.py|runner.py": {risco: "HIGH para métricas", rotas: [METRICS_STATISTICS, LOGGING_AUDIT_PROVENANCE, PIPELINE]}
+  "dtwin/candidate_*.py": {risco: HIGH, rotas: [LOCALIZATION, GEOMETRY]}
+  "dtwin/volumetry.py": {risco: HIGH, rotas: [VOLUMETRY, GEOMETRY, SEGMENTATION]}
+  "dtwin/viewer_artifacts.py|viewer_xr.py|viewer/": {risco: "HIGH se medição", rotas: [RECONSTRUCTION_3D, FRONTEND, WEBXR]}
+  "webapp/server.py": {risco: "acoplamento científico", rotas: [PIPELINE, FRONTEND, ORCHESTRATION, "rotas alvo"]}
+  "profiles/figado.yaml|configs/": {risco: "constantes científicas", rotas: [CONFIG_PROFILES, "rota semântica"], nota: "nunca 'só YAML'"}
+  "compose*.yaml|docker/|INICIAR_*.cmd|run_*.ps1|run_mac.sh": {rotas: [DOCKER_DEPLOYMENT, SECURITY, DEPENDENCIES], nota: "runtime oficial nativo; compose preservado só p/ distribuição portátil ARM64 (PH-02)"}
+
+expansoes_multimodulo:
+  "mask changes after resampling": [GEOMETRY, HARMONIZATION_RESAMPLING, SEGMENTATION, VOLUMETRY]
+  "stale embedding cache": [EMBEDDINGS, MODEL_LOADING, CACHE_ARTIFACTS, LOGGING_AUDIT_PROVENANCE]
+  "wrong patient classification": [ML_CLASSIFICATION, PANELS, EMBEDDINGS, CROSS_VALIDATION, METRICS_STATISTICS, "nunca relabel/diagnóstico"]
+  "optimize panels": [PANELS, PERFORMANCE, EMBEDDINGS, MODEL_LOADING, TESTS_BUILD_ENVIRONMENT, "SCIENTIFIC_REGRESSION se pixels mudarem"]
+  "deformed mesh": [RECONSTRUCTION_3D, GEOMETRY, SEGMENTATION, VOLUMETRY, "separar visual de quantitativo"]
+
+authority_shortcuts:
+  text_report_only: "inspecionar e reportar"
+  LOW: "baseline → contrato/characterization → patch → evidência focada/global"
+  MEDIUM: "investigar/testar/propor; aplicar só com autorização explícita; promover se científico"
+  HIGH: "nenhum patch semântico sem aprovação HG"
+  OUT_OF_AUTHORITY: "STOP_REPORT"
