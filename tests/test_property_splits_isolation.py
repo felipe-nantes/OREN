@@ -19,11 +19,26 @@ TASK-2026-08-18-PH04-INV-04.
 from __future__ import annotations
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
+from dtwin.core import PipelineError
 from dtwin.learning.schemas import ProtectedTrainingCase
 from dtwin.learning.splits import build_nested_splits, validate_nested_splits
+
+
+def _splits_ou_descarta(casos, outer, inner, seed=20260724):
+    """O gerador rejeita fail-closed coortes com grupos insuficientes por
+    classe (a rejeição é coberta por tests/test_characterization_nested_splits).
+    O balanceamento interno é por CASOS, não por grupos, então nenhuma margem
+    estática garante a precondição para toda forma de coorte — contraexemplo
+    real: outer=3/inner=3 encontrado pelo Hypothesis em 2026-08-18. Exemplos
+    rejeitados pela precondição são descartados via assume(); o invariante
+    testado é sobre splits PRODUZIDOS."""
+    try:
+        return build_nested_splits(casos, outer_folds=outer, inner_folds=inner, seed=seed)
+    except PipelineError:
+        assume(False)
 
 
 @st.composite
@@ -76,7 +91,7 @@ def test_property_nenhum_grupo_de_paciente_cruza_qualquer_fronteira(dados):
     mesmo paciente aparece dos dois lados. Vale para qualquer coorte."""
     casos, outer, inner = dados
     dono = _grupo_por_caso(casos)
-    splits = build_nested_splits(casos, outer_folds=outer, inner_folds=inner)
+    splits = _splits_ou_descarta(casos, outer, inner)
 
     for fold_externo in splits["outer_folds"]:
         grupos_treino = {dono[c] for c in fold_externo["train_case_ids"]}
@@ -101,7 +116,7 @@ def test_property_cada_exame_aparece_exatamente_uma_vez_no_teste_externo(dados):
     sem repetição -- é o que torna a estimativa honesta e o denominador
     reconciliável com ARGOS-SCI-002."""
     casos, outer, inner = dados
-    splits = build_nested_splits(casos, outer_folds=outer, inner_folds=inner)
+    splits = _splits_ou_descarta(casos, outer, inner)
 
     testes = [c for fold in splits["outer_folds"] for c in fold["test_case_ids"]]
     assert len(testes) == len(set(testes)), "exame apareceu em mais de um teste externo"
@@ -117,7 +132,7 @@ def test_property_folds_internos_particionam_exatamente_o_treino_externo(dados):
     interno enxerga exatamente o treino externo -- nunca um exame de teste,
     nunca um exame de fora da coorte."""
     casos, outer, inner = dados
-    splits = build_nested_splits(casos, outer_folds=outer, inner_folds=inner)
+    splits = _splits_ou_descarta(casos, outer, inner)
 
     for fold_externo in splits["outer_folds"]:
         treino_externo = set(fold_externo["train_case_ids"])
@@ -140,7 +155,7 @@ def test_property_artefato_de_splits_nao_carrega_nenhum_label(dados):
     podem ver ground truth. Nenhum label pode vazar para dentro dele, em
     nenhuma coorte."""
     casos, outer, inner = dados
-    splits = build_nested_splits(casos, outer_folds=outer, inner_folds=inner)
+    splits = _splits_ou_descarta(casos, outer, inner)
 
     serializado = repr(splits)
     assert "POSITIVE" not in serializado
@@ -154,8 +169,8 @@ def test_property_geracao_e_deterministica_para_a_mesma_seed(dados):
     seed produzem exatamente os mesmos folds -- requisito de reprodutibilidade
     do ledger da Etapa C."""
     casos, outer, inner = dados
-    primeiro = build_nested_splits(casos, outer_folds=outer, inner_folds=inner, seed=20260724)
-    segundo = build_nested_splits(casos, outer_folds=outer, inner_folds=inner, seed=20260724)
+    primeiro = _splits_ou_descarta(casos, outer, inner, seed=20260724)
+    segundo = _splits_ou_descarta(casos, outer, inner, seed=20260724)
     assert primeiro == segundo
 
 
@@ -165,7 +180,7 @@ def test_property_o_validador_aceita_o_que_o_gerador_produz(dados):
     """Consistência interna: `validate_nested_splits` é o guardião usado por
     consumidores; ele nunca pode rejeitar um artefato legítimo do gerador."""
     casos, outer, inner = dados
-    splits = build_nested_splits(casos, outer_folds=outer, inner_folds=inner)
+    splits = _splits_ou_descarta(casos, outer, inner)
     validate_nested_splits(splits)  # não deve levantar
 
 

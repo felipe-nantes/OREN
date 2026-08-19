@@ -8,8 +8,8 @@ CURRENT_PHASE: `PHASE_04_INVARIANTS` → **DONE** (2026-08-18, waves 1-5; PHASE_
 CURRENT_WAVE: `ph04-wave-5-final` = DONE — **PHASE_04 CONCLUÍDA** (11 contratos com invariante executável, 61 testes, 8 mutantes detectados)  
 CURRENT_MODULE: `cross-cutting / TEST_SUITE`  
 LAST_COMPLETED_TASK: `TASK-2026-08-18-PH04-INV-05` (pendências fechadas: denominadores+bootstrap ARGOS-SCI-004/013, SW-FAIL-CLOSED-01, SW-HTTP-01, SW-XR-01, POL-PHI-01 — 27 testes; mutantes de gaming-de-denominador e aceita-qualquer-contrato detectados; exit review no evidence)  
-NEXT_RECOMMENDED_TASK: `iniciar PHASE_05_INTEGRATION (aguardando autorização humana) — ANTES de executar, reescrever o item "Docker E2E" do card da fase como E2E nativo (obsoleto após a migração TASK-2026-08-18-MIGR-01)`  
-STATUS: `DONE` (fase 04) / avanço de fase aguarda o humano
+NEXT_RECOMMENDED_TASK: `iniciar PHASE_06_SCIENTIFIC_REGRESSION (aguardando autorização humana) — inclui as tolerâncias numéricas por backend adiadas em 2026-08-17 e a reconciliação 451/16 por ledger`  
+STATUS: `DONE` (PHASE_05, waves 1-3 — 13 testes de integração; achado TD-015; exit review com blockers GPU declarados) / avanço de fase aguarda o humano
 
 TOOLING: Hypothesis 6.165.10 + sortedcontainers 2.4.0 instalados no `.venv-win` em 2026-08-18 (decisão humana, reverte adiamento parcial de 2026-08-17 especificamente para esta lib de teste).
 
