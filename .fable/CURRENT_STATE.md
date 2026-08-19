@@ -4,12 +4,14 @@ LAST_UPDATED: 2026-08-18 (manhã) America/Sao_Paulo — sessão iniciada em 2026
 PACK_SCHEMA: argos-fable-engineering-pack-v1  
 BASE_COMMIT: `9683eaa796d01e946597f3fe1351556aa8fcb141`  
 BRANCH: `main` (sessão executada no worktree `claude/fable-engineering-phase-00-b0172f`, mesmo HEAD)  
-CURRENT_PHASE: `PHASE_03_CHARACTERIZATION` (IN_PROGRESS; autorizada pelo humano em 2026-08-17)  
-CURRENT_WAVE: `ph03-review-01-hg-candidates` = DONE (waves 1-4 + revisão de HG concluídas)  
-CURRENT_MODULE: `DICOM_MULTIPHASE_INGEST / CORE_IO_GEOMETRY / TEST_SUITE`  
-LAST_COMPLETED_TASK: `TASK-2026-08-18-PH03-REVIEW-01` (5 candidatas HG-02/HG-03 revisadas com o humano: 4 mantidas como risco documentado em TD-008/TD-014; 1 corrigida — erro de geometria no resolver DICOM ganhou código próprio `geometry_incompatible_series`, sem mudar seleção)  
-NEXT_RECOMMENDED_TASK: `Aguardar instrução humana — os 4 P0s da fila LONG_PLAN estão caracterizados e as candidatas HG revisadas; próximos passos possíveis: fase 04 (invariants/property tests), ou commit dos testes/correção pendentes`  
-STATUS: `IN_PROGRESS` (fase 03; P0s da fila concluídos, HG-candidates revisadas)
+CURRENT_PHASE: `PHASE_04_INVARIANTS` → **DONE** (2026-08-18, waves 1-5; PHASE_03 permanece IN_PROGRESS em paralelo, P0s/HG-candidates concluídos)  
+CURRENT_WAVE: `ph04-wave-5-final` = DONE — **PHASE_04 CONCLUÍDA** (11 contratos com invariante executável, 61 testes, 8 mutantes detectados)  
+CURRENT_MODULE: `cross-cutting / TEST_SUITE`  
+LAST_COMPLETED_TASK: `TASK-2026-08-18-PH04-INV-05` (pendências fechadas: denominadores+bootstrap ARGOS-SCI-004/013, SW-FAIL-CLOSED-01, SW-HTTP-01, SW-XR-01, POL-PHI-01 — 27 testes; mutantes de gaming-de-denominador e aceita-qualquer-contrato detectados; exit review no evidence)  
+NEXT_RECOMMENDED_TASK: `iniciar PHASE_05_INTEGRATION (aguardando autorização humana) — ANTES de executar, reescrever o item "Docker E2E" do card da fase como E2E nativo (obsoleto após a migração TASK-2026-08-18-MIGR-01)`  
+STATUS: `DONE` (fase 04) / avanço de fase aguarda o humano
+
+TOOLING: Hypothesis 6.165.10 + sortedcontainers 2.4.0 instalados no `.venv-win` em 2026-08-18 (decisão humana, reverte adiamento parcial de 2026-08-17 especificamente para esta lib de teste).
 
 TESTES DE CHARACTERIZATION: commitados em `8c31c76` (2026-08-18, junto com evidências em `5087041`).
 

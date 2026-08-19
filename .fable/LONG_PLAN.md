@@ -8,7 +8,7 @@ Estados persistentes: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `AWAITING_HUMAN`,
 | 01 Cartography | DONE (2026-08-17) | mapa exaustivo | 8 entrypoints, 13 runtime edges, 20 edges estáticos, 18 constantes, 307 tools e 259 paths de cards verificados; zero drift de código; unknowns consolidados no exit review (CARTO-04 evidence) |
 | 02 Contracts | DONE (2026-08-17) | contratos por módulo | científicos ratificados/congelados sem CONFLICTs (HUMAN_DECISIONS.md); 15 não científicos validados com evidência+testes (CONTRACTS.md); owner: Felipe Nantes; lacunas de teste → fases 03-04 |
 | 03 Characterization | IN_PROGRESS (2026-08-18) | safety net legado | waves 1-4 DONE — **os 4 P0s caracterizados**: #1 geometry equality (5 testes; direction-blind, candidata HG-03), #2 nested splits (7 testes; fronteira interna + defaults SCI-003), #3 DICOM phase selection (7 testes; 3 ambiguidades candidatas HG-02), #4 mask→volumetry provenance (já coberto por 6 testes existentes + 1 novo; 3ª ocorrência direction-blind em stage5_refine, candidata HG-03) |
-| 04 Invariants | NOT_STARTED | specification/property | contratos discriminados por testes |
+| 04 Invariants | DONE (2026-08-18) | specification/property | **11 contratos com invariante executável**, 61 testes novos, 8 mutantes dirigidos detectados, 2 auditorias estruturais AST; âncoras numéricas verificadas por reimplementação independente; exit review em INV-05 evidence |
 | 05 Integration | NOT_STARTED | fronteiras reais | pipelines e falhas/resume cobertos |
 | 06 Scientific regression | NOT_STARTED | datasets mínimos | lógica e tolerância numérica separadas |
 | 07 Adversarial | NOT_STARTED | força dos gates | branch/mutation/fault/static analisados |
