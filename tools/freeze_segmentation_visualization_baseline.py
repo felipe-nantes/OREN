@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA = "argos-segmentation-visualization-baseline-v1"
+# webapp/seg_worker.py removido em 2026-08-20 (HUMAN_DECISOES item 15):
+# launcher legado inalcancavel; o worker ativo e dtwin/seg_worker.py.
 TRACKED_FILES = (
     "profiles/figado.yaml",
-    "webapp/seg_worker.py",
     "webapp/server.py",
     "dtwin/stages.py",
     "viewer/app.js",
