@@ -225,16 +225,16 @@ def subgroup_metrics(
 
     negative_subtype_values = sorted(
         {
-            protected_by_id[str(row["case_id"])].negative_subtype
+            subtype
             for row in negative_rows
-            if protected_by_id[str(row["case_id"])].negative_subtype
+            if (subtype := protected_by_id[str(row["case_id"])].negative_subtype)
         }
     )
     positive_subtype_values = sorted(
         {
-            protected_by_id[str(row["case_id"])].positive_subtype
+            subtype
             for row in positive_rows
-            if protected_by_id[str(row["case_id"])].positive_subtype
+            if (subtype := protected_by_id[str(row["case_id"])].positive_subtype)
         }
     )
     phenotype_tag_values = sorted(

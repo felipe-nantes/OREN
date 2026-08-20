@@ -1,8 +1,25 @@
 import json
+from pathlib import Path
+
+import pytest
 
 from dtwin.benchmark.hashing import git_state, input_hashes
 from dtwin.benchmark.metrics import compute_benchmark_metrics
-from dtwin.benchmark.reporting import write_run_outputs
+from dtwin.benchmark.reporting import _atomic_text, write_run_outputs
+
+
+def test_atomic_text_nao_vaza_temporario_em_falha(monkeypatch, tmp_path):
+    """TD-007: se o replace falhar, o temporário é removido (try/finally)."""
+    destino = tmp_path / "saida" / "relatorio.json"
+
+    def replace_nega(self, target):
+        raise PermissionError(13, "acesso negado (simulado)")
+
+    monkeypatch.setattr(Path, "replace", replace_nega)
+    with pytest.raises(PermissionError):
+        _atomic_text(destino, "conteudo")
+    assert list(destino.parent.glob(".relatorio.json.tmp")) == []
+    assert not destino.exists()
 
 
 def test_hashes_and_git_state_are_recordable(tmp_path):

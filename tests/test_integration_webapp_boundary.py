@@ -154,17 +154,61 @@ def test_atualizacoes_concorrentes_de_job_nao_se_perdem(monkeypatch, tmp_path):
     assert persistido["state"] == "done"
     assert persistido["job_id"] == job_id
 
-    # ACHADO (registrado em evidence): sob replaces concorrentes do mesmo
-    # destino, o Windows pode negar os.replace (WinError 5) e o servidor
-    # apenas LOGA a falha; além disso o temporário vaza por falta de
-    # try/finally. O destino final permanece íntegro (verificado acima) —
-    # os vazamentos abaixo são a evidência observável da contenção.
+    # TD-015 CORRIGIDO (PHASE_08): o persist agora reexecuta o replace sob
+    # PermissionError (contenção WinError 5) e limpa o temporário em
+    # try/finally. Sob contenção nenhum temporário pode sobrar.
     temporarios_vazados = list(persistido_path.parent.glob(".webapp_job_state.json.*.tmp"))
-    # não é assert de falha: documenta a contagem no relatório do teste
-    print(f"temporarios vazados sob contencao: {len(temporarios_vazados)}")
+    assert temporarios_vazados == [], (
+        f"temporários vazados sob contenção: {temporarios_vazados}"
+    )
 
     with server._lock:
         server._jobs.pop(job_id, None)
+
+
+def test_persist_reexecuta_replace_sob_permission_error_e_limpa_tmp(monkeypatch, tmp_path):
+    """TD-015: falhas transitórias de replace (WinError 5) são reexecutadas e o
+    temporário nunca sobra no disco."""
+    from webapp import server
+
+    job_id = "ab7700000004"
+    monkeypatch.setattr(server, "_case_dir_for_job", lambda _job: tmp_path)
+    original_replace = Path.replace
+    falhas = {"restantes": 2}
+
+    def replace_intermitente(self, target):
+        if self.name.startswith(".webapp_job_state.json.") and falhas["restantes"] > 0:
+            falhas["restantes"] -= 1
+            raise PermissionError(13, "acesso negado (simulado)")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", replace_intermitente)
+    caminho = server._persist_completed_job_state(job_id, {"state": "done"})
+    assert json.loads(caminho.read_text(encoding="utf-8"))["state"] == "done"
+    assert falhas["restantes"] == 0, "o retry não foi exercitado"
+    assert list(caminho.parent.glob(".webapp_job_state.json.*.tmp")) == []
+
+
+def test_persist_estoura_apos_esgotar_retries_sem_vazar_tmp(monkeypatch, tmp_path):
+    """TD-015: contenção permanente continua estourando para o chamador (que
+    loga), mas sem deixar temporário para trás."""
+    from webapp import server
+
+    job_id = "ab7700000005"
+    monkeypatch.setattr(server, "_case_dir_for_job", lambda _job: tmp_path)
+    monkeypatch.setattr(server.time, "sleep", lambda _s: None)
+    original_replace = Path.replace
+
+    def replace_sempre_nega(self, target):
+        if self.name.startswith(".webapp_job_state.json."):
+            raise PermissionError(13, "acesso negado (simulado)")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", replace_sempre_nega)
+    with pytest.raises(PermissionError):
+        server._persist_completed_job_state(job_id, {"state": "done"})
+    destino = server._completed_job_state_path(job_id)
+    assert list(destino.parent.glob(".webapp_job_state.json.*.tmp")) == []
 
 
 def test_persistencia_do_estado_final_e_atomica_no_disco(monkeypatch, tmp_path):

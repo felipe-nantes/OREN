@@ -124,7 +124,7 @@ def main() -> int:
                 and (automatic_dir / "segmentation" / "volume.nii.gz").is_file()
             )
 
-            def segment(venous: Path, destination: Path) -> Path:
+            def segment(venous: Path, destination: Path, *, record=record) -> Path:
                 t0 = time.monotonic()
                 process = run_segmentation_subprocess(
                     dicom_dir=venous, case_dir=destination, profile_path=Path("profiles/figado.yaml"),
@@ -162,7 +162,7 @@ def main() -> int:
                 explicit = build_multiphase_case(
                     case_id=case_id, case_upload_dir=raw_source, output_dir=case_dir / "explicit",
                     phase_dirs=approved_phase_dirs,
-                    segment_venous=lambda _venous, destination: _copy_segmentation(automatic_dir / "segmentation", destination),
+                    segment_venous=lambda _venous, destination, automatic_dir=automatic_dir: _copy_segmentation(automatic_dir / "segmentation", destination),
                 )
                 record["explicit_ingest_seconds"] = round(time.monotonic() - t0, 4)
                 auto_panels = build_exam_panels(

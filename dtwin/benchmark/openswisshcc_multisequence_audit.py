@@ -108,7 +108,7 @@ def audit_multisequence_inputs(
         )
         last_trace_role = trace_roles[-1]
 
-        def resolve(role: str) -> Path:
+        def resolve(role: str, *, files=files, case_id=case_id) -> Path:
             item = files[role]
             path = input_root / str(item["relative_path"])
             if not path.is_file() or path.stat().st_size != int(item["bytes"]) or _sha256(path) != item["sha256"]:

@@ -62,7 +62,7 @@ def scan_multisequence_geometry(
         if not t2_role:
             raise PipelineError(f"T2 ausente em {case_id}.")
 
-        def resolve(role: str) -> Path:
+        def resolve(role: str, *, files=files, case_id=case_id) -> Path:
             item = files[role]
             path = input_root / str(item["relative_path"])
             if (
