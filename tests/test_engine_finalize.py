@@ -260,15 +260,13 @@ def test_estagio5_descarta_uniao_com_geometria_divergente(tmp_path):
     assert abs(int(resultado.sum()) - volume_venosa) < volume_venosa * 0.2
 
 
-def test_observed_estagio5_aceita_uniao_com_direction_divergente(tmp_path):
-    """OBSERVED_BEHAVIOR (PHASE_03, candidata HG-03): a defesa de geometria do
-    estágio 5 compara Size/Spacing/Origin contra a venosa, mas NÃO Direction --
-    a mesma cegueira já caracterizada em webapp.server._mesma_geometria_sitk
-    (tests/test_characterization_geometry_equality.py) e nos comparadores
-    estritos, agora numa terceira ocorrência independente, dentro do próprio
-    stage5_refine. Uma união com Direction divergente (ex.: eixo Z invertido)
-    passa pela defesa e é aceita como fonte da malha -- não é rebaixada para
-    a venosa como aconteceria com Spacing/Origin divergentes."""
+def test_estagio5_rebaixa_uniao_com_direction_divergente_para_a_venosa(tmp_path):
+    """Spec (HG-03, HUMAN_DECISOES item 13, 2026-08-20): a defesa de geometria
+    do estágio 5 agora compara também Direction (atol=1e-6). Uma união com
+    Direction divergente (ex.: eixo Z invertido) é DESCARTADA com warning e o
+    refino usa a venosa -- mesmo destino de Spacing/Origin divergentes. Este
+    teste era a characterization do comportamento antigo (PHASE_03, que
+    aceitava a união flipada) e foi invertido junto com a mudança aprovada."""
     import SimpleITK as sitk
 
     from dtwin.core import Case
@@ -294,11 +292,10 @@ def test_observed_estagio5_aceita_uniao_com_direction_divergente(tmp_path):
 
     resultado = sitk.GetArrayFromImage(sitk.ReadImage(str(case.mask_organ_clean))) > 0
     volume_venosa, volume_uniao = int(venosa.sum()), int(uniao.sum())
-    # Se a defesa pegasse Direction, o resultado bateria com a venosa (como no
-    # teste de Spacing divergente). Em vez disso, bate com a união maior --
-    # confirmando que Direction diverge sem disparar o fallback.
-    assert abs(int(resultado.sum()) - volume_uniao) < volume_uniao * 0.2
-    assert abs(int(resultado.sum()) - volume_venosa) > volume_venosa * 0.2
+    # A defesa pega Direction: o resultado bate com a VENOSA (fallback), não
+    # com a união maior que teria sido usada antes da decisão HG-03.
+    assert abs(int(resultado.sum()) - volume_venosa) < volume_venosa * 0.2
+    assert abs(int(resultado.sum()) - volume_uniao) > volume_uniao * 0.2
 
 
 def test_regiao_classificada_so_existe_quando_ha_uniao(tmp_path):

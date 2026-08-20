@@ -727,6 +727,11 @@ def stage5_refine(case: Case, profile: dict) -> None:
             candidata.GetSize() != referencia.GetSize()
             or candidata.GetSpacing() != referencia.GetSpacing()
             or candidata.GetOrigin() != referencia.GetOrigin()
+            # direction incluida por decisao HG-03 (HUMAN_DECISIONS item 13)
+            or not np.allclose(
+                candidata.GetDirection(), referencia.GetDirection(),
+                rtol=0.0, atol=1e-6,
+            )
         ):
             log.warning(
                 "Estágio 5: %s tem geometria divergente da venosa; "

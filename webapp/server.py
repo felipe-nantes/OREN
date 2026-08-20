@@ -905,7 +905,14 @@ def _build_model(case_dir: Path) -> tuple[bool, str]:
 
 
 def _mesma_geometria_sitk(a: sitk.Image, b: sitk.Image) -> bool:
-    return a.GetSize() == b.GetSize() and a.GetSpacing() == b.GetSpacing() and a.GetOrigin() == b.GetOrigin()
+    # direction incluida por decisao HG-03 (HUMAN_DECISIONS item 13): sem ela,
+    # uma mascara flipada entrava na uniao em array space fora do lugar fisico.
+    return (
+        a.GetSize() == b.GetSize()
+        and a.GetSpacing() == b.GetSpacing()
+        and a.GetOrigin() == b.GetOrigin()
+        and bool(np.allclose(a.GetDirection(), b.GetDirection(), rtol=0.0, atol=1e-6))
+    )
 
 
 def _build_enhanced_visualization_shadow(

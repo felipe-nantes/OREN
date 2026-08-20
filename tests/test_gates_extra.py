@@ -237,6 +237,22 @@ def test_refino_zeroing_organ_aborts(tmp_path):
         stages.stage5_refine(case, profile)
 
 
+def test_refino_descarta_uniao_com_direction_divergente(tmp_path, caplog):
+    """HG-03 item 13 (2026-08-20): união com direction flipada (mesmos
+    size/spacing/origin) é descartada com warning e o refino usa a venosa."""
+    import SimpleITK as sitk
+
+    case = _case_with_masks(tmp_path)
+    uniao = sitk.ReadImage(str(case.mask_organ))
+    uniao.SetDirection((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0))
+    sitk.WriteImage(uniao, str(case.mask_organ_union), useCompression=True)
+
+    with caplog.at_level("WARNING"):
+        stages.stage5_refine(case, {"refino": {}})
+    assert "geometria divergente" in caplog.text
+    assert case.mask_organ_clean.is_file()
+
+
 def test_refino_zeroing_lesion_aborts(tmp_path):
     case = _case_with_masks(tmp_path)
     profile = {"refino": {"lesao": {"min_volume_voxels": 10**9}}}

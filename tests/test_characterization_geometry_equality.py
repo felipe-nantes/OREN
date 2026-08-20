@@ -1,14 +1,17 @@
-"""Characterization: comparadores de igualdade de geometria (PHASE_03, OBSERVED_BEHAVIOR).
+"""Spec: comparadores de igualdade de geometria (PHASE_03 → PHASE_09).
 
-Estes testes FIXAM o comportamento atual dos três comparadores de geometria do
-snapshot auditado; não afirmam que ele é correto. Divergência documentada
-(LONG_PLAN P0 #1; mudança exige HG-03/04):
+Origem: characterization da PHASE_03, que FIXOU o comportamento então
+observado — o comparador do webapp ignorava direction (era o gate da união de
+fases). Em 2026-08-20 a decisão **HG-03, HUMAN_DECISIONS item 13** aprovou a
+opção A1: o webapp passou a exigir direction com ``np.allclose(rtol=0,
+atol=1e-6)``, mantendo size/spacing/origin EXATOS. Estes testes agora
+AFIRMAM o comportamento aprovado:
 
-- ``webapp.server._mesma_geometria_sitk`` compara size/spacing/origin por
-  igualdade EXATA e IGNORA direction. É o gate da união de máscaras por fase
-  (server.py:984): uma máscara com direction divergente entraria na união.
+- ``webapp.server._mesma_geometria_sitk``: size/spacing/origin exatos +
+  direction com atol=1e-6 (mais estrito que os comparadores de contrato).
 - ``dtwin.segmentation_contract.same_geometry`` e
-  ``dtwin.volumetry._same_geometry`` comparam também direction, com atol=1e-5.
+  ``dtwin.volumetry._same_geometry``: size exato; spacing/origin/direction
+  com atol=1e-5 (inalterados).
 
 Se um destes testes quebrar, a semântica de igualdade geométrica mudou — pare
 e consulte .fable/HUMAN_GATES.md (HG-03) antes de aceitar a mudança.
@@ -39,12 +42,13 @@ def _imagem(
     return imagem
 
 
-def test_observed_server_ignora_direction_mas_contract_e_volumetry_nao():
-    """OBSERVED_BEHAVIOR: só o comparador do webapp aceita direction divergente."""
+def test_todos_os_comparadores_rejeitam_direction_divergente():
+    """HG-03 item 13 (2026-08-20): o webapp também rejeita o flip — antes o
+    aceitava e a união fazia OR em array space fora do lugar físico."""
     referencia = _imagem()
     flip = _imagem(direction=FLIP_Z)
 
-    assert _mesma_geometria_sitk(referencia, flip) is True
+    assert _mesma_geometria_sitk(referencia, flip) is False
     assert same_geometry(referencia, flip) is False
     assert volumetry_same_geometry(referencia, flip) is False
 
@@ -78,7 +82,7 @@ def test_observed_contract_e_volumetry_respeitam_atol_1e_5():
     assert volumetry_same_geometry(referencia, fora) is False
 
 
-def test_observed_direction_dentro_da_tolerancia_e_aceita_pelos_estritos():
+def test_direction_quase_identica_tolerancias_por_comparador():
     referencia = _imagem()
     direcao_quase = list(IDENTIDADE)
     direcao_quase[8] = 1.0 - 9e-6
@@ -86,6 +90,14 @@ def test_observed_direction_dentro_da_tolerancia_e_aceita_pelos_estritos():
 
     assert same_geometry(referencia, quase) is True
     assert volumetry_same_geometry(referencia, quase) is True
-    # O webapp compara tuplas exatas de size/spacing/origin e ignora direction,
-    # então também aceita — mas por cegueira, não por tolerância.
-    assert _mesma_geometria_sitk(referencia, quase) is True
+    # HG-03 item 13: o webapp usa atol=1e-6 (mais estrito que o 1e-5 dos
+    # comparadores de contrato) — desvio de 9e-6 é rejeitado por ele.
+    assert _mesma_geometria_sitk(referencia, quase) is False
+
+    direcao_micro = list(IDENTIDADE)
+    direcao_micro[8] = 1.0 - 9e-7
+    micro = _imagem(direction=tuple(direcao_micro))
+    # Ruído abaixo de 1e-6 continua aceito pelos três.
+    assert _mesma_geometria_sitk(referencia, micro) is True
+    assert same_geometry(referencia, micro) is True
+    assert volumetry_same_geometry(referencia, micro) is True
