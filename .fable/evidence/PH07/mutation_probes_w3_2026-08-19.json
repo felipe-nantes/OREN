@@ -1,0 +1,44 @@
+[
+  {
+    "id": "P10-volumetry-geo004-json-off",
+    "verdict": "KILLED",
+    "restored_ok": true,
+    "pytest_exit": 1,
+    "last_line": "1 failed, 9 passed, 3 warnings in 0.39s"
+  },
+  {
+    "id": "P11-volumetry-gate-couinaud-off",
+    "verdict": "KILLED",
+    "restored_ok": true,
+    "pytest_exit": 1,
+    "last_line": "1 failed, 11 passed, 3 warnings in 0.39s"
+  },
+  {
+    "id": "P12-volumetry-schema-contrato-off",
+    "verdict": "KILLED",
+    "restored_ok": true,
+    "pytest_exit": 1,
+    "last_line": "1 failed, 3 passed, 3 warnings in 0.36s"
+  },
+  {
+    "id": "P13-segcontract-hash-do-recibo-off",
+    "verdict": "KILLED",
+    "restored_ok": true,
+    "pytest_exit": 1,
+    "last_line": "1 failed, 20 passed, 4 warnings in 0.40s"
+  },
+  {
+    "id": "P14-segcontract-geometria-finita-off",
+    "verdict": "KILLED",
+    "restored_ok": true,
+    "pytest_exit": 1,
+    "last_line": "1 failed, 3 warnings in 0.33s"
+  },
+  {
+    "id": "P15-segcontract-direcao-singular-off",
+    "verdict": "KILLED",
+    "restored_ok": true,
+    "pytest_exit": 1,
+    "last_line": "1 failed, 1 passed, 3 warnings in 0.32s"
+  }
+]

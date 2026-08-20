@@ -1,0 +1,6 @@
+No known vulnerabilities found
+Name                   Skip Reason
+---------------------- ---------------------------------------------------------------------------------
+digital-twin-cirurgico distribution marked as editable
+torch                  Dependency not found on PyPI and could not be audited: torch (2.6.0+cu124)
+torchvision            Dependency not found on PyPI and could not be audited: torchvision (0.21.0+cu124)

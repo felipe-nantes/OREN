@@ -1,0 +1,8 @@
+dtwin\benchmark\openswisshcc_multisequence_audit.py:112:20: B023 Function definition does not bind loop variable `files`
+dtwin\benchmark\openswisshcc_multisequence_audit.py:115:66: B023 Function definition does not bind loop variable `case_id`
+dtwin\benchmark\openswisshcc_multisequence_geometry.py:66:20: B023 Function definition does not bind loop variable `files`
+dtwin\benchmark\openswisshcc_multisequence_geometry.py:73:64: B023 Function definition does not bind loop variable `case_id`
+tools\run_raw_phase_equivalence_benchmark.py:133:17: B023 Function definition does not bind loop variable `record`
+tools\run_raw_phase_equivalence_benchmark.py:137:17: B023 Function definition does not bind loop variable `record`
+tools\run_raw_phase_equivalence_benchmark.py:165:84: B023 Function definition does not bind loop variable `automatic_dir`
+Found 7 errors.

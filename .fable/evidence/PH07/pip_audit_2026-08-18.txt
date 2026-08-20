@@ -1,0 +1,12 @@
+Name       Version ID              Fix Versions
+---------- ------- --------------- ------------
+setuptools 70.2.0  PYSEC-2025-49   78.1.1
+setuptools 70.2.0  PYSEC-2025-49   78.1.1
+setuptools 70.2.0  PYSEC-2026-3447 83.0.0
+setuptools 70.2.0  PYSEC-2026-3447 83.0.0
+
+Name                   Skip Reason
+---------------------- ---------------------------------------------------------------------------------
+digital-twin-cirurgico distribution marked as editable
+torch                  Dependency not found on PyPI and could not be audited: torch (2.6.0+cu124)
+torchvision            Dependency not found on PyPI and could not be audited: torchvision (0.21.0+cu124)
