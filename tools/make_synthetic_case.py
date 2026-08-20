@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
 
-from dtwin.core import Case, array_to_image, save_image, now_utc
+from dtwin.core import Case, array_to_image, now_utc, save_image
 
 
 def _sphere(shape, center, radius):

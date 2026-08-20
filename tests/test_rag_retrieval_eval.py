@@ -8,9 +8,11 @@ from dtwin.core import PipelineError
 from dtwin.rag.index import build_bm25_index
 from tools.eval_rag_retrieval import (
     evaluate_retrieval,
-    main as eval_main,
     render_markdown_report,
     validate_eval_spec,
+)
+from tools.eval_rag_retrieval import (
+    main as eval_main,
 )
 
 

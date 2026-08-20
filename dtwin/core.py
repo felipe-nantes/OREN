@@ -58,14 +58,14 @@ def read_dicom_series(folder: Path) -> sitk.Image:
     reader.SetFileNames(names)
     try:
         return reader.Execute()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise PipelineError(f"Falha ao ler a série DICOM em {folder}: {e}") from e
 
 
 def read_image(path: Path) -> sitk.Image:
     try:
         return sitk.ReadImage(str(path))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise PipelineError(f"Falha ao ler imagem {path}: {e}") from e
 
 
@@ -73,7 +73,7 @@ def save_image(image: sitk.Image, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         sitk.WriteImage(image, str(path), useCompression=True)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise PipelineError(f"Falha ao gravar imagem {path}: {e}") from e
 
 

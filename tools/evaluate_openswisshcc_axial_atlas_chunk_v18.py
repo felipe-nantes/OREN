@@ -11,8 +11,10 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from dtwin.benchmark.openswisshcc_axial_atlas_chunk_evaluation import evaluate_chunk_development  # noqa: E402
-from dtwin.core import PipelineError  # noqa: E402
+from dtwin.benchmark.openswisshcc_axial_atlas_chunk_evaluation import (
+    evaluate_chunk_development,
+)
+from dtwin.core import PipelineError
 
 
 def main(argv=None) -> int:

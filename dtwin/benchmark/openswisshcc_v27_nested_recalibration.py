@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-import random
 import shutil
 import statistics
 import uuid
@@ -30,7 +29,6 @@ from dtwin.benchmark.v23_retrospective_multicohort_phase4 import (
     _roc_auc,
 )
 from dtwin.core import PipelineError
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v27-nested-recalibration-protocol-v1"
 PREDICTION_SCHEMA = "argos-openswisshcc-v27-nested-recalibration-prediction-v1"

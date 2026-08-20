@@ -7,7 +7,11 @@ from dtwin.core import PipelineError
 from dtwin.graphrag.config import load_graphrag_config
 from dtwin.graphrag.context import build_metadata_graphrag_context
 from dtwin.graphrag.ingest_registry import ingest_records, iter_registry_records
-from dtwin.graphrag.schema import MIMIC_RELATIONS, registry_record_to_graph_params, validate_registry_record
+from dtwin.graphrag.schema import (
+    MIMIC_RELATIONS,
+    registry_record_to_graph_params,
+    validate_registry_record,
+)
 
 
 class FakeGraphStore:

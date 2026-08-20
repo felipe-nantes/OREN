@@ -20,7 +20,6 @@ from dtwin.medgemma_panel_full_fov import (
 )
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 COHORT_SCHEMA = "argos-lld-mmri-v23-full-fov-pilot-cohort-v1"
 GALLERY_SCHEMA = "argos-lld-mmri-v23-full-fov-pilot-gallery-v2"
 ROLE_TO_PHASE = {"t1_arterial": "art", "t1_venous": "pv", "t1_delayed": "del"}

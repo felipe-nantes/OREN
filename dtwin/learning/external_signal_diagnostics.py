@@ -11,7 +11,6 @@ from dtwin.core import PipelineError
 from dtwin.learning.external_bundle_evaluation import _metrics
 from dtwin.learning.protocol import canonical_sha256, load_protected_cases, sha256_file
 
-
 SCHEMA = "oren-external-signal-diagnostics-v1"
 
 

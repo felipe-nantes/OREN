@@ -10,9 +10,9 @@ import sys
 import tempfile
 import time
 import uuid
-from pathlib import Path
-from pathlib import PurePosixPath
-from typing import Any, Callable
+from collections.abc import Callable
+from pathlib import Path, PurePosixPath
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -26,7 +26,6 @@ from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 INPUT_SCHEMA = "argos-public-liver-mri-input-v1"
 PREPARATION_SCHEMA = "argos-lld-mmri-v23-blind-preparation-v1"
@@ -307,7 +306,7 @@ def total_mr_liver_segmenter(
                     fast=bool(fast),
                     quiet=True,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 raise PipelineError(f"Falha TotalSegmentator total_mr/liver: {exc}") from exc
         finally:
             if previous_home is None:
@@ -385,7 +384,7 @@ def liver_segments_mr_union_segmenter(
                     device=device,
                     quiet=True,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 raise PipelineError(
                     f"Falha TotalSegmentator liver_segments_mr: {exc}"
                 ) from exc

@@ -3,6 +3,7 @@ import numpy as np
 import SimpleITK as sitk
 
 from dtwin.core import world_vertices_from_index
+
 from .conftest import make_geo_image
 
 

@@ -16,7 +16,6 @@ from dtwin.benchmark.v24_liver_enriched_openswisshcc import (
 )
 from dtwin.core import PipelineError
 
-
 ROOT = Path("casos/qualification/openswisshcc_v1")
 
 

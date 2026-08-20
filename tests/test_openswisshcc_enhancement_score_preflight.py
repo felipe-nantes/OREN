@@ -7,7 +7,9 @@ import pytest
 
 import dtwin.benchmark.openswisshcc_enhancement_score_preflight as module
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_enhancement_proposal_selection import ALGORITHM_VERSION
+from dtwin.benchmark.openswisshcc_enhancement_proposal_selection import (
+    ALGORITHM_VERSION,
+)
 from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA, RUN_SCHEMA
 from dtwin.core import PipelineError
 

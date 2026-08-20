@@ -4,7 +4,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_candidate_volume_timing_bundle import build_candidate_volume_timing_gallery
+from dtwin.benchmark.openswisshcc_candidate_volume_timing_bundle import (
+    build_candidate_volume_timing_gallery,
+)
 from dtwin.core import PipelineError
 
 

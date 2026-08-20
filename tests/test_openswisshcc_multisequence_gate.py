@@ -1,10 +1,17 @@
-import hashlib, json
-from pathlib import Path
+import hashlib
+import json
+
 import pytest
+
 from dtwin.benchmark.openswisshcc_multisequence_batch import COHORT_SCHEMA
-from dtwin.benchmark.openswisshcc_multisequence_gate import CONFIRMATIONS, create_multisequence_review, verify_multisequence_review
+from dtwin.benchmark.openswisshcc_multisequence_gate import (
+    CONFIRMATIONS,
+    create_multisequence_review,
+    verify_multisequence_review,
+)
 from dtwin.benchmark.openswisshcc_multisequence_panel import SCHEMA
 from dtwin.core import PipelineError
+
 
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 def cohort(tmp_path):

@@ -10,10 +10,13 @@ import uuid
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
-from dtwin.benchmark.openswisshcc_alignment import _load_json, _publish_directory, _sha256
+from dtwin.benchmark.openswisshcc_alignment import (
+    _load_json,
+    _publish_directory,
+    _sha256,
+)
 from dtwin.benchmark.openswisshcc_volumetric_batch import COHORT_SCHEMA
 from dtwin.core import PipelineError
-
 
 GALLERY_SCHEMA = "argos-openswisshcc-volumetric-review-gallery-v1"
 

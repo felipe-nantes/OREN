@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -19,8 +20,11 @@ from .medgemma_panel import (
     _validate_case_manifest,
 )
 from .medgemma_panel_full_fov import _robust_nonzero_window
-from .medgemma_panel_multiphase import RGB_CHANNELS, _render_color_tile, _resolve_channel_map
-
+from .medgemma_panel_multiphase import (
+    RGB_CHANNELS,
+    _render_color_tile,
+    _resolve_channel_map,
+)
 
 LIVER_ENRICHED_POLICY = "coarse_liver_localized_full_fov_interleaved_2or3x9_v1"
 

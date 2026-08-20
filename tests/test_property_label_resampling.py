@@ -25,7 +25,6 @@ import ast
 from pathlib import Path
 
 import numpy as np
-import pytest
 import SimpleITK as sitk
 from hypothesis import given, settings
 from hypothesis import strategies as st

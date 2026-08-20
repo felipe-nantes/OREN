@@ -17,7 +17,6 @@ from dtwin.benchmark.openswisshcc_volumetric_inference import (
 )
 from dtwin.core import PipelineError
 
-
 CONFIGS = {
     "multiphase": Path("configs/medgemma_local_4b_multiphase_volumetric_choice_pathology.yaml"),
     "venous": Path("configs/medgemma_local_4b_venous_volumetric_choice_pathology.yaml"),

@@ -33,7 +33,6 @@ from dtwin.medgemma_screening import (
 )
 from dtwin.rag import append_rag_to_prompt, build_rag_context, persist_rag_context
 
-
 PROTOCOL_SCHEMA = "argos-openswisshcc-v24-liver-enriched-inference-protocol-v1"
 CASE_SCHEMA = "argos-openswisshcc-v24-liver-enriched-inference-case-v1"
 RUN_SCHEMA = "argos-openswisshcc-v24-liver-enriched-inference-run-v1"

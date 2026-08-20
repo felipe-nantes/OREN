@@ -14,7 +14,6 @@ import pyvista as pv
 from .core import sha256_of
 from .viewer_artifacts import compute_mesh_metrics
 
-
 XR_ASSET_SCHEMA = "oren-xr-render-asset-v1"
 _TRIANGLE_BUDGETS = {
     "organ": 60_000,

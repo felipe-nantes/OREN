@@ -4,7 +4,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_candidate_volume_full87 import build_candidate_volume_full87_gallery
+from dtwin.benchmark.openswisshcc_candidate_volume_full87 import (
+    build_candidate_volume_full87_gallery,
+)
 from dtwin.core import PipelineError
 
 

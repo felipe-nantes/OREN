@@ -7,7 +7,9 @@ import SimpleITK as sitk
 from PIL import Image
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_multisequence_panel import generate_multisequence_panel_set
+from dtwin.benchmark.openswisshcc_multisequence_panel import (
+    generate_multisequence_panel_set,
+)
 from dtwin.core import PipelineError
 
 

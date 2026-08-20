@@ -24,12 +24,13 @@ from dtwin.benchmark.openswisshcc_axial_atlas_evaluation import (
     _roc_auc,
 )
 from dtwin.benchmark.openswisshcc_axial_atlas_score import score_log_odds
-from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import _load_development_labels
+from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import (
+    _load_development_labels,
+)
 from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _wilson
 from dtwin.benchmark.openswisshcc_volumetric_evaluation import _best_threshold
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 EVALUATION_SCHEMA = "argos-openswisshcc-v18-atlas-chunk-development-evaluation-v1"
 

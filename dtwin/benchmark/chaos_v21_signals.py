@@ -24,7 +24,6 @@ from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.core import PipelineError
 from dtwin.medsiglip_zero_shot import load_medsiglip_config
 
-
 MEDGEMMA_CASE_SCHEMA = "argos-chaos-v21-medgemma-choice-score-v1"
 MEDGEMMA_RUN_SCHEMA = "argos-chaos-v21-medgemma-choice-batch-v1"
 MEDSIGLIP_CASE_SCHEMA = "argos-chaos-v21-medsiglip-score-v1"

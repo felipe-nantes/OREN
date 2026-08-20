@@ -6,7 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.lld_mmri_v23_evaluation import evaluate_lld_mmri_v23_after_prediction_freeze
+from dtwin.benchmark.lld_mmri_v23_evaluation import (
+    evaluate_lld_mmri_v23_after_prediction_freeze,
+)
 from dtwin.core import PipelineError
 
 

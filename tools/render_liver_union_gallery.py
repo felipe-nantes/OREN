@@ -30,18 +30,18 @@ warnings.filterwarnings("ignore")
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-import pyvista as pv  # noqa: E402
+import pyvista as pv
 
 pv.OFF_SCREEN = True
 
-from dtwin.stages import (  # noqa: E402
+from dtwin.core import Case
+from dtwin.stages import (
     _fonte_da_malha_do_orgao,
     _isolar_orgao_para_visualizacao,
     _mesh_from_mask,
     _refine_mask,
 )
-from dtwin.core import Case  # noqa: E402
-from webapp.server import _build_union_liver_mask  # noqa: E402
+from webapp.server import _build_union_liver_mask
 
 VENOSA = REPO / "casos/qualification/lld_mmri_v23/prepared/external_segmentation_audit335_fullres_v1"
 ENTRADAS = REPO / "casos/qualification/lld_mmri_v23/prepared/external_inputs_v1/inputs"

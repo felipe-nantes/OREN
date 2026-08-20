@@ -11,9 +11,10 @@ import math
 import re
 import tempfile
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from dtwin.core import PipelineError, now_utc, sha256_of
 
@@ -57,7 +58,7 @@ def _write_json_atomic(path: Path, data: Any) -> None:
 def _read_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler JSON RAG {path}: {exc}") from exc
 
 

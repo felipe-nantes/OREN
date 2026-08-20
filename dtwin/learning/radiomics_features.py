@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import math
 import os
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +14,6 @@ from scipy import ndimage, stats
 
 from dtwin.core import PipelineError
 from dtwin.learning.protocol import canonical_sha256, sha256_file
-
 
 FEATURE_SCHEMA = "argos-hybrid-liver-radiomics-case-v1"
 MANIFEST_SCHEMA = "argos-hybrid-liver-radiomics-manifest-v1"

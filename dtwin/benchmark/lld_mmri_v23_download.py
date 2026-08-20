@@ -1,11 +1,11 @@
 """Fail-closed image-only downloader for the frozen LLD-MMRI v23 cohort."""
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
-from pathlib import Path
-from pathlib import PurePosixPath
-from typing import Any, Callable
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path, PurePosixPath
+from typing import Any
 
 from dtwin.benchmark.lld_mmri_v23_external import (
     MAPPING_SCHEMA,
@@ -17,7 +17,6 @@ from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 DOWNLOAD_SCHEMA = "argos-lld-mmri-v23-image-download-manifest-v1"
 PHASE_SUFFIXES = {

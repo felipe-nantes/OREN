@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dtwin.benchmark.openswisshcc_v20_fusion import V11_WEIGHTS
+import pytest
+
+from dtwin.benchmark.openswisshcc_v20_fusion import V11_WEIGHTS, _canonical_sha
 from dtwin.benchmark.openswisshcc_v23_shape_fusion import (
     CALIBRATOR_SCHEMA,
     SHAPE_WEIGHT,
@@ -9,9 +11,7 @@ from dtwin.benchmark.openswisshcc_v23_shape_fusion import (
     _loocv,
     score_with_frozen_calibrator,
 )
-from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
-import pytest
 
 
 def _rows(values):

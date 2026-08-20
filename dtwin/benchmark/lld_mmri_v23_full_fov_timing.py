@@ -31,7 +31,6 @@ from dtwin.medgemma_screening import (
     sha256_of_text,
 )
 
-
 PROTOCOL_SCHEMA = "argos-lld-mmri-v23-full-fov-3x9-timing-protocol-v1"
 CASE_SCHEMA = "argos-lld-mmri-v23-full-fov-3x9-timing-case-v1"
 RUN_SCHEMA = "argos-lld-mmri-v23-full-fov-3x9-timing-run-v1"

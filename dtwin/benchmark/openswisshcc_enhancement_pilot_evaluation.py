@@ -22,7 +22,6 @@ from dtwin.benchmark.openswisshcc_highdimensional_inference import (
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 PROTOCOL_SCHEMA = "argos-openswisshcc-enhancement-top5-pilot-evaluation-protocol-v22"
 EVALUATION_SCHEMA = "argos-openswisshcc-enhancement-top5-pilot-evaluation-v22"
 LABEL_SCHEMA = "argos-openswisshcc-ground-truth-v1"

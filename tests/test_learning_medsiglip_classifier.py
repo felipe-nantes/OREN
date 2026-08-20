@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 from dtwin.learning.medsiglip_classifier import (
     _aggregate,
     _best_threshold,

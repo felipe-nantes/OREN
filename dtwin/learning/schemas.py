@@ -1,8 +1,9 @@
 """Strict schemas used by the supervised ARGOS research track."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 from dtwin.benchmark.models import (
     NEGATIVE_SUBTYPES,
@@ -10,7 +11,6 @@ from dtwin.benchmark.models import (
     POSITIVE_SUBTYPES,
 )
 from dtwin.core import PipelineError
-
 
 PROTOCOL_SCHEMA = "argos-hybrid-training-protocol-v1"
 SPLIT_SCHEMA = "argos-hybrid-nested-splits-v1"

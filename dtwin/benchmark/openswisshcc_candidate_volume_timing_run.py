@@ -1,7 +1,6 @@
 """Fail-closed v16 timing pilot for the reviewed four-case candidate bundle."""
 from __future__ import annotations
 
-import json
 import shutil
 import statistics
 import tempfile
@@ -29,11 +28,12 @@ from dtwin.benchmark.openswisshcc_candidate_volume_score import (
     validate_candidate_volume_bundle,
     validate_candidate_volume_review,
 )
-from dtwin.benchmark.openswisshcc_candidate_volume_timing_bundle import _selected_timing_cases
+from dtwin.benchmark.openswisshcc_candidate_volume_timing_bundle import (
+    _selected_timing_cases,
+)
 from dtwin.benchmark.openswisshcc_highdimensional_inference import _atomic_json
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import load_screening_config
-
 
 PREFLIGHT_SCHEMA = "argos-openswisshcc-candidate-volume-timing-preflight-v16"
 RUN_SCHEMA = "argos-openswisshcc-candidate-volume-timing-run-v16"

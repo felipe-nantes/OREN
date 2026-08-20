@@ -1,12 +1,16 @@
 import json
-from pathlib import Path
 
 import nibabel as nib
 import numpy as np
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LCASE, RUN_SCHEMA as LRUN
-from dtwin.benchmark.openswisshcc_localizer_roi import CASE_SCHEMA, COHORT_SCHEMA, build_roi_pilot
+from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LCASE
+from dtwin.benchmark.openswisshcc_lesion_localizer import RUN_SCHEMA as LRUN
+from dtwin.benchmark.openswisshcc_localizer_roi import (
+    CASE_SCHEMA,
+    COHORT_SCHEMA,
+    build_roi_pilot,
+)
 
 
 def save(path, data):

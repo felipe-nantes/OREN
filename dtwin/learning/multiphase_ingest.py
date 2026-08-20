@@ -29,9 +29,10 @@ Two things this module gets right that a naive implementation would miss:
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any
 
 import numpy as np
 import pydicom
@@ -161,7 +162,7 @@ def _sort_files_spatially(files: list[str | Path]) -> list[str]:
                 instance = int(getattr(ds, "InstanceNumber"))
             except (TypeError, ValueError, AttributeError):
                 instance = None
-        except Exception:  # noqa: BLE001
+        except Exception:
             projected, instance = None, None
         records.append((projected, instance, str(path), path))
     if all(record[0] is not None for record in records):

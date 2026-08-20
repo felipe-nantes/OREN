@@ -10,7 +10,6 @@ from dtwin.benchmark.openswisshcc_fallback import render_venous_fallback_candida
 from dtwin.core import PipelineError
 from dtwin.medgemma_client import load_screening_config
 
-
 CONFIG = Path("configs/medgemma_local_4b_venous_fallback_pathology.yaml")
 PROFILE = Path("profiles/figado.yaml")
 

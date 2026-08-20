@@ -11,7 +11,6 @@ from dtwin.benchmark.openswisshcc_v20_fusion import V11_WEIGHTS
 from dtwin.benchmark.public_independent_v21_calibrator import RAW_SIGNAL_SCHEMA
 from dtwin.core import PipelineError
 
-
 CALIBRATOR = Path(
     "casos/qualification/openswisshcc_v1/prepared/development_freezes_v23/"
     "shape_fusion_calibrator_v1.json"

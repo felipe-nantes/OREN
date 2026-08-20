@@ -18,7 +18,6 @@ from PIL import Image
 
 from dtwin.core import PipelineError, sha256_of
 
-
 SCHEMA = "argos-medgemma-highdimensional-stack-v1"
 CONTRACT = "dtwin-medgemma-volume-v1"
 VOLUME_ROLE = "t1_venous"

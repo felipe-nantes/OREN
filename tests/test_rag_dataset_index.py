@@ -6,8 +6,8 @@ import json
 import pytest
 
 from dtwin.core import PipelineError
-from dtwin.rag import dataset_index
 from dtwin.datasets.schema import REGISTRY_SCHEMA
+from dtwin.rag import dataset_index
 
 
 def _record(**overrides):

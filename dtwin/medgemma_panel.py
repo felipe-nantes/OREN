@@ -20,7 +20,6 @@ from skimage.segmentation import find_boundaries
 from .core import PipelineError, array_from, now_utc, read_image, sha256_of
 from .medgemma_volumetric import panel_strategy, render_volumetric_panel_set
 
-
 PANEL_FILENAME = "medgemma_liver_screening_panel.png"
 PANEL_MANIFEST_FILENAME = "medgemma_liver_screening_manifest.json"
 

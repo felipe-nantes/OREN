@@ -2,7 +2,6 @@ from pathlib import Path
 
 from tools.create_quest_access_page import build_page
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

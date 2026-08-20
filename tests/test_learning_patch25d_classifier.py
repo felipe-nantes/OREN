@@ -1,8 +1,14 @@
 from __future__ import annotations
 
-from dtwin.learning.patch25d_classifier import _aggregate, _best_threshold, _confusion
-from dtwin.learning.patch25d_classifier import _fit, _scores
 import numpy as np
+
+from dtwin.learning.patch25d_classifier import (
+    _aggregate,
+    _best_threshold,
+    _confusion,
+    _fit,
+    _scores,
+)
 
 
 def test_candidate_aggregations():

@@ -14,16 +14,18 @@ from .core import PipelineError, load_profile, now_utc, sha256_of
 from .medgemma_client import (
     build_medgemma_prompt,
     create_medgemma_client,
-    load_screening_config,
     effective_config_sha256,
+    load_screening_config,
     model_trace,
     validate_configured_medgemma_report,
     validate_medgemma_report,
 )
 from .medgemma_panel import generate_liver_panel
-from .medgemma_panel_multiphase import derive_texture_channels, generate_liver_panel_multiphase
+from .medgemma_panel_multiphase import (
+    derive_texture_channels,
+    generate_liver_panel_multiphase,
+)
 from .rag import append_rag_to_prompt, build_rag_context, persist_rag_context
-
 
 REPORT_FILENAME = "medgemma_report.json"
 PANEL_REPORTS_FILENAME = "medgemma_panel_reports.json"

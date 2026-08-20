@@ -8,8 +8,9 @@ import shutil
 import statistics
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 import nibabel as nib
 import numpy as np

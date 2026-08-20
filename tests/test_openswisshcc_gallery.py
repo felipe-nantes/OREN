@@ -5,7 +5,6 @@ from pathlib import Path
 from dtwin.benchmark.openswisshcc_freeze import create_experiment_freeze
 from dtwin.benchmark.openswisshcc_gallery import build_review_gallery
 
-
 MULTI = Path("configs/medgemma_local_4b_multiphase_fast_pathology.yaml")
 FALLBACK = Path("configs/medgemma_local_4b_venous_fallback_pathology.yaml")
 

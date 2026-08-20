@@ -25,7 +25,6 @@ from dtwin.benchmark.public_independent_v21_calibrator import (
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 PREDICTION_SCHEMA = "argos-lld-mmri-v23-frozen-prediction-v1"
 RUN_SCHEMA = "argos-lld-mmri-v23-frozen-prediction-batch-v1"
 

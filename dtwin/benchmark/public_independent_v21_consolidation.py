@@ -8,13 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
-from dtwin.benchmark.public_independent_v21_evaluation import EVALUATION_SCHEMA as POSITIVE_SCHEMA
+from dtwin.benchmark.public_independent_v21_evaluation import (
+    EVALUATION_SCHEMA as POSITIVE_SCHEMA,
+)
 from dtwin.benchmark.public_independent_v21_negative_evaluation import (
     EVALUATION_SCHEMA as NEGATIVE_SCHEMA,
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 CONSOLIDATION_SCHEMA = "argos-public-independent-v21-single-class-arms-consolidation-v1"
 

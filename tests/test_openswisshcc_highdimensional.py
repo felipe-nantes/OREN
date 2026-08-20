@@ -15,7 +15,6 @@ from dtwin.benchmark.openswisshcc_highdimensional import (
 )
 from dtwin.core import PipelineError, sha256_of
 
-
 CASE_ID = "anon-openswiss-0123456789abcdef"
 
 

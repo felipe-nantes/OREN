@@ -7,34 +7,36 @@ import os
 import shutil
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
 
 from dtwin.benchmark.lld_mmri_v23_download import validate_lld_mmri_v23_download
-from dtwin.benchmark.lld_mmri_v23_geometry_audit import verify_lld_mmri_v23_geometry_audit
+from dtwin.benchmark.lld_mmri_v23_geometry_audit import (
+    verify_lld_mmri_v23_geometry_audit,
+)
 from dtwin.benchmark.lld_mmri_v23_harmonization import (
     DYNAMIC_ROLES,
     LIVER_SUPPORT_THRESHOLD,
     dynamic_liver_support_fractions,
     verify_lld_mmri_v23_harmonization,
 )
+from dtwin.benchmark.lld_mmri_v23_mask_quality import (
+    MASK_QUALITY_POLICY,
+    evaluate_liver_mask_quality,
+)
 from dtwin.benchmark.lld_mmri_v23_preparation import (
     MINIMUM_LIVER_VOXELS,
     _read_valid_nifti,
     _same_geometry,
 )
-from dtwin.benchmark.lld_mmri_v23_mask_quality import (
-    MASK_QUALITY_POLICY,
-    evaluate_liver_mask_quality,
-)
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 PILOT_SCHEMA = "argos-lld-mmri-v23-segmentation-timing-pilot-v1"
 Segmenter = Callable[[Path, Path], dict[str, Any] | None]
@@ -289,7 +291,7 @@ def run_lld_mmri_v23_segmentation_pilot(
             primary_error: Exception | None = None
             try:
                 primary_receipt = segment_liver(venous, mask_path) or {}
-            except Exception as exc:  # noqa: BLE001 - fallback is an explicit recovery boundary
+            except Exception as exc:
                 primary_receipt = {}
                 primary_error = exc
             primary_passed, primary_voxels, primary_geometry = _mask_gate(mask_path, reference)
@@ -312,7 +314,7 @@ def run_lld_mmri_v23_segmentation_pilot(
                 fallback_error: Exception | None = None
                 try:
                     fallback_receipt = fallback_segment_liver(venous, mask_path) or {}
-                except Exception as exc:  # noqa: BLE001 - persisted below before aborting
+                except Exception as exc:
                     fallback_receipt = {}
                     fallback_error = exc
                 fallback_passed, fallback_voxels, fallback_geometry = _mask_gate(

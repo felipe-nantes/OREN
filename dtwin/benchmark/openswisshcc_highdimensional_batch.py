@@ -24,7 +24,6 @@ from dtwin.benchmark.openswisshcc_highdimensional_inference import (
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import load_screening_config
 
-
 BUNDLE_SCHEMA = "argos-openswisshcc-highdimensional-blind-bundle-v1"
 BATCH_PROTOCOL_SCHEMA = "argos-openswisshcc-highdimensional-batch-protocol-v1"
 

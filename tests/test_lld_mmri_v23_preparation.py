@@ -10,22 +10,22 @@ import pytest
 import SimpleITK as sitk
 
 from dtwin.benchmark.lld_mmri_v23_download import download_lld_mmri_v23_images
-from dtwin.benchmark.lld_mmri_v23_geometry_audit import audit_lld_mmri_v23_geometry
-from dtwin.benchmark.lld_mmri_v23_harmonization import (
-    harmonize_lld_mmri_v23_dynamic_t1,
-)
 from dtwin.benchmark.lld_mmri_v23_external import (
     MAPPING_SCHEMA,
     PROTOCOL_SCHEMA,
     REPO_ID,
     REPO_REVISION,
 )
+from dtwin.benchmark.lld_mmri_v23_geometry_audit import audit_lld_mmri_v23_geometry
+from dtwin.benchmark.lld_mmri_v23_harmonization import (
+    harmonize_lld_mmri_v23_dynamic_t1,
+)
 from dtwin.benchmark.lld_mmri_v23_preparation import (
     INPUT_SCHEMA,
     PREPARATION_SCHEMA,
-    prepare_lld_mmri_v23_blind_inputs,
     isolated_total_mr_liver_segmenter,
     liver_segments_mr_union_segmenter,
+    prepare_lld_mmri_v23_blind_inputs,
     total_mr_liver_segmenter,
     verify_lld_mmri_v23_blind_inputs,
 )
@@ -37,7 +37,6 @@ from dtwin.benchmark.lld_mmri_v23_technical_amendment import (
 )
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError, sha256_of
-
 
 SUFFIXES = ["C+A", "C+Delay", "C+V", "C-pre", "DWI", "InPhase", "OutPhase", "T2WI"]
 

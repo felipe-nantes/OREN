@@ -6,7 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.public_independent_v21_evaluation import evaluate_liverhccseg_v21_positive_arm
+from dtwin.benchmark.public_independent_v21_evaluation import (
+    evaluate_liverhccseg_v21_positive_arm,
+)
 from dtwin.core import PipelineError
 
 

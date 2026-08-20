@@ -14,7 +14,6 @@ from dtwin.benchmark.openswisshcc_v23_shape_fusion import (
 )
 from dtwin.core import PipelineError
 
-
 LOCK_SCHEMA = "argos-openswisshcc-v23-baseline-lock-v1"
 
 

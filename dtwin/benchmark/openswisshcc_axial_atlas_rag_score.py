@@ -13,14 +13,18 @@ from urllib.request import Request
 
 from dtwin.benchmark.openswisshcc_axial_atlas_score import (
     CASE_TIME_GATE_SECONDS,
-    INSTRUCTION as V17_INSTRUCTION,
     MAX_IMAGE_EDGE,
     _load_json,
-    _load_protocol as _load_v17_protocol,
     _validate_case_frames,
     atlas_query,
     score_log_odds,
     validate_atlas_bundle,
+)
+from dtwin.benchmark.openswisshcc_axial_atlas_score import (
+    INSTRUCTION as V17_INSTRUCTION,
+)
+from dtwin.benchmark.openswisshcc_axial_atlas_score import (
+    _load_protocol as _load_v17_protocol,
 )
 from dtwin.benchmark.openswisshcc_highdimensional_inference import (
     RESPONSE_PREFIX,
@@ -40,7 +44,6 @@ from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import effective_config_sha256, load_screening_config
 from dtwin.rag import build_rag_context
 from dtwin.rag.grounding import build_rag_prompt_addendum
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v19-atlas-rag-score-protocol-v1"
 PREDICTION_SCHEMA = "argos-openswisshcc-v19-atlas-rag-score-prediction-v1"

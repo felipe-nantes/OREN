@@ -126,7 +126,7 @@ def test_aviso_de_volume_nao_reprova_o_caso():
     """Fígado pequeno existe de verdade -- cirrose avançada, hepatectomia prévia,
     paciente pediátrico. Rejeitar trocaria um erro silencioso por outro; o aviso
     informa sem bloquear."""
-    from webapp.server import _aviso_volume_figado, _MOTIVOS_MASCARA
+    from webapp.server import _MOTIVOS_MASCARA, _aviso_volume_figado
 
     aviso = _aviso_volume_figado({"largest_component_volume_ml": 511.0})
     assert "cirrose" in aviso["texto"] or "hepatectomia" in aviso["texto"]

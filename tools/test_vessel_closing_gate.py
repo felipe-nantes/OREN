@@ -29,11 +29,11 @@ warnings.filterwarnings("ignore")
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-import numpy as np  # noqa: E402
-from scipy import ndimage  # noqa: E402
+import numpy as np
+from scipy import ndimage
 
-from dtwin.core import array_from, read_image  # noqa: E402
-from dtwin.stages import _isolar_orgao_para_visualizacao, _refine_mask  # noqa: E402
+from dtwin.core import array_from, read_image
+from dtwin.stages import _isolar_orgao_para_visualizacao, _refine_mask
 
 MASKS = REPO / "experiments/vessel_continuity_shortlist_v1/masks"
 SAIDA = REPO / "experiments/vessel_closing_gate_v1"

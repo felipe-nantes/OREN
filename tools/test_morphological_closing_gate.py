@@ -22,14 +22,15 @@ warnings.filterwarnings("ignore")
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-import numpy as np  # noqa: E402
-from scipy import ndimage  # noqa: E402
+import shutil
 
-from dtwin.core import array_from, read_image  # noqa: E402
-from dtwin.stages import _isolar_orgao_para_visualizacao, _refine_mask  # noqa: E402
-from webapp.server import _build_union_liver_mask  # noqa: E402
-from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED  # noqa: E402
-import shutil  # noqa: E402
+import numpy as np
+from scipy import ndimage
+
+from dtwin.core import array_from, read_image
+from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED
+from dtwin.stages import _isolar_orgao_para_visualizacao, _refine_mask
+from webapp.server import _build_union_liver_mask
 
 CASO = REPO / "casos/qualification/lld_mmri_v23/analise_10_melhores_10_piores_v1/10_piores/anon-lld-7ef3b5abe1ee4cd8"
 ENTRADAS = REPO / "casos/qualification/lld_mmri_v23/prepared/external_inputs_v1/inputs/anon-lld-7ef3b5abe1ee4cd8"

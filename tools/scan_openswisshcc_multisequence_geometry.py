@@ -5,7 +5,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_multisequence_geometry import scan_multisequence_geometry
+from dtwin.benchmark.openswisshcc_multisequence_geometry import (
+    scan_multisequence_geometry,
+)
 
 
 def main() -> int:

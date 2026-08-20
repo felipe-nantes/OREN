@@ -16,6 +16,7 @@ from dtwin.benchmark.openswisshcc_volumetric_pairwise import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_client import load_screening_config
+
 try:
     from tools.medgemma_server import MedGemmaRuntime
 except ModuleNotFoundError:  # Suporta execucao direta: python tools/run_...py

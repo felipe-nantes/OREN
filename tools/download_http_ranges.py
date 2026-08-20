@@ -45,7 +45,7 @@ def _download_part(
         },
     )
     path.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+    with urllib.request.urlopen(request, timeout=timeout) as response:
         if response.status != 206:
             raise RuntimeError(f"Server ignored Range for {path}: HTTP {response.status}")
         content_range = response.headers.get("Content-Range", "")

@@ -4,10 +4,10 @@ from __future__ import annotations
 import json
 import math
 import os
-import shutil
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Protocol, Sequence
+from typing import Any, Protocol
 
 import numpy as np
 import yaml
@@ -15,7 +15,6 @@ from PIL import Image
 
 from dtwin.core import PipelineError
 from dtwin.learning.protocol import canonical_sha256, sha256_file
-
 
 EMBEDDING_MANIFEST_SCHEMA = "argos-medsiglip-frozen-embeddings-v1"
 EMBEDDING_RECORD_SCHEMA = "argos-medsiglip-frozen-embedding-record-v1"

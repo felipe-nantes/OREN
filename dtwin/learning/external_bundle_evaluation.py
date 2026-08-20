@@ -6,8 +6,9 @@ import math
 import os
 import tempfile
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 
@@ -21,7 +22,6 @@ from dtwin.learning.protocol import (
     sha256_file,
 )
 from dtwin.learning.visual_inference import classify_embeddings, load_production_bundle
-
 
 PREDICTION_SCHEMA = "oren-medsiglip-external-prediction-v1"
 FREEZE_SCHEMA = "oren-medsiglip-external-prediction-freeze-v1"

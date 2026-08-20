@@ -16,7 +16,6 @@ from dtwin.benchmark.openswisshcc_enhancement_maps import (
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 EVALUATION_SCHEMA = "argos-openswisshcc-enhancement-feature-evaluation-v22"
 LABEL_SCHEMA = "argos-openswisshcc-ground-truth-v1"
 

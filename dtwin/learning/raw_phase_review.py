@@ -12,9 +12,10 @@ import hashlib
 import json
 import shutil
 import uuid
+from collections.abc import Iterable
 from html import escape
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk

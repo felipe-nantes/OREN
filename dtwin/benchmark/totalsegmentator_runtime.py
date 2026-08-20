@@ -9,7 +9,6 @@ from typing import Any
 
 from dtwin.core import PipelineError
 
-
 RUNTIME_GUARD_ID = "totalsegmentator_isolated_runtime_v1"
 
 

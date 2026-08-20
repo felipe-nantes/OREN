@@ -5,7 +5,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_multisequence_panel import generate_multisequence_panel_set
+from dtwin.benchmark.openswisshcc_multisequence_panel import (
+    generate_multisequence_panel_set,
+)
 
 
 def main() -> int:

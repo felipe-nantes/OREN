@@ -5,18 +5,20 @@ from __future__ import annotations
 import argparse
 import functools
 import json
-from pathlib import Path
 import traceback
+from pathlib import Path
 
-from dtwin.benchmark.lld_mmri_v23_preparation import (
-    isolated_total_mr_liver_segmenter,
-    total_mr_liver_segmenter,
-)
 from dtwin.benchmark.lld_mmri_v23_mask_quality import (
     MASK_QUALITY_POLICY,
     anatomically_gated_segmenter,
 )
-from dtwin.benchmark.lld_mmri_v23_segmentation_pilot import run_lld_mmri_v23_segmentation_pilot
+from dtwin.benchmark.lld_mmri_v23_preparation import (
+    isolated_total_mr_liver_segmenter,
+    total_mr_liver_segmenter,
+)
+from dtwin.benchmark.lld_mmri_v23_segmentation_pilot import (
+    run_lld_mmri_v23_segmentation_pilot,
+)
 from dtwin.benchmark.windows_spawn_guard import block_optional_module_for_spawn
 from dtwin.core import PipelineError
 

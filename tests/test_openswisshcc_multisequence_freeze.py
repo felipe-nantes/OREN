@@ -1,5 +1,7 @@
 from pathlib import Path
+
 import pytest
+
 from dtwin.benchmark import openswisshcc_multisequence_freeze as freeze
 from dtwin.core import PipelineError
 

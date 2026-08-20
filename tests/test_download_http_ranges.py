@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 
-
 _PATH = Path(__file__).parents[1] / "tools" / "download_http_ranges.py"
 _SPEC = importlib.util.spec_from_file_location("download_http_ranges", _PATH)
 assert _SPEC and _SPEC.loader

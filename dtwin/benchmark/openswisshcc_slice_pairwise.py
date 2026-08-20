@@ -3,22 +3,25 @@ from __future__ import annotations
 
 import hashlib
 import io
-import json
 import shutil
 import statistics
 import time
 import uuid
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, Callable, Mapping, Protocol, Sequence
+from typing import Any, Protocol
 
 from PIL import Image
 
-from dtwin.benchmark.openswisshcc_alignment import _load_json, _publish_directory, _sha256
+from dtwin.benchmark.openswisshcc_alignment import (
+    _load_json,
+    _publish_directory,
+    _sha256,
+)
 from dtwin.benchmark.openswisshcc_volumetric_gate import verify_volumetric_freeze
 from dtwin.benchmark.openswisshcc_volumetric_inference import _current_case
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 SLICE_SCHEMA = "argos-medgemma-axial-slice-pairwise-score-v1"
 CASE_SCHEMA = "argos-openswisshcc-axial-slice-pairwise-case-v1"

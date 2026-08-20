@@ -23,7 +23,6 @@ from dtwin.learning.monophase_slice_candidates import (
 )
 from dtwin.learning.protocol import canonical_sha256, sha256_file
 
-
 SCHEMA = "oren-monophase-complementary-candidates-v1"
 SEQUENCE_ROLES = ("t2_haste", "dwi_trace_run_03", "dwi_adc")
 

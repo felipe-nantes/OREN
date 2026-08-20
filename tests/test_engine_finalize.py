@@ -5,8 +5,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from dtwin.engine import Engine
 from dtwin.core import array_from, array_to_image, read_image, save_image, sha256_of
+from dtwin.engine import Engine
+
 from .conftest import make_sphere_mask
 
 
@@ -122,6 +123,7 @@ def test_finalize_exports_internal_anatomy_when_available(synthetic_case):
 def test_isolar_orgao_remove_ilha_quando_o_corpo_principal_domina():
     """Ilhas soltas viram objetos flutuando no visualizador (docs/188)."""
     import numpy as np
+
     from dtwin.stages import _isolar_orgao_para_visualizacao
 
     volume = np.zeros((20, 20, 20), dtype=bool)
@@ -137,6 +139,7 @@ def test_isolar_orgao_remove_ilha_quando_o_corpo_principal_domina():
 def test_isolar_orgao_preserva_tudo_quando_o_figado_esta_partido():
     """A guarda existe para não apagar anatomia: dois pedaços grandes ficam."""
     import numpy as np
+
     from dtwin.stages import _isolar_orgao_para_visualizacao
 
     volume = np.zeros((30, 30, 30), dtype=bool)
@@ -150,6 +153,7 @@ def test_isolar_orgao_preserva_tudo_quando_o_figado_esta_partido():
 
 def test_isolar_orgao_preenche_cavidade_interna():
     import numpy as np
+
     from dtwin.stages import _isolar_orgao_para_visualizacao
 
     volume = np.zeros((20, 20, 20), dtype=bool)
@@ -162,6 +166,7 @@ def test_isolar_orgao_preenche_cavidade_interna():
 def test_preencher_cavidade_nao_desfaz_a_guarda_do_figado_partido():
     """Preencher buracos não pode fundir dois pedaços grandes num só."""
     import numpy as np
+
     from dtwin.stages import _isolar_orgao_para_visualizacao
 
     volume = np.zeros((30, 30, 30), dtype=bool)

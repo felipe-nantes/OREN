@@ -16,7 +16,12 @@ from PIL import Image, ImageDraw
 from scipy import ndimage
 
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LOCALIZER_CASE_SCHEMA, RUN_SCHEMA as LOCALIZER_RUN_SCHEMA
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    CASE_SCHEMA as LOCALIZER_CASE_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    RUN_SCHEMA as LOCALIZER_RUN_SCHEMA,
+)
 from dtwin.core import PipelineError
 from dtwin.medgemma_panel import _render_tile
 from dtwin.medgemma_screening import _write_json_atomic

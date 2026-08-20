@@ -25,7 +25,6 @@ from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA, RUN_SCHEM
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 PREFLIGHT_SCHEMA = "argos-openswisshcc-enhancement-top5-score-preflight-v22"
 
 

@@ -7,7 +7,6 @@ import json
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-
 BLOCKED_ROOTS = {
     ".codex",
     ".codex-backups",

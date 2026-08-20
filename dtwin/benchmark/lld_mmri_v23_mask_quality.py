@@ -4,14 +4,14 @@ from __future__ import annotations
 import math
 import os
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import SimpleITK as sitk
 
 from dtwin.benchmark.lld_mmri_v23_preparation import _read_valid_nifti, _same_geometry
 from dtwin.core import PipelineError
-
 
 MASK_QUALITY_POLICY = "physical_liver_plausibility_largest_component_v1"
 MINIMUM_LIVER_VOLUME_ML = 300.0

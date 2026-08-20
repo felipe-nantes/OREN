@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+
 import tomllib
 
 from tools.score_medsiglip_panel import _write_json_atomic

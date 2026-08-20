@@ -8,8 +8,9 @@ import subprocess
 import sys
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _load_json, _sha256
 from dtwin.benchmark.openswisshcc_configs import (

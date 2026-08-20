@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from webapp import server
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

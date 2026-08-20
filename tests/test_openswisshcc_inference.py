@@ -10,7 +10,6 @@ from dtwin.benchmark.openswisshcc_review import create_panel_review
 from dtwin.core import PipelineError
 from dtwin.medgemma_client import load_screening_config
 
-
 CONFIG = Path("configs/medgemma_local_4b_multiphase_fast_pathology.yaml")
 
 

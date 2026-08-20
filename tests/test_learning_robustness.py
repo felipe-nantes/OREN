@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from dtwin.learning.robustness import (
     _metrics_for,
     bootstrap_confidence_interval,

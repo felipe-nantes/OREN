@@ -17,11 +17,11 @@ from dtwin.benchmark.openswisshcc_lesion_localizer import (
     TotalSegmentatorMRLesionLocalizer,
     run_localizer_scores,
 )
-from dtwin.core import PipelineError
 from dtwin.benchmark.windows_spawn_guard import (
     PYARROW_GUARD_ID,
     block_optional_module_for_spawn,
 )
+from dtwin.core import PipelineError
 from dtwin.medgemma_client import HTTPJSONMedGemmaClient
 from dtwin.medsiglip_zero_shot import MedSigLIPScorer
 

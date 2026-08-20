@@ -16,7 +16,9 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _validate_blind_run
 from dtwin.benchmark.openswisshcc_localizer_roi_freeze import verify_roi_freeze
 from dtwin.benchmark.openswisshcc_localizer_roi_gate import verify_paired_review
-from dtwin.benchmark.openswisshcc_localizer_roi_inference import CASE_SCHEMA as SCORE_CASE_SCHEMA
+from dtwin.benchmark.openswisshcc_localizer_roi_inference import (
+    CASE_SCHEMA as SCORE_CASE_SCHEMA,
+)
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 

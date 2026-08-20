@@ -13,8 +13,8 @@ import uuid
 from pathlib import Path
 
 from dtwin.core import PipelineError
-from dtwin.learning.internal_blind_phase_adapter import BLIND_CASE_PATTERN
 from dtwin.learning.internal_blind_phase_adapter import (
+    BLIND_CASE_PATTERN,
     summarize_authorized_blind_phase_eligibility,
 )
 from webapp import server

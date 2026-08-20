@@ -31,7 +31,7 @@ def _zip(path, subjects, *, unsafe=False):
             )
         if unsafe:
             archive.writestr("../escape.txt", b"x")
-    return hashlib.md5(path.read_bytes()).hexdigest()  # noqa: S324 - checksum oficial é MD5
+    return hashlib.md5(path.read_bytes()).hexdigest()
 
 
 def _patch_split(monkeypatch):

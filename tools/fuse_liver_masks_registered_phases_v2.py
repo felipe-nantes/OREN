@@ -9,7 +9,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.benchmark.liver_mask_phase_fusion import run_fusion, verify_fusion  # noqa: E402
+from dtwin.benchmark.liver_mask_phase_fusion import (
+    run_fusion,
+    verify_fusion,
+)
 
 
 def main() -> int:

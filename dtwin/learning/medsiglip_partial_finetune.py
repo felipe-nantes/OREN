@@ -33,7 +33,6 @@ from dtwin.learning.protocol import (
 )
 from dtwin.learning.splits import validate_nested_splits
 
-
 CONFIG_SCHEMA = "argos-hybrid-medsiglip-partial-finetune-config-v1"
 PREDICTION_SCHEMA = "argos-hybrid-medsiglip-partial-oof-prediction-v1"
 FREEZE_SCHEMA = "argos-hybrid-medsiglip-partial-oof-freeze-v1"

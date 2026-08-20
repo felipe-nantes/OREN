@@ -15,7 +15,6 @@ def _runtime_preflight(config: dict) -> None:
     med = config["medgemma"]
     import torch
     import transformers
-
     from transformers import AutoModelForImageTextToText, AutoProcessor  # noqa: F401
 
     if not torch.cuda.is_available():
@@ -91,7 +90,7 @@ def main(argv=None) -> int:
         _verify_local_snapshot(path)
         print(f"[OK] Modelo disponível no cache local: {path}")
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"[ABORTADO] Não foi possível acessar {model_id}: {type(exc).__name__}: {exc}")
         print("Aceite os termos no Hugging Face e execute 'hf auth login' nesta máquina.")
         return 1

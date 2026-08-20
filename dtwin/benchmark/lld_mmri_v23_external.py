@@ -17,7 +17,6 @@ from dtwin.benchmark.openswisshcc_v23_shape_fusion import _validated_calibrator
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 PROTOCOL_SCHEMA = "argos-lld-mmri-v23-external-protocol-v1"
 LABEL_SCHEMA = "argos-lld-mmri-v23-protected-label-v1"
 MAPPING_SCHEMA = "argos-lld-mmri-v23-protected-source-map-v1"

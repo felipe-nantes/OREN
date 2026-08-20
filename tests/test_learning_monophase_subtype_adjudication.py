@@ -11,7 +11,6 @@ from dtwin.learning.monophase_subtype_adjudication import (
     validated_top2,
 )
 
-
 PROBS = {"hcc": 0.45, "fnh": 0.35, "hemangioma": 0.15, "hepatic_cyst": 0.05}
 
 

@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from dtwin.core import PipelineError
-from dtwin.learning.protocol import canonical_sha256, sha256_file
 from dtwin.learning.monophase_slice_candidates import publish_immutable_directory
+from dtwin.learning.protocol import canonical_sha256, sha256_file
 
 
 def _json(path: Path) -> dict[str, Any]:

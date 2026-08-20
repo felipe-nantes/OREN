@@ -35,8 +35,9 @@ import math
 import os
 import tempfile
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import joblib
 import numpy as np
@@ -56,7 +57,6 @@ from dtwin.learning.protocol import (
 )
 from dtwin.learning.robustness import clinical_subtype_map
 from dtwin.learning.splits import validate_nested_splits
-
 
 CONFIG_SCHEMA = "argos-hybrid-medsiglip-multiclass-config-v1"
 PREDICTION_SCHEMA = "argos-hybrid-medsiglip-multiclass-oof-prediction-v1"

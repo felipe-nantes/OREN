@@ -24,7 +24,6 @@ from scipy import ndimage
 from dtwin.core import PipelineError, now_utc, sha256_of
 from dtwin.segmentation_contract import image_geometry, same_geometry
 
-
 CONFIG_SCHEMA = "argos-liver-segmentation-benchmark-config-v2"
 RESULT_SCHEMA = "argos-liver-segmentation-comparison-v2"
 CASE_SCHEMA = "argos-liver-segmentation-case-comparison-v2"
@@ -58,7 +57,7 @@ def _load_binary(
 ) -> tuple[np.ndarray, bool, str]:
     try:
         image = sitk.ReadImage(str(path))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler mascara {path.name}: {exc}") from exc
     if label_value is not None:
         image = sitk.Cast(image == int(label_value), sitk.sitkUInt8)

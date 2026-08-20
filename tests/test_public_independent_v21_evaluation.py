@@ -5,7 +5,11 @@ import pytest
 
 from dtwin.benchmark import public_independent_v21_evaluation as module
 from dtwin.benchmark.public_independent_v21_calibrator import (
-    CALIBRATOR_SCHEMA, SCORE_SCHEMA, SCORE_SUMMARY_SCHEMA, WEIGHTS, _canonical_sha,
+    CALIBRATOR_SCHEMA,
+    SCORE_SCHEMA,
+    SCORE_SUMMARY_SCHEMA,
+    WEIGHTS,
+    _canonical_sha,
 )
 from dtwin.core import PipelineError
 from dtwin.datasets.liverhccseg_labels import AUDIT_SCHEMA

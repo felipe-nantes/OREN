@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from dtwin.benchmark import openswisshcc_candidate_volume_evaluation as evaluation

@@ -15,16 +15,17 @@ from dtwin.benchmark.openswisshcc_candidate_volume import (
     OUTPUT_SIDE,
     _original_dynamic_inputs,
     _registered_or_none,
+    _valid_localizer_run_schema,
     _validate_manifest_files,
     build_candidate_volume_case,
     centered_slice_indices,
-    select_candidate_components,
-    _valid_localizer_run_schema,
     preview_frame_indices,
+    select_candidate_components,
 )
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LOCALIZER_CASE_SCHEMA
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    CASE_SCHEMA as LOCALIZER_CASE_SCHEMA,
+)
 from dtwin.core import PipelineError
-
 
 CASE_ID = "anon-openswiss-0123456789abcdef"
 

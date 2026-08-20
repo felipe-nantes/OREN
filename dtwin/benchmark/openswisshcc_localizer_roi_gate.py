@@ -12,8 +12,18 @@ from typing import Any
 from PIL import Image
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_localizer_enhancement_roi import CASE_SCHEMA as ENHANCEMENT_CASE_SCHEMA, COHORT_SCHEMA as ENHANCEMENT_COHORT_SCHEMA
-from dtwin.benchmark.openswisshcc_localizer_roi import CASE_SCHEMA as MORPHOLOGY_CASE_SCHEMA, COHORT_SCHEMA as MORPHOLOGY_COHORT_SCHEMA
+from dtwin.benchmark.openswisshcc_localizer_enhancement_roi import (
+    CASE_SCHEMA as ENHANCEMENT_CASE_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_localizer_enhancement_roi import (
+    COHORT_SCHEMA as ENHANCEMENT_COHORT_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_localizer_roi import (
+    CASE_SCHEMA as MORPHOLOGY_CASE_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_localizer_roi import (
+    COHORT_SCHEMA as MORPHOLOGY_COHORT_SCHEMA,
+)
 from dtwin.core import PipelineError
 
 REVIEW_SCHEMA = "argos-openswisshcc-localizer-roi-paired-review-v1"

@@ -35,12 +35,13 @@ from dtwin.benchmark.openswisshcc_candidate_volume_score import (
 )
 from dtwin.benchmark.openswisshcc_candidate_volume_timing_run import (
     RUN_SCHEMA as TIMING_RUN_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_candidate_volume_timing_run import (
     _load_static_context,
 )
 from dtwin.benchmark.openswisshcc_lesion_localizer_chunks import MERGED_RUN_SCHEMA
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 FULL87_SCHEMA = "argos-openswisshcc-candidate-volume-full87-v16"
 CONTACT_SHEET_SCHEMA = "argos-openswisshcc-candidate-volume-contact-sheet-v16"

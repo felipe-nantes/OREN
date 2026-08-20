@@ -11,7 +11,6 @@ import yaml
 from dtwin.core import PipelineError
 from dtwin.learning.protocol import canonical_sha256, sha256_file
 
-
 FUSION_SCHEMA = "argos-hybrid-v23-medsiglip-late-fusion-prediction-v1"
 FREEZE_SCHEMA = "argos-hybrid-v23-medsiglip-late-fusion-freeze-v1"
 EVALUATION_SCHEMA = "argos-hybrid-v23-medsiglip-late-fusion-evaluation-v1"

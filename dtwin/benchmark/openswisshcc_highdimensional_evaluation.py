@@ -31,7 +31,6 @@ from dtwin.benchmark.openswisshcc_highdimensional_inference import _atomic_json
 from dtwin.benchmark.reporting import write_run_outputs
 from dtwin.core import PipelineError, now_utc, sha256_of
 
-
 EVALUATION_SCHEMA = "argos-openswisshcc-highdimensional-evaluation-v1"
 TIME_GATE_SECONDS = 180.0
 

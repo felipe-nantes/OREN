@@ -13,9 +13,8 @@ from dtwin.learning.candidate_dataset import (
     verify_candidate_dataset,
 )
 from dtwin.learning.protocol import atomic_write_json, canonical_sha256, sha256_file
-from dtwin.learning.schemas import PROTOCOL_SCHEMA
+from dtwin.learning.schemas import PROTOCOL_SCHEMA, ProtectedTrainingCase
 from dtwin.learning.splits import build_nested_splits
-from dtwin.learning.schemas import ProtectedTrainingCase
 
 
 def _sha(path: Path) -> str:

@@ -247,7 +247,7 @@ def test_restrict_splits_preserves_fold_membership_and_drops_missing_cases():
 
 def test_v23_style_source_loads_via_freeze_schema(tmp_path):
     from dtwin.learning.multi_signal_fusion import load_signal_scores
-    from dtwin.learning.protocol import canonical_sha256, sha256_file
+    from dtwin.learning.protocol import sha256_file
 
     root = tmp_path / "v23"
     root.mkdir()

@@ -9,7 +9,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.benchmark.mrsegmentator_chaos_runner import run_cohort, verify_run  # noqa: E402
+from dtwin.benchmark.mrsegmentator_chaos_runner import (
+    run_cohort,
+    verify_run,
+)
 
 
 def main() -> int:

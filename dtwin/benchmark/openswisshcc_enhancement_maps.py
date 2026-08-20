@@ -21,7 +21,6 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 CASE_SCHEMA = "argos-openswisshcc-enhancement-features-case-v22"
 COHORT_SCHEMA = "argos-openswisshcc-enhancement-features-cohort-v22"
 ALGORITHM_VERSION = "robust-liver-zscore-dynamic-v1"

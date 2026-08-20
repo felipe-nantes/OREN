@@ -18,7 +18,6 @@ import SimpleITK as sitk
 
 from .core import PipelineError, now_utc, sha256_of
 
-
 INPUT_SCHEMA = "argos-segmentation-native-input-v2"
 QUALITY_SCHEMA = "argos-segmentation-visualization-quality-v2"
 
@@ -139,7 +138,7 @@ def build_native_input_manifest(
     try:
         source_image = sitk.ReadImage(str(source_path))
         reference_image = sitk.ReadImage(str(reference_path))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler entrada de segmentacao: {exc}") from exc
     return {
         "schema": INPUT_SCHEMA,
@@ -179,7 +178,7 @@ def validate_visualization_mask(
     try:
         mask_image = sitk.ReadImage(str(candidate_path))
         reference_image = sitk.ReadImage(str(reference_path))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler mascara visual experimental: {exc}") from exc
     if not same_geometry(mask_image, reference_image):
         raise PipelineError("Mascara visual experimental fora da grade de referencia.")

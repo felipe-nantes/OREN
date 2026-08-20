@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import re
 import shutil
 import uuid
@@ -19,7 +18,6 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.benchmark.openswisshcc_v23_baseline import verify_v23_baseline_lock
 from dtwin.core import PipelineError
-
 
 CONTRACT_SCHEMA = "argos-v23-independent-external-validation-contract-v1"
 IMAGE_CASE_SCHEMA = "argos-v23-external-image-case-v1"

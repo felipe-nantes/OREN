@@ -7,7 +7,6 @@ import dtwin.benchmark.openswisshcc_highdimensional_inference as inference
 from dtwin.benchmark.openswisshcc_highdimensional import CONTRACT, SCHEMA
 from dtwin.core import PipelineError, sha256_of
 
-
 CASE_ID = "anon-openswiss-0123456789abcdef"
 
 

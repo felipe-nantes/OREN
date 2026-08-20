@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 
 import dtwin.benchmark.openswisshcc_alignment as module
-
 from dtwin.benchmark.openswisshcc_alignment import (
     AlignmentGateError,
     dice_coefficient,

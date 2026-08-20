@@ -5,8 +5,9 @@ import json
 import math
 import statistics
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import SimpleITK as sitk
 
@@ -19,7 +20,6 @@ from dtwin.benchmark.openswisshcc_candidate_shape import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 TIMING_SCHEMA = "argos-openswisshcc-candidate-shape-timing-v23"
 V20_CONSERVATIVE_SECONDS = 104.4465

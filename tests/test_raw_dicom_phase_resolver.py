@@ -13,8 +13,8 @@ from dtwin.learning import multiphase_ingest as mi
 from dtwin.learning.raw_dicom_phase_resolver import (
     ARTERIAL,
     DELAYED,
-    RawPhaseResolutionError,
     VENOUS,
+    RawPhaseResolutionError,
     resolve_raw_dicom_phases,
 )
 

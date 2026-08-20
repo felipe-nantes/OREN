@@ -8,10 +8,10 @@ silently interpreted by a delayed-phase head.
 """
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from dtwin.core import PipelineError
-
 
 SEQUENCE_CONTRACT_SCHEMA = "oren-monophase-sequence-contract-v1"
 HIERARCHICAL_RESULT_SCHEMA = "oren-hierarchical-liver-screening-v1"

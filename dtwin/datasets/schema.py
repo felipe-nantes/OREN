@@ -8,7 +8,6 @@ from typing import Any
 from dtwin.benchmark.models import NEGATIVE_SUBTYPES, PHENOTYPE_TAGS, POSITIVE_SUBTYPES
 from dtwin.core import PipelineError
 
-
 REGISTRY_SCHEMA = "argos-dataset-registry-v1"
 CONFIG_SCHEMA = "argos-dataset-config-v1"
 RAG_CLASSES = {"negative", "positive"}

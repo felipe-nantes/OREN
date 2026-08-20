@@ -16,12 +16,13 @@ from dtwin.benchmark.openswisshcc_candidate_volume_score import (
 )
 from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     ALGORITHM_VERSION as PROPOSAL_ALGORITHM,
+)
+from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     COHORT_SCHEMA as PROPOSAL_SCHEMA,
 )
 from dtwin.benchmark.openswisshcc_enhancement_score_preflight import PREFLIGHT_SCHEMA
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 PROJECTION_SCHEMA = "argos-openswisshcc-enhancement-top5-timing-projection-v22"
 HISTORICAL_TIMING_SCHEMA = "argos-openswisshcc-candidate-volume-timing-run-v16"

@@ -24,7 +24,6 @@ from dtwin.core import PipelineError
 
 from .multiphase_ingest import ARTERIAL, DELAYED, REQUIRED_PHASES, VENOUS
 
-
 BLIND_CASE_PATTERN = re.compile(r"^ARGOS-BLIND-\d{4}$")
 AUDIT_FILENAME = "conversion_audit.json"
 SERIES_FILENAME = "volume.dcm"
@@ -107,7 +106,7 @@ def _validate_dicom_identity(
             stop_before_pixels=True,
             force=False,
         )
-    except Exception as exc:  # noqa: BLE001 - normalized into a safe pipeline error
+    except Exception as exc:
         raise PipelineError("Arquivo da série multifásica não é um DICOM válido.") from exc
     if str(getattr(dataset, "PatientID", "")) != case_id:
         raise PipelineError("Identificador DICOM não corresponde ao caso cego.")

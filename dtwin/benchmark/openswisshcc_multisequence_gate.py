@@ -5,9 +5,10 @@ import hashlib
 import json
 import os
 import uuid
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.benchmark.openswisshcc_multisequence_batch import COHORT_SCHEMA

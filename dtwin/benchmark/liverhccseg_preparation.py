@@ -9,12 +9,11 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import SimpleITK as sitk
 import numpy as np
+import SimpleITK as sitk
 
 from dtwin.benchmark.public_independent_cohort import anonymous_public_case_id
 from dtwin.core import PipelineError
-
 
 CASE_SCHEMA = "argos-liverhccseg-blind-input-case-v1"
 COHORT_SCHEMA = "argos-liverhccseg-blind-input-cohort-v1"

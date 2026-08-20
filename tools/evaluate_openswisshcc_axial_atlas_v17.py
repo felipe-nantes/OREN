@@ -11,11 +11,11 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from dtwin.benchmark.openswisshcc_axial_atlas_evaluation import (  # noqa: E402
+from dtwin.benchmark.openswisshcc_axial_atlas_evaluation import (
     evaluate_development,
     freeze_evaluation_protocol,
 )
-from dtwin.core import PipelineError  # noqa: E402
+from dtwin.core import PipelineError
 
 
 def parser() -> argparse.ArgumentParser:

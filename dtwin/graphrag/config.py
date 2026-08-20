@@ -10,7 +10,6 @@ import yaml
 
 from dtwin.core import PipelineError
 
-
 CONFIG_SCHEMA = "argos-graphrag-neo4j-config-v1"
 
 

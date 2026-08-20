@@ -11,7 +11,6 @@ from dtwin.benchmark.openswisshcc_inference_batch import run_reviewed_inference_
 from dtwin.benchmark.openswisshcc_review import create_panel_review
 from dtwin.core import PipelineError
 
-
 MULTI = Path("configs/medgemma_local_4b_multiphase_fast_pathology.yaml")
 FALLBACK = Path("configs/medgemma_local_4b_venous_fallback_pathology.yaml")
 

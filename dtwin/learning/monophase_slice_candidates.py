@@ -25,7 +25,6 @@ from dtwin.learning.candidate_dataset import (
 )
 from dtwin.learning.protocol import canonical_sha256, sha256_file
 
-
 SLICE_DERIVATION_SCHEMA = "oren-monophase-axial-liver-slices-v1"
 
 

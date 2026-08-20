@@ -24,8 +24,8 @@ import math
 import sys
 from pathlib import Path
 
-import SimpleITK as sitk
 import numpy as np
+import SimpleITK as sitk
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
@@ -59,7 +59,7 @@ def main() -> int:
             isolated_total_mr_liver_segmenter(
                 fonte, predita, device="gpu", fast=False, timeout_seconds=600
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             feitos[caso.name] = {"erro": f"{type(exc).__name__}: {exc}"}
             destino.write_text(json.dumps(feitos, indent=2), encoding="utf-8")
             print(f"    falhou: {exc}", flush=True)

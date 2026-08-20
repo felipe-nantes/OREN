@@ -16,7 +16,6 @@ from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 LABEL_SCHEMA = "argos-lld-mmri-v23-protected-label-v1"
 EVALUATION_SCHEMA = "argos-lld-mmri-v23-external-evaluation-v1"
 TIMING_SCHEMA = "argos-lld-mmri-v23-end-to-end-timing-v1"

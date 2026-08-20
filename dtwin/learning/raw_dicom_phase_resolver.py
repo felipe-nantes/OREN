@@ -177,7 +177,7 @@ def _read_series(root: Path) -> list[RawSeries]:
             continue
         try:
             ds = pydicom.dcmread(str(source), stop_before_pixels=True, force=True)
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         if str(getattr(ds, "Modality", "") or "").upper() != "MR":
             continue

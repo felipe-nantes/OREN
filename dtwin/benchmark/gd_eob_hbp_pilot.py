@@ -4,12 +4,12 @@ from __future__ import annotations
 import hashlib
 import html
 import json
-import os
 import shutil
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -37,7 +37,6 @@ from dtwin.medgemma_panel_liver_enriched import (
     generate_liver_enriched_panel_set_multiphase,
 )
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 PROTOCOL_SCHEMA = "argos-gd-eob-hbp-label-blind-pilot-protocol-v1"
 RUN_SCHEMA = "argos-gd-eob-hbp-label-blind-pilot-run-v1"

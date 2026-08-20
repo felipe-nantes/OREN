@@ -4,7 +4,6 @@ import pytest
 
 from tools.verify_graphify_argos import is_blocked_source, verify_graph
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

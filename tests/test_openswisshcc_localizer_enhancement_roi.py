@@ -6,8 +6,13 @@ import pytest
 import SimpleITK as sitk
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LCASE, RUN_SCHEMA as LRUN
-from dtwin.benchmark.openswisshcc_localizer_enhancement_roi import CASE_SCHEMA, COHORT_SCHEMA, build_enhancement_roi_pilot
+from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LCASE
+from dtwin.benchmark.openswisshcc_lesion_localizer import RUN_SCHEMA as LRUN
+from dtwin.benchmark.openswisshcc_localizer_enhancement_roi import (
+    CASE_SCHEMA,
+    COHORT_SCHEMA,
+    build_enhancement_roi_pilot,
+)
 from dtwin.core import PipelineError
 
 

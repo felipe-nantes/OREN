@@ -4,11 +4,12 @@ from __future__ import annotations
 import os
 import shutil
 import uuid
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any
 
-import SimpleITK as sitk
 import numpy as np
+import SimpleITK as sitk
 
 from .core import PipelineError
 from .segmentation_contract import (
@@ -19,7 +20,6 @@ from .segmentation_contract import (
     experimental_paths,
     same_geometry,
 )
-
 
 ARTERIAL_KEYS = ("t1_arterial", "arterial", "art")
 SECONDARY_KEYS = ("t1_delayed", "delayed", "t1_venous", "venous")
@@ -385,7 +385,7 @@ def run_phase_aware_shadow(
                         "accepted": False, "reason": "secondary_mask_missing",
                     }
                 secondary_elapsed = float(secondary_result.get("elapsed_seconds", 0.0))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 # Secondary confirmation is optional. A technical failure must
                 # never discard a valid primary mask or fail the exam.
                 adaptive_receipt["fusion"] = {

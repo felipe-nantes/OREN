@@ -5,7 +5,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_slice_pairwise_evaluation import evaluate_slice_pairwise
+from dtwin.benchmark.openswisshcc_slice_pairwise_evaluation import (
+    evaluate_slice_pairwise,
+)
 
 
 def main() -> int:

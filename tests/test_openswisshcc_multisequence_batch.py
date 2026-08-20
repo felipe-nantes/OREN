@@ -1,9 +1,15 @@
-import hashlib, json
-from pathlib import Path
+import hashlib
+import json
+
 import pytest
-from dtwin.benchmark.openswisshcc_multisequence_batch import build_multisequence_cohort, build_multisequence_gallery
+
+from dtwin.benchmark.openswisshcc_multisequence_batch import (
+    build_multisequence_cohort,
+    build_multisequence_gallery,
+)
 from dtwin.benchmark.openswisshcc_multisequence_panel import SCHEMA
 from dtwin.core import PipelineError
+
 
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 def input_manifest(p):

@@ -11,7 +11,7 @@ import yaml
 
 from dtwin.core import PipelineError
 
-from .dicom_utils import discover_dicom_series, stable_hash
+from .dicom_utils import discover_dicom_series
 from .nifti_utils import discover_nifti_files
 from .schema import CONFIG_SCHEMA, DatasetConfig, RegistryRecord, relative_path
 

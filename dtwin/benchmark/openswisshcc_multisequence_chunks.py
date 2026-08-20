@@ -1,12 +1,21 @@
 """Signed blind chunk plan and atomic merger for long multisequence v9 inference."""
 from __future__ import annotations
-import hashlib,json,os,shutil,statistics,uuid
+
+import hashlib
+import json
+import os
+import shutil
+import statistics
+import uuid
 from pathlib import Path
 from typing import Any
-from dtwin.benchmark.openswisshcc_alignment import _publish_directory,_sha256
-from dtwin.benchmark.openswisshcc_multisequence_freeze import verify_multisequence_freeze
+
+from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
+from dtwin.benchmark.openswisshcc_multisequence_freeze import (
+ verify_multisequence_freeze,
+)
 from dtwin.benchmark.openswisshcc_multisequence_gate import verify_multisequence_review
-from dtwin.benchmark.openswisshcc_multisequence_inference import CASE_SCHEMA,RUN_SCHEMA
+from dtwin.benchmark.openswisshcc_multisequence_inference import CASE_SCHEMA, RUN_SCHEMA
 from dtwin.core import PipelineError
 
 PLAN_SCHEMA="argos-openswisshcc-multisequence-chunk-plan-v1"

@@ -5,7 +5,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_candidate_volume_evaluation import create_evaluation_protocol
+from dtwin.benchmark.openswisshcc_candidate_volume_evaluation import (
+    create_evaluation_protocol,
+)
 from dtwin.core import PipelineError
 
 

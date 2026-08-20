@@ -21,7 +21,6 @@ from dtwin.benchmark.openswisshcc import (
 )
 from dtwin.core import PipelineError
 
-
 DERIVATIVES_MD5 = "e7df6554b20aeb941d697710e4201c18"
 TRANSFORM_PREFIX = PurePosixPath("derivatives/T1_registration_transforms")
 FORBIDDEN_TERMS = ("lesion", "manual", "ground_truth", "label", "truth")

@@ -3,8 +3,14 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_lesion_localizer import TotalSegmentatorMRLesionLocalizer, run_localizer_scores
-from dtwin.benchmark.openswisshcc_lesion_localizer_chunks import load_verified_selection_plan, planned_chunk
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    TotalSegmentatorMRLesionLocalizer,
+    run_localizer_scores,
+)
+from dtwin.benchmark.openswisshcc_lesion_localizer_chunks import (
+    load_verified_selection_plan,
+    planned_chunk,
+)
 
 
 def main() -> int:

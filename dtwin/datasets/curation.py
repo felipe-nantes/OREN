@@ -17,9 +17,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from dtwin.benchmark.models import (
     NEGATIVE_SUBTYPES,

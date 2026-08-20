@@ -22,7 +22,7 @@ REPORT_SCHEMA = "argos-rag-retrieval-report-v1"
 def _read_yaml(path: Path) -> dict[str, Any]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler YAML de avaliação RAG {path}: {exc}") from exc
     if not isinstance(data, dict):
         raise PipelineError("Avaliação RAG precisa ser um mapa YAML.")
@@ -56,7 +56,7 @@ def _load_chunk_texts(index: dict[str, Any]) -> dict[str, str]:
         return {}
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {}
     texts: dict[str, str] = {}
     for entry in manifest.get("chunks", []):
@@ -73,7 +73,7 @@ def _load_chunk_texts(index: dict[str, Any]) -> dict[str, str]:
             continue
         try:
             chunk = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         if chunk.get("chunk_id") == chunk_id:
             texts[str(chunk_id)] = str(chunk.get("text", ""))

@@ -5,10 +5,22 @@ import pytest
 from PIL import Image
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_localizer_enhancement_roi import CASE_SCHEMA as ECASE, COHORT_SCHEMA as ECOHORT
-from dtwin.benchmark.openswisshcc_localizer_roi import CASE_SCHEMA as MCASE, COHORT_SCHEMA as MCOHORT
-from dtwin.benchmark.openswisshcc_localizer_roi_freeze import create_roi_freeze, verify_roi_freeze
-from dtwin.benchmark.openswisshcc_localizer_roi_gate import REQUIRED_CONFIRMATIONS, _canonical, create_paired_review, verify_paired_review
+from dtwin.benchmark.openswisshcc_localizer_enhancement_roi import CASE_SCHEMA as ECASE
+from dtwin.benchmark.openswisshcc_localizer_enhancement_roi import (
+    COHORT_SCHEMA as ECOHORT,
+)
+from dtwin.benchmark.openswisshcc_localizer_roi import CASE_SCHEMA as MCASE
+from dtwin.benchmark.openswisshcc_localizer_roi import COHORT_SCHEMA as MCOHORT
+from dtwin.benchmark.openswisshcc_localizer_roi_freeze import (
+    create_roi_freeze,
+    verify_roi_freeze,
+)
+from dtwin.benchmark.openswisshcc_localizer_roi_gate import (
+    REQUIRED_CONFIRMATIONS,
+    _canonical,
+    create_paired_review,
+    verify_paired_review,
+)
 from dtwin.core import PipelineError
 
 

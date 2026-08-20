@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from dtwin.benchmark.openswisshcc_v23_error_audit import (
     _audit_flags,
     _finite,
@@ -7,7 +9,6 @@ from dtwin.benchmark.openswisshcc_v23_error_audit import (
     _transition,
 )
 from dtwin.core import PipelineError
-import pytest
 
 
 def test_transition_classifies_corrections_and_regressions():

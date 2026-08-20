@@ -9,7 +9,6 @@ from dtwin.benchmark.openswisshcc_freeze import create_experiment_freeze
 from dtwin.benchmark.openswisshcc_review import create_panel_review
 from dtwin.core import PipelineError
 
-
 MULTI = Path("configs/medgemma_local_4b_multiphase_fast_pathology.yaml")
 FALLBACK = Path("configs/medgemma_local_4b_venous_fallback_pathology.yaml")
 

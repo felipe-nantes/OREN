@@ -8,7 +8,9 @@ import pytest
 
 from dtwin.benchmark import openswisshcc_axial_atlas_evaluation as evaluation
 from dtwin.benchmark import openswisshcc_axial_atlas_score as score
-from dtwin.benchmark.openswisshcc_axial_atlas import PROTOCOL_SIGNATURE as ATLAS_SIGNATURE
+from dtwin.benchmark.openswisshcc_axial_atlas import (
+    PROTOCOL_SIGNATURE as ATLAS_SIGNATURE,
+)
 from dtwin.benchmark.openswisshcc_highdimensional_inference import _canonical_hash
 from dtwin.benchmark.openswisshcc_volume_score import CHOICES, CONTRACT, SCORING_METHOD
 from dtwin.core import PipelineError, sha256_of

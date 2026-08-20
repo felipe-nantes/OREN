@@ -11,8 +11,9 @@ import csv
 import json
 import shutil
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -27,7 +28,6 @@ from dtwin.benchmark.openswisshcc_enhancement_localizer import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 AUDIT_SCHEMA = "argos-openswisshcc-enhancement-localizer-audit-v22"
 EXTRACTION_SCHEMA = "argos-openswisshcc-v16-authorized-mask-extraction-v1"

@@ -14,8 +14,8 @@ from dtwin.datasets.chaos_download import (
     ChaosDownloadSpec,
     download_chaos_train,
     extract_chaos_mri_train,
-    verify_chaos_train_archive,
     verify_chaos_mri_extraction,
+    verify_chaos_train_archive,
 )
 
 
@@ -32,7 +32,7 @@ def _spec(payload: bytes) -> ChaosDownloadSpec:
         filename="CHAOS_Train_Sets.zip",
         url="https://example.invalid/train.zip",
         size_bytes=len(payload),
-        md5=hashlib.md5(payload).hexdigest(),  # noqa: S324 - publisher checksum contract
+        md5=hashlib.md5(payload).hexdigest(),
         record_id="test",
         version="test",
     )

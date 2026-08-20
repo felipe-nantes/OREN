@@ -18,7 +18,6 @@ from dtwin.medgemma_client import load_screening_config, model_trace
 from dtwin.medgemma_panel_multiphase import generate_liver_panel_multiphase
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 CASE_SCHEMA = "argos-liverhccseg-v21-uniform9-panel-case-v1"
 COHORT_SCHEMA = "argos-liverhccseg-v21-uniform9-panel-cohort-v1"
 GALLERY_SCHEMA = "argos-liverhccseg-v21-uniform9-gallery-v1"

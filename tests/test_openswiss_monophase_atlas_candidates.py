@@ -4,8 +4,8 @@ import hashlib
 import json
 from pathlib import Path
 
-from PIL import Image
 import pytest
+from PIL import Image
 
 from dtwin.core import PipelineError
 from dtwin.learning.openswiss_monophase_atlas_candidates import (

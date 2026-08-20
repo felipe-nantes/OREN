@@ -1,10 +1,13 @@
-import hashlib,json
-from pathlib import Path
+import hashlib
+import json
+
 import pytest
+
+from dtwin.benchmark import openswisshcc_multisequence_quality_cohort as bundle
 from dtwin.benchmark.openswisshcc_multisequence_batch import COHORT_SCHEMA
 from dtwin.benchmark.openswisshcc_multisequence_panel import SCHEMA
 from dtwin.benchmark.openswisshcc_multisequence_quality import create_quality_review
-from dtwin.benchmark import openswisshcc_multisequence_quality_cohort as bundle
+
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def source(tmp_path):

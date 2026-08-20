@@ -152,6 +152,7 @@ def generate_candidate_region(
 
     try:
         import importlib.metadata
+
         from totalsegmentator.python_api import totalsegmentator
     except (ImportError, ModuleNotFoundError) as exc:
         raise PipelineError("TotalSegmentator indisponível para localizar a região candidata.") from exc

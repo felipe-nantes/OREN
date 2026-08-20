@@ -20,7 +20,6 @@ from dtwin.core import PipelineError
 from dtwin.learning.candidate_dataset import CANDIDATE_RECORD_SCHEMA
 from dtwin.learning.protocol import canonical_sha256, sha256_file
 
-
 SCHEMA = "oren-openswiss-monophase-atlas-candidates-v1"
 
 

@@ -21,8 +21,10 @@ from dtwin.benchmark.openswisshcc_axial_atlas_evaluation import (
 from dtwin.benchmark.openswisshcc_axial_atlas_rag_score import (
     PREDICTION_SCHEMA,
     SUMMARY_SCHEMA,
-    _load_protocol as _load_score_protocol,
     score_log_odds,
+)
+from dtwin.benchmark.openswisshcc_axial_atlas_rag_score import (
+    _load_protocol as _load_score_protocol,
 )
 from dtwin.benchmark.openswisshcc_axial_atlas_score import CASE_TIME_GATE_SECONDS
 from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import (
@@ -34,7 +36,6 @@ from dtwin.benchmark.openswisshcc_volumetric_evaluation import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v19-atlas-rag-evaluation-protocol-v1"
 EVALUATION_SCHEMA = "argos-openswisshcc-v19-atlas-rag-development-evaluation-v1"

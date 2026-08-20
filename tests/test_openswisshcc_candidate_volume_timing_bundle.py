@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 
 from dtwin.benchmark.openswisshcc_candidate_volume_timing import SCENARIOS
-from dtwin.benchmark.openswisshcc_candidate_volume_timing_bundle import _selected_timing_cases
+from dtwin.benchmark.openswisshcc_candidate_volume_timing_bundle import (
+    _selected_timing_cases,
+)
 from dtwin.core import PipelineError
 
 

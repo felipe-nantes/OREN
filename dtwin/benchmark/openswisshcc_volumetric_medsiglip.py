@@ -7,15 +7,19 @@ import shutil
 import statistics
 import time
 import uuid
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any
 
-from dtwin.benchmark.openswisshcc_alignment import _load_json, _publish_directory, _sha256
+from dtwin.benchmark.openswisshcc_alignment import (
+    _load_json,
+    _publish_directory,
+    _sha256,
+)
 from dtwin.benchmark.openswisshcc_volumetric_gate import verify_volumetric_freeze
 from dtwin.core import PipelineError
 from dtwin.medsiglip_zero_shot import MedSigLIPScorer, load_medsiglip_config
-
 
 CASE_SCHEMA = "argos-openswisshcc-volumetric-medsiglip-case-v1"
 RUN_SCHEMA = "argos-openswisshcc-volumetric-medsiglip-run-v1"

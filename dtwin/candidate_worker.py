@@ -19,7 +19,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         print("CANDIDATE_OK")
         return 0
-    except Exception as exc:  # noqa: BLE001 - process boundary
+    except Exception as exc:
         print(f"CANDIDATE_FAIL: {type(exc).__name__}: {exc}")
         return 2
 

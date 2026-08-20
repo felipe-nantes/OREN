@@ -16,11 +16,12 @@ from dtwin.benchmark.openswisshcc_candidate_shape import CASE_SCHEMA
 from dtwin.benchmark.openswisshcc_v20_fusion import (
     BLIND_SIGNAL_SCHEMA,
     V11_WEIGHTS,
+)
+from dtwin.benchmark.openswisshcc_v20_fusion import (
     _loocv as _v11_loocv,
 )
 from dtwin.benchmark.openswisshcc_v23_baseline import verify_v23_baseline_lock
 from dtwin.core import PipelineError
-
 
 AUDIT_SCHEMA = "argos-openswisshcc-v23-development-error-audit-v1"
 ERROR_SCHEMA = "argos-openswisshcc-v23-development-error-case-v1"

@@ -24,6 +24,7 @@ from dtwin.core import (
     save_image,
 )
 from dtwin.stages import _make_case_id, stage2_normalize, stage3_segment_organ
+
 from .conftest import make_geo_image, make_sphere_mask
 
 ORGAN_PROFILE = {"segmentacao_orgao": {"rotulo_alvo": "liver", "motor_task": "total_mr"}}

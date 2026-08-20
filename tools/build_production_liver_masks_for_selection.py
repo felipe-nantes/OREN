@@ -32,13 +32,22 @@ warnings.filterwarnings("ignore")
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-import numpy as np  # noqa: E402
-import SimpleITK as sitk  # noqa: E402
+import numpy as np
 
-from dtwin.core import Case, array_from, array_to_image, read_image, save_image  # noqa: E402
-from dtwin.stages import _fonte_da_malha_do_orgao, _isolar_orgao_para_visualizacao, _refine_mask  # noqa: E402
-from webapp.server import _build_union_liver_mask  # noqa: E402
-from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED  # noqa: E402
+from dtwin.core import (
+    Case,
+    array_from,
+    array_to_image,
+    read_image,
+    save_image,
+)
+from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED
+from dtwin.stages import (
+    _fonte_da_malha_do_orgao,
+    _isolar_orgao_para_visualizacao,
+    _refine_mask,
+)
+from webapp.server import _build_union_liver_mask
 
 SELECAO = REPO / "casos/qualification/lld_mmri_v23/analise_10_melhores_10_piores_v1"
 ENTRADAS = REPO / "casos/qualification/lld_mmri_v23/prepared/external_inputs_v1/inputs"
@@ -108,7 +117,7 @@ def main() -> int:
         print(f"[{i}/{len(casos)}] {grupo}/{pasta_caso.name}", flush=True)
         try:
             r = processa_caso(grupo, pasta_caso)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             r = {"case_id": pasta_caso.name, "grupo": grupo, "erro": str(exc)}
             print(f"    falhou: {exc}", flush=True)
         else:

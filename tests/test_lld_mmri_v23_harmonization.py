@@ -8,7 +8,8 @@ import pytest
 import SimpleITK as sitk
 
 from dtwin.benchmark import lld_mmri_v23_harmonization as module
-from dtwin.benchmark.lld_mmri_v23_geometry_audit import AUDIT_SCHEMA, CASE_SCHEMA as AUDIT_CASE_SCHEMA
+from dtwin.benchmark.lld_mmri_v23_geometry_audit import AUDIT_SCHEMA
+from dtwin.benchmark.lld_mmri_v23_geometry_audit import CASE_SCHEMA as AUDIT_CASE_SCHEMA
 from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError

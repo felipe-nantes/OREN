@@ -14,8 +14,8 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.core import sha256_of  # noqa: E402
-from dtwin.stages import _isolar_orgao_para_visualizacao, _mesh_from_mask  # noqa: E402
+from dtwin.core import sha256_of
+from dtwin.stages import _isolar_orgao_para_visualizacao, _mesh_from_mask
 
 
 def _clean(source: Path, destination: Path) -> dict:

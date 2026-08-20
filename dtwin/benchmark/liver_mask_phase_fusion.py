@@ -16,7 +16,6 @@ from dtwin.benchmark.mrsegmentator_chaos_runner import verify_run
 from dtwin.core import PipelineError, now_utc, sha256_of
 from dtwin.segmentation_contract import same_geometry, validate_visualization_mask
 
-
 RUN_SCHEMA = "argos-liver-mask-phase-fusion-v1"
 CASE_SCHEMA = "argos-liver-mask-phase-fusion-case-v1"
 ALLOWED_POLICIES = frozenset(

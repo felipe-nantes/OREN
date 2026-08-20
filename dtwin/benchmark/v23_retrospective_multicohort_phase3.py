@@ -20,6 +20,8 @@ import SimpleITK as sitk
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory
 from dtwin.benchmark.openswisshcc_candidate_shape import (
     ALGORITHM_VERSION as SHAPE_ALGORITHM,
+)
+from dtwin.benchmark.openswisshcc_candidate_shape import (
     compute_candidate_shape_features,
 )
 from dtwin.benchmark.openswisshcc_enhancement_localizer import (
@@ -31,6 +33,8 @@ from dtwin.benchmark.openswisshcc_enhancement_maps import (
 )
 from dtwin.benchmark.openswisshcc_enhancement_proposal_selection import (
     ALGORITHM_VERSION as SELECTION_ALGORITHM,
+)
+from dtwin.benchmark.openswisshcc_enhancement_proposal_selection import (
     MAX_COMPONENTS,
     THRESHOLD_KEY,
     select_top_components,
@@ -41,7 +45,6 @@ from dtwin.benchmark.v23_retrospective_multicohort_phase2 import (
     verify_phase2_openswisshcc_inventory,
 )
 from dtwin.core import PipelineError
-
 
 SUMMARY_SCHEMA = "argos-v23-retrospective-multicohort-phase3-summary-v1"
 SIGNAL_SCHEMA = "argos-v23-retrospective-exact-signal-case-v1"

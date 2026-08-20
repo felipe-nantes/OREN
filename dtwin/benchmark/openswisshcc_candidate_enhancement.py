@@ -6,13 +6,13 @@ the API by construction.
 """
 from __future__ import annotations
 
-import json
 import math
 import shutil
 import sys
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -35,7 +35,6 @@ from dtwin.benchmark.openswisshcc_enhancement_maps import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 ALGORITHM_VERSION = "model-candidate-dynamic-context-5mm-v1"
 CONTEXT_RADIUS_MM = 5.0

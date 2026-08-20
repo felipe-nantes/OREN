@@ -31,11 +31,11 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.learning.medsiglip_embeddings import (  # noqa: E402
+from dtwin.learning.medsiglip_embeddings import (
     HuggingFaceMedSigLIPBackend,
     load_embedding_config,
 )
-from dtwin.learning.visual_inference import (  # noqa: E402
+from dtwin.learning.visual_inference import (
     classify_embeddings,
     load_production_bundle,
 )

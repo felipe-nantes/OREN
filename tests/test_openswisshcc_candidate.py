@@ -2,7 +2,6 @@ from pathlib import Path
 
 from dtwin.medgemma_client import load_screening_config
 
-
 CONFIG = Path("configs/medgemma_local_4b_multiphase_fast_pathology.yaml")
 
 

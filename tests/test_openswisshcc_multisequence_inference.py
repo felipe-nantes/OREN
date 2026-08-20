@@ -1,8 +1,12 @@
-import hashlib,json,time
-from pathlib import Path
+import hashlib
+import json
+import time
+
 import pytest
+
 from dtwin.benchmark import openswisshcc_multisequence_inference as inf
 from dtwin.core import PipelineError
+
 
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 def case_root(tmp_path):

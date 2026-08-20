@@ -9,7 +9,9 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from dtwin.benchmark.liverhccseg_preparation import COHORT_SCHEMA as PREPARED_COHORT_SCHEMA
+from dtwin.benchmark.liverhccseg_preparation import (
+    COHORT_SCHEMA as PREPARED_COHORT_SCHEMA,
+)
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _wilson
 from dtwin.benchmark.public_independent_v21_calibrator import (
@@ -21,7 +23,6 @@ from dtwin.benchmark.public_independent_v21_calibrator import (
 from dtwin.core import PipelineError
 from dtwin.datasets.liverhccseg_labels import AUDIT_SCHEMA
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 EVALUATION_SCHEMA = "argos-public-independent-v21-positive-only-evaluation-v1"
 PROTOCOL_SCHEMA = "argos-liverhccseg-v21-positive-evaluation-authorization-v1"

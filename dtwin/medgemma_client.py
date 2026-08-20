@@ -11,8 +11,9 @@ import os
 import re
 import socket
 import time
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -20,7 +21,6 @@ from urllib.request import Request, urlopen
 import yaml
 
 from .core import PipelineError
-
 
 REQUIRED_REPORT_FIELDS = {
     "resultado_hipotese",

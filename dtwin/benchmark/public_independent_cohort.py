@@ -17,15 +17,15 @@ import json
 import os
 import shutil
 import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable
+from typing import Any
 
 import yaml
 
 from dtwin.core import PipelineError
 from dtwin.datasets.schema import REGISTRY_SCHEMA
-
 
 CONFIG_SCHEMA = "argos-public-independent-cohort-config-v1"
 INFERENCE_SCHEMA = "argos-public-independent-inference-manifest-v1"

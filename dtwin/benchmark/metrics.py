@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from statistics import NormalDist
-from typing import Any, Iterable
+from typing import Any
 
 from .models import BenchmarkCaseResult, BenchmarkStatus, GroundTruthLabel, ModelResult
 

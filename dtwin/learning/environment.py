@@ -13,7 +13,6 @@ from typing import Any
 
 from dtwin.core import PipelineError
 
-
 REQUIRED_TRAINING_MODULES = ("joblib", "pandas", "sklearn")
 GPU_MINIMUM_FREE_MIB = 6144
 DISK_MINIMUM_FREE_GIB = 20.0

@@ -16,11 +16,12 @@ from dtwin.benchmark.openswisshcc_candidate_volume import (
     CANDIDATE_SCHEMA,
     CASE_SCHEMA,
     COHORT_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_candidate_volume import (
     CONTRACT as VOLUME_INPUT_CONTRACT,
 )
 from dtwin.benchmark.openswisshcc_highdimensional_inference import (
     RESPONSE_PREFIX,
-    TIME_GATE_SECONDS,
     _atomic_json,
     _canonical_hash,
     _request_json,
@@ -35,7 +36,6 @@ from dtwin.benchmark.openswisshcc_volume_score import (
 )
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import load_screening_config
-
 
 REVIEW_SCHEMA = "argos-openswisshcc-candidate-volume-review-v16"
 PROTOCOL_SCHEMA = "argos-openswisshcc-candidate-volume-score-protocol-v16"

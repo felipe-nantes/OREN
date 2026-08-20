@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import time
 import uuid
@@ -20,7 +19,6 @@ from dtwin.benchmark.mrsegmentator_chaos_runner import (
 )
 from dtwin.core import PipelineError, now_utc, sha256_of
 from dtwin.segmentation_contract import validate_visualization_mask
-
 
 RUN_SCHEMA = "argos-totalsegmentator-liver-cohort-gpu-run-v2"
 CASE_SCHEMA = "argos-totalsegmentator-liver-cohort-gpu-case-v2"

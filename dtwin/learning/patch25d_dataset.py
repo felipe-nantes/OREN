@@ -16,7 +16,6 @@ from scipy import ndimage
 from dtwin.core import PipelineError
 from dtwin.learning.protocol import canonical_sha256, sha256_file
 
-
 DATASET_SCHEMA = "argos-hybrid-patch25d-dataset-v1"
 RECORD_SCHEMA = "argos-hybrid-patch25d-record-v1"
 TARGET_SCHEMA = "argos-hybrid-patch25d-protected-target-v1"

@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 
 import dtwin.learning.monophase_slice_candidates as slice_module
-
 from dtwin.core import PipelineError
 from dtwin.learning.monophase_slice_candidates import (
     case_intensity_window,

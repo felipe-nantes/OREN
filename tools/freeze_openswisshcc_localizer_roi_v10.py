@@ -3,7 +3,10 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_localizer_roi_freeze import create_roi_freeze, verify_roi_freeze
+from dtwin.benchmark.openswisshcc_localizer_roi_freeze import (
+    create_roi_freeze,
+    verify_roi_freeze,
+)
 
 
 def main() -> int:

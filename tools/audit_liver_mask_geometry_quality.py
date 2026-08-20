@@ -83,7 +83,7 @@ def features_from_array(array: np.ndarray, spacing: np.ndarray) -> dict | None:
     # órgão. Euler = 1 para um sólido simples sem alças nem cavidades.
     try:
         euler = int(measure.euler_number(array, connectivity=1))
-    except Exception:  # noqa: BLE001
+    except Exception:
         euler = 0
 
     # Rugosidade: razão entre a área real e a de uma esfera do mesmo volume.
@@ -93,7 +93,7 @@ def features_from_array(array: np.ndarray, spacing: np.ndarray) -> dict | None:
             array.astype(np.uint8), level=0.5, spacing=(spacing[2], spacing[1], spacing[0])
         )
         area_mm2 = float(measure.mesh_surface_area(verts, faces))
-    except Exception:  # noqa: BLE001
+    except Exception:
         area_mm2 = float("nan")
     volume_mm3 = volume_ml * 1000.0
     esfera = (36.0 * math.pi * volume_mm3 ** 2) ** (1.0 / 3.0)

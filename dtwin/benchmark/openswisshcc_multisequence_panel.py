@@ -1,7 +1,6 @@
 """Deterministic 2x2 native T1/T2/ordered-TRACE/ADC panel generation."""
 from __future__ import annotations
 
-import json
 import math
 import shutil
 import uuid
@@ -18,7 +17,6 @@ from dtwin.benchmark.openswisshcc_multisequence_geometry import _geometry_matche
 from dtwin.core import PipelineError
 from dtwin.medgemma_panel import _render_tile
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 SCHEMA = "argos-openswisshcc-multisequence-panel-set-v1"
 

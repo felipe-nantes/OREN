@@ -40,6 +40,7 @@ from .core import (
     sha256_of,
     world_vertices_from_index,
 )
+from .segmentation_contract import approved_visualization_mask
 from .viewer_artifacts import (
     acquisition_summary,
     compute_mesh_metrics,
@@ -47,9 +48,8 @@ from .viewer_artifacts import (
     lesion_segment_overlap,
     nearest_surface_relationships,
 )
-from .segmentation_contract import approved_visualization_mask
-from .volumetry import VolumetryStructure, build_volumetry_manifest
 from .viewer_xr import build_xr_render_asset
+from .volumetry import VolumetryStructure, build_volumetry_manifest
 
 log = logging.getLogger("dtwin")
 
@@ -66,7 +66,7 @@ def _first_dicom(folder: Path):
         try:
             pydicom.dcmread(str(p), stop_before_pixels=True, force=True)
             return str(p)
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
     return None
 
@@ -558,7 +558,7 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
             totalsegmentator(
                 **call_kwargs,
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             if current_task == task:
                 raise PipelineError(
                     f"Falha na segmentação automática ({task}/{label}): {e}"
@@ -1079,7 +1079,7 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
         mesh = pv.read(str(vtp))
         try:
             mesh.save(str(stl))  # API correta (corrige o pv.save_mesh_as inexistente)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise PipelineError(f"Falha ao exportar STL {stl}: {e}") from e
         metrics = compute_mesh_metrics(
             Path(spec["mask"]),

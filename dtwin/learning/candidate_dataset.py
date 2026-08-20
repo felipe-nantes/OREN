@@ -20,7 +20,6 @@ from dtwin.learning.protocol import canonical_sha256, sha256_file
 from dtwin.learning.schemas import assert_label_blind_record
 from dtwin.learning.splits import validate_nested_splits
 
-
 CANDIDATE_DATASET_SCHEMA = "argos-hybrid-label-blind-candidate-dataset-v1"
 CANDIDATE_RECORD_SCHEMA = "argos-hybrid-label-blind-candidate-record-v1"
 

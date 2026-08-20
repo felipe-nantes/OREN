@@ -6,7 +6,10 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from dtwin.benchmark.lld_mmri_v23_liver_enriched_pilot import COHORT_SCHEMA, GALLERY_SCHEMA
+from dtwin.benchmark.lld_mmri_v23_liver_enriched_pilot import (
+    COHORT_SCHEMA,
+    GALLERY_SCHEMA,
+)
 from dtwin.benchmark.lld_mmri_v23_liver_enriched_review import (
     create_liver_enriched_human_review,
     verify_liver_enriched_human_review,

@@ -7,18 +7,26 @@ import random
 import shutil
 import statistics
 import uuid
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any
 
 from dtwin.benchmark.metrics import compute_benchmark_metrics
-from dtwin.benchmark.openswisshcc_alignment import _load_json, _publish_directory, _sha256
+from dtwin.benchmark.openswisshcc_alignment import (
+    _load_json,
+    _publish_directory,
+    _sha256,
+)
 from dtwin.benchmark.openswisshcc_evaluation import (
     _case_result,
     _load_labels_after_inference,
     _quantile,
 )
 from dtwin.benchmark.openswisshcc_volumetric_gate import verify_volumetric_freeze
-from dtwin.benchmark.openswisshcc_volumetric_inference import INFERENCE_SCHEMA, RUN_SCHEMA
+from dtwin.benchmark.openswisshcc_volumetric_inference import (
+    INFERENCE_SCHEMA,
+    RUN_SCHEMA,
+)
 from dtwin.benchmark.reporting import write_run_outputs
 from dtwin.core import PipelineError, now_utc
 

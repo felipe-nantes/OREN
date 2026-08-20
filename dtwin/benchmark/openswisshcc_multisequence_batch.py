@@ -7,13 +7,17 @@ import json
 import os
 import shutil
 import uuid
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import quote
 
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_multisequence_audit import _rows
-from dtwin.benchmark.openswisshcc_multisequence_panel import SCHEMA, generate_multisequence_panel_set
+from dtwin.benchmark.openswisshcc_multisequence_panel import (
+    SCHEMA,
+    generate_multisequence_panel_set,
+)
 from dtwin.core import PipelineError
 
 COHORT_SCHEMA = "argos-openswisshcc-multisequence-cohort-v1"

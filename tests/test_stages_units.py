@@ -1,9 +1,10 @@
 # tests/test_stages_units.py
 import numpy as np
 
-from dtwin.stages import _refine_mask, _mesh_from_mask
-from dtwin.core import save_image, array_to_image
-from .conftest import make_sphere_mask, make_geo_image
+from dtwin.core import array_to_image, save_image
+from dtwin.stages import _mesh_from_mask, _refine_mask
+
+from .conftest import make_geo_image, make_sphere_mask
 
 
 def test_refine_removes_small_objects():

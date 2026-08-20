@@ -2,9 +2,16 @@ import json
 
 import pytest
 
-from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _load_selected_labels, _validate_blind_run, _validate_score
+from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import (
+    _load_selected_labels,
+    _validate_blind_run,
+    _validate_score,
+)
 from dtwin.benchmark.openswisshcc_localizer_roi_freeze import QUESTION_BANK
-from dtwin.benchmark.openswisshcc_localizer_roi_inference import RUN_SCHEMA, SCORE_SCHEMA
+from dtwin.benchmark.openswisshcc_localizer_roi_inference import (
+    RUN_SCHEMA,
+    SCORE_SCHEMA,
+)
 from dtwin.core import PipelineError
 
 

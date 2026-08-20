@@ -14,7 +14,6 @@ import SimpleITK as sitk
 from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.core import PipelineError
 
-
 TRACE_RE = re.compile(r"^dwi_trace_run_(\d+)$")
 
 

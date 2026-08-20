@@ -1,11 +1,11 @@
 import hashlib
 import shutil
-from pathlib import Path
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from dtwin.core import PipelineError
 from webapp import server
@@ -64,6 +64,7 @@ def test_find_best_series_empty_when_only_incompatible_modality(tmp_path):
 
 def test_series_selection_metadata_is_sanitized(tmp_path):
     import json
+
     import numpy as np
 
     from tools.make_synthetic_case import write_dicom_series
@@ -1993,6 +1994,7 @@ def test_uniao_de_fases_usa_as_chaves_reais_do_multiphase_ingest(tmp_path, monke
     string reescrita à mão, para nunca mais divergir em silêncio."""
     import numpy as np
     import SimpleITK as sitk
+
     from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED, VENOUS
 
     venosa = np.zeros((6, 6, 6), dtype=np.uint8)

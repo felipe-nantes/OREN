@@ -9,7 +9,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.benchmark.totalsegmentator_liver_cohort_runner import (  # noqa: E402
+from dtwin.benchmark.totalsegmentator_liver_cohort_runner import (
     run_cohort,
     verify_run,
 )

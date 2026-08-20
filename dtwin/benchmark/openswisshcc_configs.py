@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.core import PipelineError
-
 
 MULTIPHASE_KEY = "multiphase_rgb"
 FALLBACK_KEY = "venous_single_phase_fallback"

@@ -1,7 +1,13 @@
 import pytest
 
 from dtwin.core import PipelineError
-from dtwin.rag.chunking import CorpusChunk, CorpusDocument, chunk_document, rough_token_count, validate_chunks
+from dtwin.rag.chunking import (
+    CorpusChunk,
+    CorpusDocument,
+    chunk_document,
+    rough_token_count,
+    validate_chunks,
+)
 
 
 def _metadata():

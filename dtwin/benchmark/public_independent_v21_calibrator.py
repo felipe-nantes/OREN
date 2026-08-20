@@ -31,7 +31,6 @@ from dtwin.benchmark.openswisshcc_v11_fusion import (
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 CALIBRATOR_SCHEMA = "argos-public-independent-v21-v11-calibrator-v1"
 RAW_SIGNAL_SCHEMA = "argos-public-independent-v21-raw-signals-v1"
 SCORE_SCHEMA = "argos-public-independent-v21-calibrated-score-v1"

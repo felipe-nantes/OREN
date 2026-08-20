@@ -6,8 +6,12 @@ from typing import Any
 from dtwin.core import PipelineError
 
 from .config import GraphRagConfig
-from .schema import CONSTRAINTS, MIMIC_RELATIONS, NEGATIVE_TARGET_RELATIONS, registry_record_to_graph_params
-
+from .schema import (
+    CONSTRAINTS,
+    MIMIC_RELATIONS,
+    NEGATIVE_TARGET_RELATIONS,
+    registry_record_to_graph_params,
+)
 
 UPSERT_CASE_CYPHER = """
 MERGE (d:Dataset {dataset_id: $dataset_id})

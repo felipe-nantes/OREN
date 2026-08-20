@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from dtwin.core import PipelineError
+from dtwin.learning.protocol import sha256_file
 from dtwin.learning.visual_inference import (
     DEFAULT_EMBEDDING_CONFIG,
     ProductionBundle,
@@ -13,8 +15,6 @@ from dtwin.learning.visual_inference import (
     embed_panels,
     load_production_bundle,
 )
-from dtwin.learning.protocol import sha256_file
-
 
 SCENARIO = "monophase_medsiglip"
 HIERARCHICAL_SCENARIO = "monophase_medsiglip_hierarchical"

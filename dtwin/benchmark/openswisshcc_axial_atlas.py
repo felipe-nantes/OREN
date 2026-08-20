@@ -5,22 +5,22 @@ gerados. Ele não abre labels, máscaras de lesão ou o holdout.
 """
 from __future__ import annotations
 
+import gc
 import hashlib
 import html
 import json
-import gc
 import os
 import shutil
 import tempfile
 import time
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 from PIL import Image
 
 from dtwin.core import PipelineError
-
 
 ALGORITHM_VERSION = "openswisshcc-axial-atlas-v17"
 CASE_SCHEMA = "argos-openswisshcc-axial-atlas-case-v17"

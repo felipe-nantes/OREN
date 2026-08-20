@@ -6,11 +6,15 @@ from pathlib import Path
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.benchmark.openswisshcc_candidate_volume import select_candidate_components
-from dtwin.benchmark.openswisshcc_highdimensional_inference import _atomic_json, _canonical_hash
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LOCALIZER_CASE_SCHEMA
+from dtwin.benchmark.openswisshcc_highdimensional_inference import (
+    _atomic_json,
+    _canonical_hash,
+)
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    CASE_SCHEMA as LOCALIZER_CASE_SCHEMA,
+)
 from dtwin.benchmark.openswisshcc_lesion_localizer_chunks import MERGED_RUN_SCHEMA
 from dtwin.core import PipelineError
-
 
 PLAN_SCHEMA = "argos-openswisshcc-candidate-volume-timing-selection-v16"
 ALIGNMENT_SCHEMA = "argos-public-liver-mri-alignment-v1"

@@ -8,7 +8,6 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-
 SCHEMA = "argos-segmentation-visualization-baseline-v1"
 TRACKED_FILES = (
     "profiles/figado.yaml",

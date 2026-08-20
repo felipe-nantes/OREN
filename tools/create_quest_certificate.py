@@ -20,7 +20,6 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
-
 CA_CERT_NAME = "oren-quest-ca.pem"
 CA_KEY_NAME = "oren-quest-ca-key.pem"
 SERVER_CERT_NAME = "oren-quest-cert.pem"

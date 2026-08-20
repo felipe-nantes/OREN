@@ -1,14 +1,14 @@
 import json
 
 import numpy as np
-from PIL import Image
 import pytest
 import SimpleITK as sitk
+from PIL import Image
 
 from dtwin.core import Case, PipelineError, load_profile, now_utc, save_image
 from dtwin.medgemma_client import load_screening_config, model_trace
 from dtwin.medgemma_panel_multiphase import generate_liver_panel_multiphase
-from tests.conftest import make_sphere_mask, make_geo_image
+from tests.conftest import make_geo_image, make_sphere_mask
 
 CONFIG = "configs/medgemma_local_4b_multiphase.yaml"
 

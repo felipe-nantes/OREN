@@ -34,7 +34,6 @@ from dtwin.benchmark.openswisshcc import (
 )
 from dtwin.core import PipelineError
 
-
 HOLDOUT_PREPARATION_SCHEMA = "argos-openswisshcc-holdout-label-blind-preparation-v1"
 HOLDOUT_INPUT_SCHEMA = "argos-public-liver-mri-holdout-input-v1"
 HOLDOUT_AUDIT_SCHEMA = "argos-openswisshcc-holdout-label-blind-audit-v1"

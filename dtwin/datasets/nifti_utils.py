@@ -33,7 +33,7 @@ def validate_nifti(path: Path) -> None:
     try:
         image = nib.load(str(path))
         shape = tuple(int(value) for value in image.shape)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"NIfTI inválido ou corrompido: {path}") from exc
     if len(shape) < 3 or any(value <= 0 for value in shape[:3]):
         raise PipelineError(f"NIfTI deve possuir volume 3D válido: {path}")

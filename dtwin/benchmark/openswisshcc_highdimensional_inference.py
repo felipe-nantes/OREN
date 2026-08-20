@@ -18,7 +18,6 @@ from dtwin.benchmark.openswisshcc_highdimensional import CONTRACT, SCHEMA
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import load_screening_config
 
-
 PROTOCOL_SCHEMA = "argos-openswisshcc-highdimensional-protocol-v1"
 RESULT_SCHEMA = "argos-openswisshcc-highdimensional-pilot-result-v1"
 INSTRUCTION = (

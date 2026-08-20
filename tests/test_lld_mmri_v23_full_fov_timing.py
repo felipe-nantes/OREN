@@ -15,7 +15,6 @@ from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.core import PipelineError
 from tests.test_lld_mmri_v23_full_fov_review import _sources
 
-
 CONFIG = Path("configs/medgemma_local_4b_lld_v23_full_fov_no_mask_3x9_pilot.yaml")
 
 

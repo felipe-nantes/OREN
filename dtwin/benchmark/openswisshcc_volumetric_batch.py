@@ -5,14 +5,14 @@ import hashlib
 import json
 import shutil
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory
 from dtwin.benchmark.openswisshcc_review import ready_case_ids, verify_panel_review
 from dtwin.benchmark.openswisshcc_volumetric import render_volumetric_candidate
 from dtwin.core import PipelineError
-
 
 COHORT_SCHEMA = "argos-openswisshcc-volumetric-candidate-cohort-v1"
 

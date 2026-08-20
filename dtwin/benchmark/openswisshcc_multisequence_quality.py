@@ -1,10 +1,18 @@
 """Blind technical-quality decisions for the OpenSwissHCC multisequence v9 cohort."""
 from __future__ import annotations
-import hashlib,json,os,uuid
-from datetime import datetime,timezone
+
+import hashlib
+import json
+import os
+import uuid
+from collections.abc import Mapping
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any,Mapping
-from dtwin.benchmark.openswisshcc_multisequence_gate import validate_multisequence_cohort
+from typing import Any
+
+from dtwin.benchmark.openswisshcc_multisequence_gate import (
+ validate_multisequence_cohort,
+)
 from dtwin.core import PipelineError
 
 SCHEMA="argos-openswisshcc-multisequence-quality-review-v1"

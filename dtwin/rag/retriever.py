@@ -11,7 +11,6 @@ import yaml
 from dtwin.core import PipelineError, now_utc, sha256_of
 from dtwin.rag.index import load_bm25_index, search_bm25
 
-
 RAG_CONTEXT_SCHEMA = "argos-rag-context-v1"
 DEFAULT_QUERY_IDS = [
     "hcc_aphe_washout_capsule",
@@ -42,7 +41,7 @@ def _safe_repo_path(value: str | Path, *, repo_root: Path, label: str) -> Path:
 def _read_yaml(path: Path) -> dict[str, Any]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler YAML RAG {path}: {exc}") from exc
     if not isinstance(data, dict):
         raise PipelineError(f"YAML RAG deve ser objeto: {path}")
@@ -52,7 +51,7 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler JSON RAG {path}: {exc}") from exc
     if not isinstance(data, dict):
         raise PipelineError(f"JSON RAG deve ser objeto: {path}")

@@ -28,7 +28,6 @@ from dtwin.benchmark.public_independent_v21_calibrator import (
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 LABEL_SCHEMA = "argos-openswisshcc-ground-truth-v1"
 LABEL_BUNDLE_SCHEMA = "argos-openswisshcc-holdout-v21-label-authorization-v1"
 EVALUATION_SCHEMA = "argos-openswisshcc-holdout-v21-same-domain-evaluation-v1"

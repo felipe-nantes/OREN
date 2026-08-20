@@ -13,7 +13,6 @@ from xml.etree import ElementTree as ET
 from dtwin.core import PipelineError
 from dtwin.datasets.schema import REGISTRY_SCHEMA
 
-
 OFFICIAL_V11_METADATA_MD5 = "37806f09955aa198ab8e50e0e2929da7"
 AUDIT_SCHEMA = "argos-liverhccseg-protected-selection-audit-v1"
 _MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"

@@ -18,7 +18,6 @@ import pydicom
 
 from dtwin.benchmark.dataset_audit import select_best_mr_series
 
-
 FORBIDDEN_PUBLIC_TOKENS = {
     "positive",
     "negative",

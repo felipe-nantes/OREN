@@ -38,7 +38,6 @@ from dtwin.medgemma_panel_liver_enriched import (
 )
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 PROTOCOL_SCHEMA = "argos-openswisshcc-v24-liver-enriched-protocol-v1"
 PILOT_SCHEMA = "argos-openswisshcc-v24-liver-enriched-pilot-v1"
 GALLERY_SCHEMA = "argos-openswisshcc-v24-liver-enriched-gallery-v1"

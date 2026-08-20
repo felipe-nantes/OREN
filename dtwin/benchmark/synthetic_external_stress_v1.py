@@ -12,10 +12,10 @@ import hashlib
 import json
 import math
 from collections import Counter
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable
 
 import numpy as np
 import SimpleITK as sitk
@@ -23,11 +23,12 @@ from scipy.ndimage import (
     binary_dilation,
     distance_transform_edt,
     gaussian_filter,
+)
+from scipy.ndimage import (
     label as connected_components,
 )
 
 from dtwin.core import PipelineError, sha256_of
-
 
 SCHEMA = "argos-synthetic-external-stress-v1"
 ALGORITHM_ID = "highpass-parenchyma-v2_centroid-motion-implant-v1"

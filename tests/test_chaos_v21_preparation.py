@@ -63,7 +63,7 @@ def _fixture(tmp_path: Path):
     payload = archive_buffer.getvalue()
     spec = ChaosDownloadSpec(
         filename="CHAOS_Train_Sets.zip", url="https://example.invalid/train.zip",
-        size_bytes=len(payload), md5=hashlib.md5(payload).hexdigest(),  # noqa: S324
+        size_bytes=len(payload), md5=hashlib.md5(payload).hexdigest(),
         record_id="test", version="test",
     )
 

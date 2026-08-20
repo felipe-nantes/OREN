@@ -8,10 +8,10 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from tools.medgemma_server import (
-    MedGemmaRuntime,
     VOLUME_SCORE_CHOICES,
     VOLUME_SCORE_METHOD,
     VOLUME_SCORE_PREFIX,
+    MedGemmaRuntime,
     create_app,
 )
 

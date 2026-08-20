@@ -30,7 +30,9 @@ warnings.filterwarnings("ignore")
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.benchmark.lld_mmri_v23_preparation import isolated_total_mr_liver_segmenter  # noqa: E402
+from dtwin.benchmark.lld_mmri_v23_preparation import (
+    isolated_total_mr_liver_segmenter,
+)
 
 RANKING = REPO / "experiments/liver_integrity_ranking_v1/results.json"
 ENTRADAS = REPO / "casos/qualification/lld_mmri_v23/prepared/external_inputs_v1/inputs"
@@ -87,7 +89,7 @@ def main() -> int:
                 fonte, liver_out, device="gpu", fast=False, timeout_seconds=600,
                 worker_path=WORKER,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             feitos[case_id] = {"erro": str(exc)}
             destino_json.write_text(json.dumps(feitos, indent=1, ensure_ascii=False), encoding="utf-8")
             print(f"    falhou: {exc}", flush=True)

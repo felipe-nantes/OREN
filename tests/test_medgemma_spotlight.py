@@ -1,6 +1,6 @@
 import numpy as np
-from PIL import Image
 import pytest
+from PIL import Image
 
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_spotlight import (

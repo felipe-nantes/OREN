@@ -48,7 +48,6 @@ RESSALVAS QUE ACOMPANHAM QUALQUER RESULTADO DESTE SCRIPT:
 from __future__ import annotations
 
 import json
-import math
 import time
 import warnings
 from collections import Counter
@@ -59,14 +58,19 @@ import SimpleITK as sitk
 
 warnings.filterwarnings("ignore")
 
-from PIL import Image  # noqa: E402
-from sklearn.linear_model import LogisticRegression  # noqa: E402
-from sklearn.pipeline import Pipeline  # noqa: E402
-from sklearn.preprocessing import StandardScaler  # noqa: E402
+from PIL import Image
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
-from dtwin.learning.medsiglip_multiclass_classifier import build_multiclass_labels  # noqa: E402
-from dtwin.learning.protocol import load_protected_cases, load_protected_label_rows  # noqa: E402
-from dtwin.learning.robustness import clinical_subtype_map  # noqa: E402
+from dtwin.learning.medsiglip_multiclass_classifier import (
+    build_multiclass_labels,
+)
+from dtwin.learning.protocol import (
+    load_protected_cases,
+    load_protected_label_rows,
+)
+from dtwin.learning.robustness import clinical_subtype_map
 
 REPO = Path(".").resolve()
 CFG = REPO / "configs/training/hybrid_v1_protocol.yaml"
@@ -260,8 +264,9 @@ def main() -> int:
     insufficient: list[str] = []
     if pending:
         say(f"embutindo recortes T2/DWI de {len(pending)} casos...")
-        from dtwin.learning.medsiglip_embeddings import (  # noqa: E402
-            HuggingFaceMedSigLIPBackend, load_embedding_config,
+        from dtwin.learning.medsiglip_embeddings import (
+            HuggingFaceMedSigLIPBackend,
+            load_embedding_config,
         )
         backend = HuggingFaceMedSigLIPBackend(load_embedding_config(EMBED_CFG))
         started = time.time()
@@ -279,7 +284,7 @@ def main() -> int:
                     np.save(CACHE_T2DWI / f"{case_id}.npy", mean.astype(np.float32))
                     t2dwi[case_id] = mean.astype(np.float64)
                     coverages[case_id] = coverage
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     say(f"  ! {case_id}: {type(exc).__name__}: {exc}")
                     insufficient.append(case_id)
                 if index % 50 == 0 or index == len(pending):

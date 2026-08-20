@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import subprocess
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from dtwin.core import sha256_of
 

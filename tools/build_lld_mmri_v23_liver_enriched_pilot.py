@@ -12,8 +12,8 @@ from dtwin.benchmark.lld_mmri_v23_liver_enriched_pilot import (
     build_liver_enriched_pilot,
     verify_liver_enriched_full_cohort,
 )
-from dtwin.medgemma_screening import _write_json_atomic
 from dtwin.core import PipelineError
+from dtwin.medgemma_screening import _write_json_atomic
 
 
 def main() -> int:

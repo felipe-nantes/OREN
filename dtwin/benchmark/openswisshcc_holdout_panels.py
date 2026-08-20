@@ -22,7 +22,6 @@ from dtwin.medgemma_panel import generate_liver_panel
 from dtwin.medgemma_panel_multiphase import generate_liver_panel_multiphase
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 CASE_SCHEMA = "argos-openswisshcc-holdout-uniform9-panel-case-v1"
 COHORT_SCHEMA = "argos-openswisshcc-holdout-uniform9-panel-cohort-v1"
 GALLERY_SCHEMA = "argos-openswisshcc-holdout-uniform9-gallery-v1"

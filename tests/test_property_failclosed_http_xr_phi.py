@@ -78,7 +78,6 @@ def test_bundle_de_producao_corrompido_e_recusado(tmp_path):
 def _cliente_gateway(monkeypatch, health_payload):
     """Constrói o adaptador HTTP real (HTTPJSONMedGemmaClient) com socket e
     health mockados — nenhuma rede é tocada."""
-    import socket as socket_module
     from contextlib import contextmanager
 
     from dtwin import medgemma_client as mc

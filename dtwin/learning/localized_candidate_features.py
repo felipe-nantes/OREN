@@ -13,14 +13,16 @@ import SimpleITK as sitk
 
 from dtwin.benchmark.openswisshcc_enhancement_maps import _compute_enhancement_state
 from dtwin.core import PipelineError
-from dtwin.learning.localized_candidate_supervision import _same_geometry, _verified_geometry
+from dtwin.learning.localized_candidate_supervision import (
+    _same_geometry,
+    _verified_geometry,
+)
 from dtwin.learning.medsiglip_embeddings import (
     EMBEDDING_MANIFEST_SCHEMA,
     EMBEDDING_RECORD_SCHEMA,
     verify_embeddings,
 )
 from dtwin.learning.protocol import canonical_sha256, sha256_file
-
 
 FEATURE_VERSION = "localized-dynamic-statistics-v1"
 QUANTILES = (10, 25, 50, 75, 90, 95, 99)

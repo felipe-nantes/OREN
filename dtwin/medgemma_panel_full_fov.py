@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -24,7 +25,6 @@ from .medgemma_panel_multiphase import (
     _render_color_tile,
     _resolve_channel_map,
 )
-
 
 FULL_FOV_POLICY = "mask_independent_full_acquired_fov_uniform9_v1"
 FULL_FOV_MULTIPANEL_POLICY = "mask_independent_full_acquired_fov_3x9_v1"

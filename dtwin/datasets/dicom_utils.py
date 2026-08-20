@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import pydicom
 
@@ -33,7 +33,7 @@ def iter_candidate_dicom_files(root: Path) -> Iterable[Path]:
 def read_dicom_header(path: Path):
     try:
         return pydicom.dcmread(str(path), stop_before_pixels=True, force=True)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler cabeçalho DICOM: {path}") from exc
 
 

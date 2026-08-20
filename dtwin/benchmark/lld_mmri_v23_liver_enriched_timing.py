@@ -32,7 +32,6 @@ from dtwin.medgemma_screening import (
 )
 from dtwin.rag import append_rag_to_prompt, build_rag_context, persist_rag_context
 
-
 PROTOCOL_SCHEMA = "argos-lld-mmri-v23-liver-enriched-timing-protocol-v1"
 CASE_SCHEMA = "argos-lld-mmri-v23-liver-enriched-timing-case-v1"
 RUN_SCHEMA = "argos-lld-mmri-v23-liver-enriched-timing-run-v1"

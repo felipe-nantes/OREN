@@ -8,8 +8,9 @@ anatomia verdadeira do paciente.
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import pyvista as pv
@@ -19,7 +20,6 @@ from scipy import ndimage
 from scipy.spatial import cKDTree
 
 from .core import PipelineError, array_from, read_image, sha256_of
-
 
 REFERENCE_PREFIX = "mri_reference_"
 REFERENCE_SIZE_PX = 512

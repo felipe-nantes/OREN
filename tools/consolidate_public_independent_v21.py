@@ -6,7 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.public_independent_v21_consolidation import consolidate_v21_external_arms
+from dtwin.benchmark.public_independent_v21_consolidation import (
+    consolidate_v21_external_arms,
+)
 from dtwin.core import PipelineError
 
 

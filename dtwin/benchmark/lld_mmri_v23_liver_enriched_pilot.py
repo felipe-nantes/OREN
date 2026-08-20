@@ -26,7 +26,6 @@ from dtwin.medgemma_panel_liver_enriched import (
 )
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 COHORT_SCHEMA = "argos-lld-mmri-v23-liver-enriched-pilot-cohort-v1"
 GALLERY_SCHEMA = "argos-lld-mmri-v23-liver-enriched-pilot-gallery-v1"
 FULL_VERIFICATION_SCHEMA = "argos-lld-mmri-v23-liver-enriched-full-verification-v1"

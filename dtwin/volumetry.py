@@ -13,15 +13,15 @@ import itertools
 import json
 import math
 import os
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
 
 from .core import PipelineError, array_from, now_utc, read_image, sha256_of
-
 
 VOLUMETRY_SCHEMA = "oren-volumetry-manifest-v1"
 VOLUMETRY_CONTRACT = "oren-hepatic-volumetry-contract-v1"

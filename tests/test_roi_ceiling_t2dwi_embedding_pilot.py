@@ -14,7 +14,6 @@ import numpy as np
 import pytest
 import SimpleITK as sitk
 
-
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tools" / "build_lld_mmri_v23_roi_ceiling_t2dwi_embedding_pilot.py"
 

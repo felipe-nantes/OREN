@@ -3,7 +3,10 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_lesion_localizer import TotalSegmentatorMRLesionLocalizer,run_localizer_scores
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    TotalSegmentatorMRLesionLocalizer,
+    run_localizer_scores,
+)
 from dtwin.benchmark.openswisshcc_multisequence_chunks import verify_chunk_plan
 
 

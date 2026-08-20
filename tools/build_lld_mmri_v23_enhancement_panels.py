@@ -53,8 +53,14 @@ _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from dtwin.core import PipelineError, array_from, now_utc, read_image, sha256_of  # noqa: E402
-from dtwin.medgemma_panel_multiphase import _render_color_tile  # noqa: E402
+from dtwin.core import (
+    PipelineError,
+    array_from,
+    now_utc,
+    read_image,
+    sha256_of,
+)
+from dtwin.medgemma_panel_multiphase import _render_color_tile
 
 PANEL_SCHEMA = "argos-lld-mmri-v23-relative-enhancement-panel-manifest-v1"
 BUILD_SCHEMA = "argos-lld-mmri-v23-relative-enhancement-build-v1"
@@ -341,7 +347,7 @@ def main(argv=None) -> int:
                     tissue_weighting=tissue_weighting,
                 )
                 rows.append(row)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 failures.append({"case_id": case_id, "error": f"{type(exc).__name__}: {exc}"})
             if index % 25 == 0 or index == len(case_ids):
                 elapsed = time.perf_counter() - started

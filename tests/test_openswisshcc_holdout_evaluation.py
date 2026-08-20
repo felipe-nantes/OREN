@@ -14,7 +14,10 @@ from dtwin.benchmark.openswisshcc_holdout_signals import (
     RAW_SIGNAL_SUMMARY_SCHEMA,
     freeze_holdout_v21_predictions,
 )
-from dtwin.benchmark.public_independent_v21_calibrator import SCORE_SCHEMA, SCORE_SUMMARY_SCHEMA
+from dtwin.benchmark.public_independent_v21_calibrator import (
+    SCORE_SCHEMA,
+    SCORE_SUMMARY_SCHEMA,
+)
 from dtwin.core import PipelineError
 
 

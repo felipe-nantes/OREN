@@ -6,7 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_candidate_shape_timing import measure_candidate_shape_timing
+from dtwin.benchmark.openswisshcc_candidate_shape_timing import (
+    measure_candidate_shape_timing,
+)
 from dtwin.core import PipelineError
 
 

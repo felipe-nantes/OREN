@@ -9,7 +9,6 @@ import SimpleITK as sitk
 from dtwin.benchmark.openswisshcc_volumetric import render_volumetric_candidate
 from dtwin.core import PipelineError
 
-
 MULTI = Path("configs/medgemma_local_4b_multiphase_volumetric_choice_pathology.yaml")
 FALLBACK = Path("configs/medgemma_local_4b_venous_volumetric_choice_pathology.yaml")
 HIGH = Path("configs/medgemma_local_4b_venous_volumetric_high_contrast_choice_pathology.yaml")

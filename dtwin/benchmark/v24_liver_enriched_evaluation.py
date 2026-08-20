@@ -13,6 +13,9 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha, _ecdf
 from dtwin.benchmark.openswisshcc_volumetric_evaluation import _best_threshold
 from dtwin.benchmark.v23_retrospective_multicohort_phase2 import FOLDS, REPEATS
+from dtwin.benchmark.v23_retrospective_multicohort_phase3 import (
+    verify_phase3_exact_v23_signals,
+)
 from dtwin.benchmark.v23_retrospective_multicohort_phase4 import (
     _bootstrap,
     _confusion,
@@ -23,15 +26,11 @@ from dtwin.benchmark.v23_retrospective_multicohort_phase4 import (
     _score,
     verify_phase4_evaluation,
 )
-from dtwin.benchmark.v23_retrospective_multicohort_phase3 import (
-    verify_phase3_exact_v23_signals,
-)
 from dtwin.benchmark.v24_liver_enriched_inference import (
     SIGNAL_RULE,
     verify_v24_liver_enriched_inference_run,
 )
 from dtwin.core import PipelineError
-
 
 PREDICTION_SCHEMA = "argos-openswisshcc-v24-liver-enriched-oof-prediction-v1"
 PREDICTION_FREEZE_SCHEMA = (

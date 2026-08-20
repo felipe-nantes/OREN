@@ -19,8 +19,9 @@ time.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -138,7 +139,7 @@ def classify_one_case(
             threshold=decision["threshold"],
             panel_count=decision["panel_count"],
         )
-    except Exception as exc:  # noqa: BLE001 — fail closed as technical error
+    except Exception as exc:
         record["error"] = f"{type(exc).__name__}: {exc}"
     return record
 

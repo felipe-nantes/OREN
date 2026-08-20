@@ -8,7 +8,11 @@ import uuid
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from dtwin.benchmark.openswisshcc_alignment import _load_json, _publish_directory, _sha256
+from dtwin.benchmark.openswisshcc_alignment import (
+    _load_json,
+    _publish_directory,
+    _sha256,
+)
 from dtwin.benchmark.openswisshcc_candidate import CANDIDATE_VERSION
 from dtwin.benchmark.openswisshcc_fallback import (
     FALLBACK_VERSION,
@@ -30,7 +34,6 @@ from dtwin.medgemma_client import (
     load_screening_config,
 )
 from dtwin.medgemma_screening import build_report_envelope, sha256_of_text
-
 
 INFERENCE_VERSION = "openswisshcc-medgemma-4b-reviewed-v2"
 

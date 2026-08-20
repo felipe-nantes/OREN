@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import shutil
 import uuid
 from pathlib import Path, PurePosixPath
@@ -19,7 +18,6 @@ from dtwin.benchmark.openswisshcc_alignment import (
 from dtwin.core import PipelineError, load_profile
 from dtwin.medgemma_client import load_screening_config, model_trace
 from dtwin.medgemma_panel_multiphase import generate_liver_panel_multiphase
-
 
 CANDIDATE_VERSION = "openswisshcc-multiphase-fast-pathology-v1"
 

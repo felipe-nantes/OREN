@@ -38,7 +38,6 @@ from dtwin.benchmark.v23_retrospective_multicohort_phase3 import (
 )
 from dtwin.core import PipelineError
 
-
 PREDICTION_SUMMARY_SCHEMA = "argos-v23-retrospective-phase4-prediction-freeze-v1"
 LOOCV_SCHEMA = "argos-v23-retrospective-phase4-loocv-prediction-v1"
 REPEATED_SCHEMA = "argos-v23-retrospective-phase4-repeated-prediction-v1"

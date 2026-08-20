@@ -6,7 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_v23_shape_fusion import evaluate_shape_fusion_development
+from dtwin.benchmark.openswisshcc_v23_shape_fusion import (
+    evaluate_shape_fusion_development,
+)
 from dtwin.core import PipelineError
 
 

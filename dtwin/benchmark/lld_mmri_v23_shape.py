@@ -6,8 +6,9 @@ import os
 import shutil
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -16,24 +17,29 @@ from dtwin.benchmark.lld_mmri_v23_panels import _safe
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_candidate_shape import (
     ALGORITHM_VERSION as SHAPE_ALGORITHM_VERSION,
+)
+from dtwin.benchmark.openswisshcc_candidate_shape import (
     CASE_SCHEMA,
     COHORT_SCHEMA,
     compute_candidate_shape_features,
 )
 from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     ALGORITHM_VERSION as PROPOSAL_ALGORITHM_VERSION,
+)
+from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     build_enhancement_proposals,
 )
 from dtwin.benchmark.openswisshcc_enhancement_maps import _compute_enhancement_state
 from dtwin.benchmark.openswisshcc_enhancement_proposal_selection import (
     ALGORITHM_VERSION as SELECTION_ALGORITHM_VERSION,
+)
+from dtwin.benchmark.openswisshcc_enhancement_proposal_selection import (
     MAX_COMPONENTS,
     THRESHOLD_KEY,
     select_top_components,
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 BRANCH_ALGORITHM_VERSION = "lld-v23-t3-top5-physical-shape-v1"
 

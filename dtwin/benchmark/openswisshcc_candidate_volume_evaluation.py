@@ -23,12 +23,16 @@ from dtwin.benchmark.openswisshcc_candidate_volume_score import (
     _validate_existing_prediction,
     validate_candidate_volume_bundle,
 )
-from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import _load_development_labels
+from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import (
+    _load_development_labels,
+)
 from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _wilson
-from dtwin.benchmark.openswisshcc_volumetric_evaluation import _best_threshold, _binary_metrics
+from dtwin.benchmark.openswisshcc_volumetric_evaluation import (
+    _best_threshold,
+    _binary_metrics,
+)
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-candidate-volume-evaluation-protocol-v16"
 EVALUATION_SCHEMA = "argos-openswisshcc-candidate-volume-development-evaluation-v16"

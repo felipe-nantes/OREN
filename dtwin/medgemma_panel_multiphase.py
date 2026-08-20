@@ -24,8 +24,9 @@ Invariantes de segurança preservados (idênticos ao fluxo de fase única):
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 from PIL import Image, ImageDraw

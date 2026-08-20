@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from PIL import Image
 import pytest
+from PIL import Image
 
 from dtwin.benchmark import lld_mmri_v23_panels as module
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha

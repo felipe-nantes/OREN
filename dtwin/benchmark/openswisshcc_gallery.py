@@ -13,7 +13,6 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory
 from dtwin.benchmark.openswisshcc_freeze import verify_experiment_freeze
 from dtwin.core import PipelineError
 
-
 GALLERY_SCHEMA = "argos-openswisshcc-review-gallery-v1"
 
 

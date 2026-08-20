@@ -1,12 +1,16 @@
 import json
-from pathlib import Path
 
 import nibabel as nib
 import numpy as np
 import pytest
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA,RUN_SCHEMA,index_inputs,run_localizer_scores
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    CASE_SCHEMA,
+    RUN_SCHEMA,
+    index_inputs,
+    run_localizer_scores,
+)
 from dtwin.core import PipelineError
 
 

@@ -7,11 +7,15 @@ import pytest
 from PIL import Image
 
 import dtwin.benchmark.openswisshcc_candidate_volume_score as score
-from dtwin.benchmark.openswisshcc_candidate_volume import CANDIDATE_SCHEMA, CASE_SCHEMA, COHORT_SCHEMA, CONTRACT as INPUT_CONTRACT
+from dtwin.benchmark.openswisshcc_candidate_volume import (
+    CANDIDATE_SCHEMA,
+    CASE_SCHEMA,
+    COHORT_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_candidate_volume import CONTRACT as INPUT_CONTRACT
 from dtwin.benchmark.openswisshcc_highdimensional_inference import _canonical_hash
 from dtwin.benchmark.openswisshcc_volume_score import CONTRACT, SCORING_METHOD
 from dtwin.core import PipelineError, sha256_of
-
 
 CASE_ID = "anon-openswiss-0123456789abcdef"
 

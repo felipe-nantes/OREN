@@ -64,8 +64,9 @@ def test_ingest_preserves_geometry_and_anonymizes(tmp_path):
 def test_ingest_rejects_too_few_slices(tmp_path):
     _write_dicom_series(tmp_path / "dcm", n_slices=2)
     case = Case(tmp_path / "case")
-    from dtwin.core import PipelineError
     import pytest
+
+    from dtwin.core import PipelineError
 
     with pytest.raises(PipelineError, match="poucas fatias"):
         stages.stage1_ingest(case, PROFILE, tmp_path / "dcm", "anonymize")

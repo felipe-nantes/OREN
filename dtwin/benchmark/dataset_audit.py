@@ -9,13 +9,13 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from collections import Counter, defaultdict
-from dataclasses import asdict, dataclass, field
+from collections import Counter
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import pydicom
-
 
 AUDIT_SCHEMA = "argos-liver-mri-dataset-audit-v1"
 _PHI_FIELD_NAMES = {
@@ -320,7 +320,7 @@ def _accumulate_series(paths: Iterable[Path]) -> tuple[list[_SeriesAccumulator],
             dataset = pydicom.dcmread(
                 str(path), stop_before_pixels=True, force=True, specific_tags=_TECHNICAL_TAGS
             )
-        except Exception:  # noqa: BLE001 - erro é resumido sem caminho/PHI
+        except Exception:
             unreadable += 1
             continue
         if any(name in dataset for name in _PHI_FIELD_NAMES):

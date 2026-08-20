@@ -14,14 +14,14 @@ import shutil
 import tempfile
 import time
 import uuid
+from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
 
 from dtwin.core import PipelineError
-
 
 ALGORITHM_VERSION = "openswisshcc-pairwise-or-identity-v1"
 FORBIDDEN_RECORD_KEYS = {"label", "truth", "hcc", "positive", "negative"}

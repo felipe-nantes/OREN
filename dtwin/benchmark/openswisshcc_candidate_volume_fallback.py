@@ -1,7 +1,6 @@
 """Build the signed v16 technical gallery for cases without accepted registration."""
 from __future__ import annotations
 
-import json
 import shutil
 import uuid
 from pathlib import Path
@@ -31,7 +30,6 @@ from dtwin.benchmark.openswisshcc_candidate_volume_timing import PLAN_SCHEMA
 from dtwin.benchmark.openswisshcc_highdimensional_inference import _canonical_hash
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 FALLBACK_REASON = "alignment_manifest_missing_after_blind_dice_gate"
 

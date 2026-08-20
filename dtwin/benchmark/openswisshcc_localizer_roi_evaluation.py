@@ -9,10 +9,21 @@ from pathlib import Path
 from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_localizer_roi_freeze import QUESTION_BANK, verify_roi_freeze
+from dtwin.benchmark.openswisshcc_localizer_roi_freeze import (
+    QUESTION_BANK,
+    verify_roi_freeze,
+)
 from dtwin.benchmark.openswisshcc_localizer_roi_gate import verify_paired_review
-from dtwin.benchmark.openswisshcc_localizer_roi_inference import CASE_SCHEMA, RUN_SCHEMA, SCORE_SCHEMA
-from dtwin.benchmark.openswisshcc_volumetric_evaluation import _best_threshold, _loocv, _repeated_stratified_cv
+from dtwin.benchmark.openswisshcc_localizer_roi_inference import (
+    CASE_SCHEMA,
+    RUN_SCHEMA,
+    SCORE_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_volumetric_evaluation import (
+    _best_threshold,
+    _loocv,
+    _repeated_stratified_cv,
+)
 from dtwin.core import PipelineError
 
 EVALUATION_SCHEMA = "argos-openswisshcc-localizer-roi-evaluation-v1"

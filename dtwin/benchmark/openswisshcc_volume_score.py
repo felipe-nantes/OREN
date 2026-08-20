@@ -26,7 +26,6 @@ from dtwin.benchmark.openswisshcc_highdimensional_inference import (
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import load_screening_config
 
-
 CONTRACT = "dtwin-medgemma-volume-score-v1"
 SCORING_METHOD = "first_token_restricted_softmax_v1"
 CHOICES = ("POSITIVA", "NEGATIVA", "INCONCLUSIVA")

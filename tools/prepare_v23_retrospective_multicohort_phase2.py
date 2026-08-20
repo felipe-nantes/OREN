@@ -11,7 +11,6 @@ from dtwin.benchmark.v23_retrospective_multicohort_phase2 import (
 )
 from dtwin.core import PipelineError
 
-
 ROOT = Path("casos/qualification/openswisshcc_v1")
 
 

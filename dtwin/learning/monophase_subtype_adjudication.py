@@ -9,15 +9,15 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Any, Iterable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from dtwin.core import PipelineError
 from dtwin.learning.monophase_protocol import build_hierarchical_screening_result
 from dtwin.medgemma_client import HTTPJSONMedGemmaClient, load_screening_config
-
 
 SCHEMA = "oren-monophase-subtype-adjudication-v1"
 ALLOWED_SUBTYPES = {"hcc", "fnh", "hemangioma", "hepatic_cyst"}

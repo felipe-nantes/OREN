@@ -12,10 +12,10 @@ reported as a clean generalization number.
 """
 from __future__ import annotations
 
-import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -241,7 +241,10 @@ def embed_panels(config_path: Path | str, panel_paths: Sequence[Path]) -> np.nda
     the GPU. Uses the SAME embedding config as training so vectors match."""
     from PIL import Image
 
-    from dtwin.learning.medsiglip_embeddings import HuggingFaceMedSigLIPBackend, load_embedding_config
+    from dtwin.learning.medsiglip_embeddings import (
+        HuggingFaceMedSigLIPBackend,
+        load_embedding_config,
+    )
 
     if not panel_paths:
         raise PipelineError("Nenhum painel para embutir.")

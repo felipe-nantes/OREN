@@ -20,10 +20,12 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.benchmark.lld_mmri_v23_preparation import (  # noqa: E402
+from dtwin.benchmark.lld_mmri_v23_preparation import (
     liver_segments_mr_union_segmenter,
 )
-from dtwin.benchmark.windows_spawn_guard import block_optional_module_for_spawn  # noqa: E402
+from dtwin.benchmark.windows_spawn_guard import (
+    block_optional_module_for_spawn,
+)
 
 
 def main() -> int:

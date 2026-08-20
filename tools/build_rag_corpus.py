@@ -31,7 +31,6 @@ import yaml
 from dtwin.core import PipelineError, now_utc, sha256_of
 from dtwin.rag.chunking import DEFAULT_MAX_TOKENS, CorpusDocument, chunk_document
 
-
 SCHEMA_VERSION = "argos-rag-corpus-v1"
 USER_AGENT = "ARGOS-RAG-CorpusBuilder/0.1 (research; local)"
 
@@ -119,7 +118,7 @@ def _read_manifest(path: Path) -> dict[str, Any]:
         raise PipelineError(f"Manifesto do corpus não encontrado: {path}")
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler manifesto do corpus {path}: {exc}") from exc
     articles = data.get("articles")
     if not isinstance(articles, list) or not articles:
@@ -177,10 +176,10 @@ def _fetch_url(url: str, *, timeout: int) -> SourcePayload:
         raise PipelineError(f"URL/esquema de fonte RAG não suportado: {url}")
     request = Request(url, headers={"User-Agent": USER_AGENT})
     try:
-        with urlopen(request, timeout=timeout) as response:  # noqa: S310 - fontes aprovadas no manifesto
+        with urlopen(request, timeout=timeout) as response:
             media_type = response.headers.get_content_type() or "application/octet-stream"
             return SourcePayload(response.read(), media_type, "download")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao baixar fonte RAG {url}: {exc}") from exc
 
 

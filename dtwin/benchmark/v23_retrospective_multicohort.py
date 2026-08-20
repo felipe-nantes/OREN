@@ -15,7 +15,6 @@ from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.benchmark.openswisshcc_v23_baseline import verify_v23_baseline_lock
 from dtwin.core import PipelineError
 
-
 CONTRACT_SCHEMA = "argos-v23-retrospective-multicohort-contract-v1"
 READINESS_SCHEMA = "argos-v23-retrospective-multicohort-readiness-v1"
 CLAIM = "Desempenho retrospectivo multicohort nas bases disponíveis ao projeto."

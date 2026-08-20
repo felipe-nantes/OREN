@@ -7,14 +7,13 @@ decision that still requires human review.
 """
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
 from dtwin.core import PipelineError, now_utc, sha256_of
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 SCHEMA = "argos-hcc-benign-mimic-adjudication-v1"
 TARGET = "lesao_focal_hepatica_suspeita"

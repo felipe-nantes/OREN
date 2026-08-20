@@ -30,7 +30,6 @@ from dtwin.learning.candidate_dataset import (
 )
 from dtwin.learning.protocol import canonical_sha256, sha256_file
 
-
 CONFIG_SCHEMA = "oren-medsiglip-monophase-representation-config-v1"
 DERIVATION_SCHEMA = "oren-medsiglip-monophase-derivation-v1"
 CHANNEL_INDEX = {"red": 0, "green": 1, "blue": 2}

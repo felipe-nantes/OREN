@@ -19,7 +19,7 @@ Duas leituras, porque a interface faz as duas coisas:
   honesto       : sobre TODOS os alvos, com nao-determinado contando como erro
 """
 import json
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -28,11 +28,15 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from dtwin.learning.medsiglip_multiclass_classifier import (
-    _load_embedding_map, build_multiclass_labels,
+    _load_embedding_map,
+    build_multiclass_labels,
 )
 from dtwin.learning.protocol import load_protected_cases, load_protected_label_rows
 from dtwin.learning.robustness import clinical_subtype_map
-from dtwin.learning.visual_inference import NAMED_LESION_CLASSES, NAMED_LESION_MASS_FLOOR
+from dtwin.learning.visual_inference import (
+    NAMED_LESION_CLASSES,
+    NAMED_LESION_MASS_FLOOR,
+)
 
 REPO = Path(".").resolve()
 CFG = REPO / "configs/training/hybrid_v1_protocol.yaml"

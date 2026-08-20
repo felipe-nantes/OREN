@@ -20,9 +20,7 @@ from dtwin.benchmark.lld_mmri_v23_review import verify_lld_mmri_v23_review
 from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.benchmark.openswisshcc_lesion_localizer import INPUT_SCHEMA
 from dtwin.core import PipelineError
-from dtwin.medgemma_screening import _write_json_atomic
 from dtwin.medsiglip_zero_shot import load_medsiglip_config
-
 
 MEDGEMMA_CASE_SCHEMA = "argos-lld-mmri-v23-medgemma-choice-score-v1"
 MEDGEMMA_RUN_SCHEMA = "argos-lld-mmri-v23-medgemma-choice-batch-v1"

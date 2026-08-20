@@ -4,7 +4,10 @@ import json
 
 import pytest
 
-from dtwin.benchmark.openswisshcc_candidate_volume_fallback import FALLBACK_REASON, _validate_timing_plan
+from dtwin.benchmark.openswisshcc_candidate_volume_fallback import (
+    FALLBACK_REASON,
+    _validate_timing_plan,
+)
 from dtwin.benchmark.openswisshcc_candidate_volume_timing import PLAN_SCHEMA
 from dtwin.benchmark.openswisshcc_highdimensional_inference import _canonical_hash
 from dtwin.core import PipelineError

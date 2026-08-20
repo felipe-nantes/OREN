@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from PIL import Image, PngImagePlugin
 import pytest
+from PIL import Image, PngImagePlugin
 
 from dtwin.benchmark import lld_mmri_v23_liver_enriched_pilot as module
 from dtwin.benchmark.openswisshcc_alignment import _sha256

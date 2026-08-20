@@ -9,12 +9,18 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from dtwin.benchmark.chaos_v21_preparation import COHORT_SCHEMA as PREPARED_COHORT_SCHEMA
+from dtwin.benchmark.chaos_v21_preparation import (
+    COHORT_SCHEMA as PREPARED_COHORT_SCHEMA,
+)
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _wilson
 from dtwin.benchmark.public_independent_cohort import (
     LABELS_SCHEMA,
+)
+from dtwin.benchmark.public_independent_cohort import (
     PROTOCOL_SCHEMA as PUBLIC_PROTOCOL_SCHEMA,
+)
+from dtwin.benchmark.public_independent_cohort import (
     _canonical_hash as _public_canonical_hash,
 )
 from dtwin.benchmark.public_independent_v21_calibrator import (
@@ -25,7 +31,6 @@ from dtwin.benchmark.public_independent_v21_calibrator import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 EVALUATION_SCHEMA = "argos-public-independent-v21-negative-only-evaluation-v1"
 PROTOCOL_SCHEMA = "argos-chaos-v21-negative-evaluation-authorization-v1"

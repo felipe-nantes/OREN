@@ -8,8 +8,8 @@ import pytest
 import SimpleITK as sitk
 
 from dtwin.benchmark.mrsegmentator_chaos_runner import (
-    _publish_directory,
     LIVER_LABEL,
+    _publish_directory,
     extract_liver_label,
     verify_run,
 )

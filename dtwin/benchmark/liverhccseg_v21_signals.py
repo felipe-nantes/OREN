@@ -28,14 +28,17 @@ from dtwin.benchmark.liverhccseg_v21_review import verify_liverhccseg_v21_review
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_lesion_localizer import (
     CASE_SCHEMA as LOCALIZER_CASE_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
     RUN_SCHEMA as LOCALIZER_RUN_SCHEMA,
 )
-from dtwin.benchmark.public_independent_v21_calibrator import RAW_SIGNAL_SCHEMA, _canonical_sha
+from dtwin.benchmark.public_independent_v21_calibrator import (
+    RAW_SIGNAL_SCHEMA,
+    _canonical_sha,
+)
 from dtwin.core import PipelineError
-from dtwin.medgemma_client import load_screening_config
 from dtwin.medgemma_screening import _write_json_atomic
 from dtwin.medsiglip_zero_shot import load_medsiglip_config
-
 
 MEDGEMMA_CASE_SCHEMA = "argos-liverhccseg-v21-medgemma-choice-score-v1"
 MEDGEMMA_RUN_SCHEMA = "argos-liverhccseg-v21-medgemma-choice-batch-v1"

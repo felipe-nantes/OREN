@@ -5,9 +5,10 @@ import json
 import math
 import os
 import tempfile
-from collections import Counter, defaultdict
+from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import joblib
 import numpy as np
@@ -24,9 +25,7 @@ from dtwin.learning.protocol import (
     sha256_file,
     verify_protocol,
 )
-from dtwin.learning.schemas import ProtectedTrainingCase
 from dtwin.learning.splits import validate_nested_splits
-
 
 PREDICTION_SCHEMA = "argos-hybrid-medsiglip-oof-prediction-v1"
 PREDICTION_FREEZE_SCHEMA = "argos-hybrid-medsiglip-oof-freeze-v1"

@@ -16,14 +16,13 @@ import shutil
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
 from scipy import ndimage
 
 from dtwin.core import PipelineError
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v16-localizer-audit-protocol-v1"
 EXTRACTION_SCHEMA = "argos-openswisshcc-v16-authorized-mask-extraction-v1"
@@ -44,7 +43,7 @@ def _sha256(path: Path) -> str:
 
 
 def _md5(path: Path) -> str:
-    digest = hashlib.md5()  # noqa: S324 - required to verify the publisher checksum
+    digest = hashlib.md5()
     with Path(path).open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)

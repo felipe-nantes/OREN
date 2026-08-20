@@ -16,7 +16,6 @@ import SimpleITK as sitk
 from dtwin.core import PipelineError, now_utc, sha256_of
 from dtwin.segmentation_contract import same_geometry, validate_visualization_mask
 
-
 RUN_SCHEMA = "argos-mrsegmentator-chaos-gpu-run-v2"
 CASE_SCHEMA = "argos-mrsegmentator-chaos-gpu-case-v2"
 LIVER_LABEL = 5
@@ -67,7 +66,7 @@ def extract_liver_label(
     try:
         labelmap = sitk.ReadImage(str(labelmap_path))
         source = sitk.ReadImage(str(source_path))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise PipelineError(f"Falha ao ler saida MRSegmentator: {exc}") from exc
     liver = sitk.Cast(labelmap == LIVER_LABEL, sitk.sitkUInt8)
     resampled = not same_geometry(liver, source)

@@ -1,7 +1,7 @@
 # tests/test_core_profile.py
 import pytest
 
-from dtwin.core import load_profile, PipelineError
+from dtwin.core import PipelineError, load_profile
 
 
 def _write(p, text):

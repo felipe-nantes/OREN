@@ -10,11 +10,11 @@ from __future__ import annotations
 import hashlib
 import html
 import json
-import math
 import shutil
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -24,6 +24,8 @@ from scipy import ndimage
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_lesion_localizer import (
     CASE_SCHEMA as LOCALIZER_CASE_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
     RUN_SCHEMA as LOCALIZER_RUN_SCHEMA,
 )
 from dtwin.benchmark.openswisshcc_lesion_localizer_chunks import MERGED_RUN_SCHEMA
@@ -38,7 +40,6 @@ from dtwin.benchmark.openswisshcc_localizer_roi import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 CANDIDATE_SCHEMA = "argos-openswisshcc-candidate-volume-v16"
 CASE_SCHEMA = "argos-openswisshcc-candidate-volume-case-v16"

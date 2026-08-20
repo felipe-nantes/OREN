@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import numpy as np
 import pyvista as pv
@@ -11,6 +10,7 @@ from dtwin.viewer_artifacts import (
     lesion_segment_overlap,
     nearest_surface_relationships,
 )
+
 from .conftest import make_sphere_mask
 
 

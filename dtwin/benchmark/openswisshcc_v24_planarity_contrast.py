@@ -22,7 +22,6 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory
 from dtwin.benchmark.openswisshcc_candidate_shape import CASE_SCHEMA
 from dtwin.benchmark.openswisshcc_v20_fusion import (
     BLIND_SIGNAL_SCHEMA,
-    V11_WEIGHTS,
     _canonical_sha,
     _ecdf,
 )
@@ -35,7 +34,6 @@ from dtwin.benchmark.openswisshcc_volumetric_evaluation import (
     _binary_metrics,
 )
 from dtwin.core import PipelineError
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v24-planarity-contrast-protocol-v1"
 EVALUATION_SCHEMA = "argos-openswisshcc-v24-planarity-contrast-evaluation-v1"

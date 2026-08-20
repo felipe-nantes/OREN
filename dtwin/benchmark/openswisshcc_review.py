@@ -5,13 +5,13 @@ import hashlib
 import json
 import os
 import uuid
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable
+from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _load_json, _sha256
 from dtwin.core import PipelineError
-
 
 REVIEW_SCHEMA = "argos-public-liver-mri-panel-review-v1"
 REQUIRED_CONFIRMATIONS = (

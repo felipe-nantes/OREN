@@ -1,7 +1,14 @@
 """Record and verify immutable human approval of the multisequence v9 cohort."""
-import argparse, json
+import argparse
+import json
 from pathlib import Path
-from dtwin.benchmark.openswisshcc_multisequence_gate import create_multisequence_review, verify_multisequence_review
+
+from dtwin.benchmark.openswisshcc_multisequence_gate import (
+    create_multisequence_review,
+    verify_multisequence_review,
+)
+
+
 def main():
     p=argparse.ArgumentParser(); p.add_argument('--panels',type=Path,required=True); p.add_argument('--out',type=Path,required=True); p.add_argument('--reviewer',required=True); p.add_argument('--expected-case-count',type=int,default=88)
     for flag in ('no-visible-phi','all-panels','cross-sequence-anatomy','liver-framing-contrast','out-of-fov-tiles'): p.add_argument('--confirm-'+flag,action='store_true')

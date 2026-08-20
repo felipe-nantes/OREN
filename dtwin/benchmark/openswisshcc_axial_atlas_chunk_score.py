@@ -11,11 +11,15 @@ from urllib.request import Request
 
 from dtwin.benchmark.openswisshcc_axial_atlas_score import (
     INSTRUCTION as V17_INSTRUCTION,
+)
+from dtwin.benchmark.openswisshcc_axial_atlas_score import (
     _load_json,
-    _load_protocol as _load_v17_protocol,
     _validate_case_frames,
     score_log_odds,
     validate_atlas_bundle,
+)
+from dtwin.benchmark.openswisshcc_axial_atlas_score import (
+    _load_protocol as _load_v17_protocol,
 )
 from dtwin.benchmark.openswisshcc_highdimensional_inference import (
     _atomic_json,
@@ -31,7 +35,6 @@ from dtwin.benchmark.openswisshcc_volume_score import (
 )
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import load_screening_config
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v18-atlas-chunk-score-protocol-v2"
 PREDICTION_SCHEMA = "argos-openswisshcc-v18-atlas-chunk-score-prediction-v2"

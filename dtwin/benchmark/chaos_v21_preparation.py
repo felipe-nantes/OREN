@@ -25,17 +25,17 @@ from dtwin.benchmark.public_independent_cohort import (
     INFERENCE_SCHEMA,
     PROTOCOL_SCHEMA,
     SOURCE_MAP_SCHEMA,
-    _canonical_hash as _cohort_canonical_hash,
     _tree_fingerprint,
     anonymous_public_case_id,
 )
+from dtwin.benchmark.public_independent_cohort import (
+    _canonical_hash as _cohort_canonical_hash,
+)
 from dtwin.core import PipelineError
 from dtwin.datasets.chaos_download import (
-    EXTRACTION_SCHEMA,
     verify_chaos_mri_extraction,
 )
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 CASE_SCHEMA = "argos-chaos-v21-blind-input-case-v1"
 COHORT_SCHEMA = "argos-chaos-v21-blind-input-cohort-v1"
@@ -160,7 +160,7 @@ def _ordered_dicom_files(directory: Path) -> list[Path]:
     for path in sorted(directory.glob("*.dcm")):
         try:
             ds = pydicom.dcmread(path, stop_before_pixels=True)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise PipelineError("Falha ao ler DICOM CHAOS durante preparacao.") from exc
         if str(getattr(ds, "Modality", "")).upper() != "MR":
             raise PipelineError("Serie CHAOS contem modalidade nao MR.")

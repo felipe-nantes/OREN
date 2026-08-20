@@ -5,8 +5,9 @@ import json
 import math
 import os
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import joblib
 import numpy as np
@@ -26,7 +27,6 @@ from dtwin.learning.protocol import (
 )
 from dtwin.learning.radiomics_features import verify_radiomics_features
 from dtwin.learning.splits import validate_nested_splits
-
 
 PREDICTION_SCHEMA = "argos-hybrid-radiomics-oof-prediction-v1"
 PREDICTION_FREEZE_SCHEMA = "argos-hybrid-radiomics-oof-freeze-v1"

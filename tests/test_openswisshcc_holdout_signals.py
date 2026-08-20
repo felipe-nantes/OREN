@@ -8,9 +8,15 @@ import pytest
 
 from dtwin.benchmark import openswisshcc_holdout_signals as module
 from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_holdout import HOLDOUT_AUDIT_SCHEMA, HOLDOUT_INPUT_SCHEMA
+from dtwin.benchmark.openswisshcc_holdout import (
+    HOLDOUT_AUDIT_SCHEMA,
+    HOLDOUT_INPUT_SCHEMA,
+)
 from dtwin.benchmark.openswisshcc_holdout_panels import COHORT_SCHEMA
-from dtwin.benchmark.public_independent_v21_calibrator import SCORE_SCHEMA, SCORE_SUMMARY_SCHEMA
+from dtwin.benchmark.public_independent_v21_calibrator import (
+    SCORE_SCHEMA,
+    SCORE_SUMMARY_SCHEMA,
+)
 from dtwin.core import PipelineError
 
 

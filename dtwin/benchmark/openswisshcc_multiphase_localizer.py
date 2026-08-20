@@ -5,8 +5,9 @@ import shutil
 import statistics
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import nibabel as nib
 import numpy as np
@@ -33,7 +34,6 @@ from dtwin.benchmark.openswisshcc_lesion_localizer import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 ALGORITHM_VERSION = "venous-registered-arterial-union-v22"
 

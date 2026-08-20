@@ -5,8 +5,14 @@ from pathlib import Path
 
 import pytest
 
-from dtwin.benchmark.openswisshcc_candidate_volume_timing import PLAN_SCHEMA, SCENARIOS, build_timing_selection_plan
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LOCALIZER_CASE_SCHEMA
+from dtwin.benchmark.openswisshcc_candidate_volume_timing import (
+    PLAN_SCHEMA,
+    SCENARIOS,
+    build_timing_selection_plan,
+)
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    CASE_SCHEMA as LOCALIZER_CASE_SCHEMA,
+)
 from dtwin.benchmark.openswisshcc_lesion_localizer_chunks import MERGED_RUN_SCHEMA
 from dtwin.core import PipelineError
 

@@ -16,7 +16,6 @@ from dtwin.benchmark.openswisshcc_freeze import verify_experiment_freeze
 from dtwin.benchmark.openswisshcc_review import _candidate
 from dtwin.core import PipelineError
 
-
 FINALIZATION_SCHEMA = "argos-openswisshcc-candidate-finalization-v1"
 
 

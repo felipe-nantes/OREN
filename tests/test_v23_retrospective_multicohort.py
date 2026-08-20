@@ -8,7 +8,6 @@ import pytest
 import dtwin.benchmark.v23_retrospective_multicohort as subject
 from dtwin.core import PipelineError
 
-
 BASELINE = {
     "calibrator_signature": "a" * 64,
     "decision_threshold": 0.5121839080459771,

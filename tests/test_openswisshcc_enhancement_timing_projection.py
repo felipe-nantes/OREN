@@ -12,6 +12,8 @@ from dtwin.benchmark.openswisshcc_candidate_volume_score import (
 )
 from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     ALGORITHM_VERSION as PROPOSAL_ALGORITHM,
+)
+from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     COHORT_SCHEMA as PROPOSAL_SCHEMA,
 )
 from dtwin.benchmark.openswisshcc_enhancement_score_preflight import PREFLIGHT_SCHEMA

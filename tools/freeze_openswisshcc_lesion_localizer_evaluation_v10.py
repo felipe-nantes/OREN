@@ -3,7 +3,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import create_evaluation_protocol
+from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import (
+    create_evaluation_protocol,
+)
 
 
 def main() -> int:

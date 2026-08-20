@@ -26,9 +26,9 @@ if __name__ == "__main__":
     fast = fast_arg.strip().lower() in ("1", "true", "fast", "yes")
     sys.path.insert(0, repo)  # visível só no processo principal
     try:
-        from dtwin.engine import Engine
         from dtwin.core import PipelineError
-    except Exception as exc:  # noqa: BLE001
+        from dtwin.engine import Engine
+    except Exception as exc:
         print(f"PREP_FAIL: import do motor falhou: {type(exc).__name__}: {exc}")
         sys.exit(65)
     try:
@@ -37,6 +37,6 @@ if __name__ == "__main__":
     except PipelineError as exc:
         print(f"PREP_FAIL: {exc}")
         sys.exit(2)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"PREP_FAIL: {type(exc).__name__}: {exc}")
         sys.exit(3)

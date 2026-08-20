@@ -4,10 +4,9 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
-
 
 PYARROW_GUARD_ID = "pyarrow_blocked_for_windows_spawn_v1"
 

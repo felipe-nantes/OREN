@@ -7,15 +7,19 @@ import shutil
 import statistics
 import time
 import uuid
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any, Callable, Mapping, Protocol
+from typing import Any, Protocol
 
-from dtwin.benchmark.openswisshcc_alignment import _load_json, _publish_directory, _sha256
+from dtwin.benchmark.openswisshcc_alignment import (
+    _load_json,
+    _publish_directory,
+    _sha256,
+)
 from dtwin.benchmark.openswisshcc_volumetric_gate import verify_volumetric_freeze
 from dtwin.benchmark.openswisshcc_volumetric_inference import _current_case
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 PAIRWISE_SCHEMA = "argos-medgemma-volumetric-pairwise-panel-scores-v1"
 CASE_SCHEMA = "argos-openswisshcc-volumetric-pairwise-case-v1"

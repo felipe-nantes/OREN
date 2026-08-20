@@ -7,11 +7,14 @@ import shutil
 import statistics
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LOCALIZER_CASE_SCHEMA
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    CASE_SCHEMA as LOCALIZER_CASE_SCHEMA,
+)
 from dtwin.benchmark.openswisshcc_localizer_roi_freeze import verify_roi_freeze
 from dtwin.benchmark.openswisshcc_localizer_roi_gate import verify_paired_review
 from dtwin.core import PipelineError

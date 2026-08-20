@@ -9,7 +9,6 @@ from typing import Any
 
 from dtwin.core import PipelineError, sha256_of
 
-
 SCHEMA = "argos-raw-phase-equivalence-v1"
 
 

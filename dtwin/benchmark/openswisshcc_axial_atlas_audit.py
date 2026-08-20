@@ -11,8 +11,9 @@ import hashlib
 import json
 import math
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -20,10 +21,11 @@ import SimpleITK as sitk
 from dtwin.benchmark.openswisshcc_axial_atlas import (
     CASE_SCHEMA,
     COHORT_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_axial_atlas import (
     PROTOCOL_SIGNATURE as ATLAS_PROTOCOL_SIGNATURE,
 )
 from dtwin.core import PipelineError
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v17-atlas-audit-protocol-v1"
 AUDIT_SCHEMA = "argos-openswisshcc-v17-atlas-retrospective-audit-v1"

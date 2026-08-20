@@ -5,7 +5,6 @@ from typing import Any
 
 from dtwin.core import PipelineError
 
-
 TARGET_FINDING = "focal_liver_lesion"
 REGISTRY_SCHEMA = "argos-dataset-registry-v1"
 

@@ -8,7 +8,6 @@ from PIL import Image
 
 from tools.build_anatomic_material_textures import build
 
-
 ROOT = Path(__file__).resolve().parents[1]
 ASSET_DIR = ROOT / "viewer" / "assets" / "materials"
 

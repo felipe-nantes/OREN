@@ -12,6 +12,7 @@ from dtwin.core import PipelineError
 from dtwin.segmentation_contract import (
     INPUT_SCHEMA,
     QUALITY_SCHEMA,
+    approved_visualization_mask,
     assert_experimental_output,
     atomic_write_experimental_json,
     build_native_input_manifest,
@@ -19,7 +20,6 @@ from dtwin.segmentation_contract import (
     experimental_paths,
     image_geometry,
     validate_visualization_mask,
-    approved_visualization_mask,
 )
 
 

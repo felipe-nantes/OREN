@@ -8,10 +8,11 @@ import re
 import subprocess
 import sys
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import yaml
 
@@ -20,7 +21,11 @@ from dtwin.medgemma_client import effective_config_sha256, load_screening_config
 from dtwin.medgemma_volumetric import effective_screening_timeout
 
 from .hashing import git_state
-from .importers import DatasetCase, attach_ground_truth, prepare_inference_case, validate_inference_source
+from .importers import (
+    DatasetCase,
+    attach_ground_truth,
+    prepare_inference_case,
+)
 from .metrics import compute_benchmark_metrics
 from .models import BenchmarkCaseResult, BenchmarkStatus, ModelResult
 from .reporting import write_run_outputs
@@ -201,7 +206,7 @@ def run_case(
             case.inference, workspace, profile_path=experiment.profile_path,
             segment_if_missing=experiment.segment_if_missing, device=experiment.device,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return BenchmarkCaseResult(
             case_id=case.inference.case_id, dataset=case.inference.dataset,
             input_format=case.inference.input_format, truth=case.ground_truth.label,

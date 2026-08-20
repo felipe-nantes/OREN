@@ -15,10 +15,18 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_candidate_volume import _validate_localizer
 from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     ALGORITHM_VERSION as SOURCE_ALGORITHM,
+)
+from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     CASE_SCHEMA as SOURCE_CASE_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_enhancement_localizer import (
     COHORT_SCHEMA as SOURCE_COHORT_SCHEMA,
 )
-from dtwin.benchmark.openswisshcc_enhancement_maps import _input_index, _load, _selection
+from dtwin.benchmark.openswisshcc_enhancement_maps import (
+    _input_index,
+    _load,
+    _selection,
+)
 from dtwin.benchmark.openswisshcc_lesion_localizer import (
     CASE_SCHEMA,
     RUN_SCHEMA,
@@ -27,7 +35,6 @@ from dtwin.benchmark.openswisshcc_lesion_localizer import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 ALGORITHM_VERSION = "joint-enhancement-t3-top5-volume-v1"
 THRESHOLD_KEY = "t3"

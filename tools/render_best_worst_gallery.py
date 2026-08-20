@@ -36,13 +36,13 @@ warnings.filterwarnings("ignore")
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-import numpy as np  # noqa: E402
-import pyvista as pv  # noqa: E402
+import numpy as np
+import pyvista as pv
 
 pv.OFF_SCREEN = True
 
-from dtwin.core import array_from, array_to_image, read_image, save_image  # noqa: E402
-from dtwin.stages import _mesh_from_mask, _refine_mask  # noqa: E402
+from dtwin.core import array_from, array_to_image, read_image, save_image
+from dtwin.stages import _mesh_from_mask, _refine_mask
 
 SELECAO = REPO / "casos/qualification/lld_mmri_v23/analise_10_melhores_10_piores_v1"
 SAIDA = REPO / "experiments/best_worst_gallery_v1"

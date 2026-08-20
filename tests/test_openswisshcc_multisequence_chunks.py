@@ -1,9 +1,13 @@
-import hashlib,json
-from pathlib import Path
+import hashlib
+import json
+
 import pytest
+
 from dtwin.benchmark import openswisshcc_multisequence_chunks as chunks
-from dtwin.benchmark.openswisshcc_multisequence_inference import CASE_SCHEMA,RUN_SCHEMA
+from dtwin.benchmark.openswisshcc_multisequence_inference import CASE_SCHEMA, RUN_SCHEMA
 from dtwin.core import PipelineError
+
+
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def plan(tmp_path,monkeypatch):
  ids=["anon-a","anon-b","anon-c"];monkeypatch.setattr(chunks,"verify_multisequence_freeze",lambda **k:{"experiment_signature":"exp"});monkeypatch.setattr(chunks,"verify_multisequence_review",lambda **k:{"review_signature":"rev","cases":[{"case_id":x} for x in ids]})

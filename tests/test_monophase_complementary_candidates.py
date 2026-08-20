@@ -7,7 +7,9 @@ import numpy as np
 import pytest
 
 from dtwin.core import PipelineError
-from dtwin.learning.monophase_complementary_candidates import build_complementary_candidates
+from dtwin.learning.monophase_complementary_candidates import (
+    build_complementary_candidates,
+)
 from dtwin.learning.protocol import sha256_file
 
 

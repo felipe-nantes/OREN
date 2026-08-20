@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import base64
 import io
-import json
 import logging
 import threading
 import time
@@ -198,7 +197,7 @@ class MedGemmaRuntime:
             )
             log.exception(self.load_error)
             return
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self.model = None
             self.processor = None
             self.load_error = f"{type(exc).__name__}: {exc}"
@@ -664,7 +663,7 @@ def create_app(config_path: Path):
                 )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.exception("Falha de inferência MedGemma")
             raise HTTPException(status_code=500, detail=f"Inferência falhou: {type(exc).__name__}") from exc
         response = {
@@ -742,7 +741,7 @@ def create_app(config_path: Path):
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.exception("Falha de inferência volumétrica MedGemma")
             raise HTTPException(
                 status_code=500,

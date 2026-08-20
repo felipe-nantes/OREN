@@ -144,7 +144,7 @@ def main() -> int:
         if not predita.is_file():
             try:
                 segmenta_isolado(fonte, predita)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 feitos[caso.name] = {"erro": f"{type(exc).__name__}: {exc}"}
                 destino.write_text(json.dumps(feitos, indent=2), encoding="utf-8")
                 print(f"    falhou: {exc}", flush=True)

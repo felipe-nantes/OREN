@@ -1,12 +1,13 @@
 # tests/test_engine_prepare.py
 from pathlib import Path
+
 import numpy as np
-import SimpleITK as sitk
 import pytest
+import SimpleITK as sitk
 
 from dtwin import stages
+from dtwin.core import PipelineError, array_from, array_to_image, read_image, save_image
 from dtwin.engine import Engine
-from dtwin.core import read_image, array_from, array_to_image, save_image, PipelineError
 
 
 def _write_dicom_series(folder: Path, modality: str = "MR", n_slices: int = 6):

@@ -23,7 +23,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.benchmark.windows_spawn_guard import block_optional_module_for_spawn  # noqa: E402
+from dtwin.benchmark.windows_spawn_guard import (
+    block_optional_module_for_spawn,
+)
 
 
 def _write_json_atomic(path: Path, payload: dict) -> None:

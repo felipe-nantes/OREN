@@ -3,7 +3,11 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.benchmark.openswisshcc_localizer_roi_gate import REQUIRED_CONFIRMATIONS, create_paired_review, verify_paired_review
+from dtwin.benchmark.openswisshcc_localizer_roi_gate import (
+    REQUIRED_CONFIRMATIONS,
+    create_paired_review,
+    verify_paired_review,
+)
 
 
 def main() -> int:

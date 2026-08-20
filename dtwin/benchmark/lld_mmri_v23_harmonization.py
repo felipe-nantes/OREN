@@ -14,13 +14,17 @@ import numpy as np
 import SimpleITK as sitk
 
 from dtwin.benchmark.lld_mmri_v23_download import validate_lld_mmri_v23_download
-from dtwin.benchmark.lld_mmri_v23_geometry_audit import AUDIT_SCHEMA, CASE_SCHEMA as AUDIT_CASE_SCHEMA
-from dtwin.benchmark.lld_mmri_v23_preparation import _geometry, _read_valid_nifti, _same_geometry
+from dtwin.benchmark.lld_mmri_v23_geometry_audit import AUDIT_SCHEMA
+from dtwin.benchmark.lld_mmri_v23_geometry_audit import CASE_SCHEMA as AUDIT_CASE_SCHEMA
+from dtwin.benchmark.lld_mmri_v23_preparation import (
+    _geometry,
+    _read_valid_nifti,
+    _same_geometry,
+)
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 HARMONIZATION_SCHEMA = "argos-lld-mmri-v23-dynamic-t1-harmonization-v1"
 CASE_SCHEMA = "argos-lld-mmri-v23-dynamic-t1-harmonized-case-v1"

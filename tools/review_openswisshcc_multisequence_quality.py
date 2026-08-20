@@ -1,8 +1,18 @@
 """Create a blind technical-quality decision manifest for v9."""
-import argparse,json
+import argparse
+import json
 from pathlib import Path
-from dtwin.benchmark.openswisshcc_multisequence_gate import validate_multisequence_cohort
-from dtwin.benchmark.openswisshcc_multisequence_quality import create_quality_review,verify_quality_review,REASONS
+
+from dtwin.benchmark.openswisshcc_multisequence_gate import (
+ validate_multisequence_cohort,
+)
+from dtwin.benchmark.openswisshcc_multisequence_quality import (
+ REASONS,
+ create_quality_review,
+ verify_quality_review,
+)
+
+
 def main():
  p=argparse.ArgumentParser();p.add_argument('--panels',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--reviewer',required=True);p.add_argument('--exclude',action='append',default=[],metavar='CASE_ID=REASON');p.add_argument('--expected-case-count',type=int,default=88);a=p.parse_args()
  records=validate_multisequence_cohort(a.panels,a.expected_case_count)["records"];decisions={r["case_id"]:{"status":"approved_primary","reason_code":None} for r in records}

@@ -31,13 +31,12 @@ from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
 from scipy import ndimage
-from skimage import morphology
 
 warnings.filterwarnings("ignore")
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from dtwin.stages import _mesh_from_mask, _refine_mask  # noqa: E402
+from dtwin.stages import _mesh_from_mask, _refine_mask
 
 LLD = REPO / "casos/qualification/lld_mmri_v23/prepared/external_segmentation_audit335_fullres_v1"
 OUT = REPO / "experiments/mesh_topology_quality_v1"
@@ -132,7 +131,7 @@ def main() -> int:
                     max_triangles=MESH["max_triangles"],
                 )
                 registro[nome] = metricas_da_malha(malha)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 registro[nome] = {"falhou": True, "erro": f"{type(exc).__name__}: {exc}"}
         linhas.append(registro)
         if i % 5 == 0 or i == len(caminhos):

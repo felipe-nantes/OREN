@@ -25,8 +25,9 @@ import json
 import math
 import random
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from dtwin.core import PipelineError
 from dtwin.learning.protocol import (

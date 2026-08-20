@@ -27,8 +27,8 @@ import logging
 import math
 import os
 import platform
-import shutil
 import secrets
+import shutil
 import socket
 import subprocess
 import sys
@@ -50,26 +50,31 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.datastructures import FormData
 
-from dtwin.benchmark.metrics import compute_benchmark_metrics
-from dtwin.benchmark.subtype_metrics import (
-    SUBTYPE_CLASSES,
-    binary_label_for_subtype,
-    compute_subtype_metrics,
-)
-from dtwin.benchmark.hashing import git_state
-from dtwin.benchmark.reporting import write_run_outputs
-from dtwin.benchmark.runner import classify_screening_failure
 from dtwin.benchmark.dataset_audit import (
     describe_selected_series,
     select_best_mr_series,
     select_monophase_evidence_series,
 )
+from dtwin.benchmark.hashing import git_state
+from dtwin.benchmark.metrics import compute_benchmark_metrics
 from dtwin.benchmark.operational_timing import (
     DEFAULT_REPORT_BUDGET_SECONDS,
     build_operational_timing,
     persist_operational_timing,
 )
+from dtwin.benchmark.reporting import write_run_outputs
+from dtwin.benchmark.runner import classify_screening_failure
+from dtwin.benchmark.subtype_metrics import (
+    SUBTYPE_CLASSES,
+    binary_label_for_subtype,
+    compute_subtype_metrics,
+)
+from dtwin.candidate_subprocess import candidate_error, run_candidate_subprocess
 from dtwin.core import PipelineError, sha256_of
+from dtwin.learning.monophase_protocol import (
+    build_hierarchical_screening_result,
+    resolve_monophase_sequence_contract,
+)
 from dtwin.medgemma_client import (
     OPTIONAL_REPORT_V2_FIELDS,
     effective_config_sha256,
@@ -77,11 +82,6 @@ from dtwin.medgemma_client import (
 )
 from dtwin.medgemma_volumetric import effective_screening_timeout
 from dtwin.segmentation_subprocess import run_segmentation_subprocess
-from dtwin.candidate_subprocess import candidate_error, run_candidate_subprocess
-from dtwin.learning.monophase_protocol import (
-    build_hierarchical_screening_result,
-    resolve_monophase_sequence_contract,
-)
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 log = logging.getLogger("dtwin.webapp")
@@ -329,7 +329,7 @@ def _set(job_id: str, **kw) -> None:
     if completed_snapshot is not None:
         try:
             _persist_completed_job_state(job_id, completed_snapshot)
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception("Job %s: falha ao persistir estado final", job_id)
 
 
@@ -376,7 +376,7 @@ def _expected_modalities() -> set[str]:
     try:
         prof = yaml.safe_load((REPO / PROFILE).read_text("utf-8")) or {}
         return {str(m).upper() for m in (prof.get("modalidade") or [])}
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {"MR", "MRI"}
 
 
@@ -385,7 +385,7 @@ def _modality_of(names: list[str]) -> str:
     for name in names[:5]:
         try:
             ds = pydicom.dcmread(name, stop_before_pixels=True, force=True)
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         modality = str(getattr(ds, "Modality", "") or "").upper()
         if modality:
@@ -427,13 +427,13 @@ def _find_largest_compatible_series_legacy(root: Path) -> tuple[list[str], int]:
     for dirpath, _dirs, _files in os.walk(root):
         try:
             series_ids = list(reader.GetGDCMSeriesIDs(dirpath)) or [""]
-        except Exception:  # noqa: BLE001
+        except Exception:
             series_ids = [""]
         for sid in series_ids:
             try:
                 names = (reader.GetGDCMSeriesFileNames(dirpath, sid) if sid
                          else reader.GetGDCMSeriesFileNames(dirpath))
-            except Exception:  # noqa: BLE001
+            except Exception:
                 names = []
             if len(names) <= len(best_files):
                 continue
@@ -450,7 +450,7 @@ def _find_largest_compatible_series_legacy(root: Path) -> tuple[list[str], int]:
             path = os.path.join(dirpath, name)
             try:
                 img = sitk.ReadImage(path)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
             depth = img.GetSize()[2] if img.GetDimension() >= 3 else 1
             if depth <= best_depth or not _modality_ok([path], expected):
@@ -575,9 +575,9 @@ def _mask_quality(case_dir: Path) -> dict:
     craniocaudal — menos da metade de um fígado adulto, sem tocar a borda do
     volume (ou seja, não era corte de campo de visão, era sub-segmentação).
     """
-    from dtwin.benchmark.lld_mmri_v23_mask_quality import evaluate_liver_mask_quality
-
     import SimpleITK as sitk
+
+    from dtwin.benchmark.lld_mmri_v23_mask_quality import evaluate_liver_mask_quality
 
     referencia = sitk.ReadImage(str(case_dir / "volume.nii.gz"))
     return evaluate_liver_mask_quality(case_dir / "mask_organ.nii.gz", referencia)
@@ -946,7 +946,9 @@ def _build_union_liver_mask(case_dir: Path, phase_paths: dict[str, Path]) -> dic
     experiments/three_phase_union_v1): recupera 23% de volume a mais que a
     venosa sozinha, na mediana.
     """
-    from dtwin.benchmark.lld_mmri_v23_preparation import isolated_total_mr_liver_segmenter
+    from dtwin.benchmark.lld_mmri_v23_preparation import (
+        isolated_total_mr_liver_segmenter,
+    )
     from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED
 
     venous_mask_path = case_dir / "mask_organ.nii.gz"
@@ -973,12 +975,12 @@ def _build_union_liver_mask(case_dir: Path, phase_paths: dict[str, Path]) -> dic
                 Path(fonte), destino, device="gpu", fast=False,
                 timeout_seconds=UNION_PHASE_TIMEOUT, python_executable=PY,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             fases_falhas[fase] = type(exc).__name__
             continue
         try:
             imagem_fase = sitk.ReadImage(str(destino))
-        except Exception:  # noqa: BLE001
+        except Exception:
             fases_falhas[fase] = "leitura_falhou"
             continue
         if not _mesma_geometria_sitk(imagem_fase, venous_image):
@@ -1104,7 +1106,9 @@ def process_monophase_medsiglip_job(
     generic/arterial/venous series must never enter this worker.
     """
     from dtwin.learning.exam_to_panels import build_monophase_exam_panels
-    from dtwin.learning.monophase_visual_inference import infer_monophase_case_from_panels
+    from dtwin.learning.monophase_visual_inference import (
+        infer_monophase_case_from_panels,
+    )
     from dtwin.learning.visual_inference import in_sample_status, load_production_bundle
 
     case_dir = (WORKSPACE / job_id / "case").resolve()
@@ -1179,7 +1183,7 @@ def process_monophase_medsiglip_job(
         model_started = time.monotonic()
         try:
             viewer_ready, viewer_error = _build_model(case_dir)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             viewer_ready, viewer_error = False, type(exc).__name__
         durations["model_3d"] = round(time.monotonic() - model_started, 4)
         durations["total"] = round(time.monotonic() - started, 4)
@@ -1240,7 +1244,7 @@ def process_monophase_medsiglip_job(
             "O processamento excedeu o tempo limite.", "timeout"))
     except PipelineError as exc:
         _set(job_id, state="done", step="concluido", progress=100, result=_graceful(str(exc)))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.exception("Job MedSigLIP monofásico %s: falha inesperada", job_id)
         _set(job_id, state="done", step="concluido", progress=100, result=_graceful(
             "Não foi possível concluir a análise monofásica.", type(exc).__name__))
@@ -1419,7 +1423,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
                 "used_by_screening_inference": False,
                 "requires_human_review": True,
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             candidate_localization = {
                 "status": "localization_unavailable",
                 "candidate_present": False,
@@ -1446,7 +1450,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
                 visualizacao_shadow = _build_enhanced_visualization_shadow(
                     case_dir, multiphase.phase_paths
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 visualizacao_shadow = {
                     "status": "failed",
                     "reason": type(exc).__name__,
@@ -1467,7 +1471,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             t0 = time.monotonic()
             try:
                 uniao_mascara = _build_union_liver_mask(case_dir, multiphase.phase_paths)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 uniao_mascara = {
                     "status": "union_failed", "reason": type(exc).__name__,
                     "phases_included": ["venous"], "phase_failures": {},
@@ -1481,7 +1485,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
         t0 = time.monotonic()
         try:
             viewer_ready, motivo_modelo = _build_model(case_dir)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             viewer_ready, motivo_modelo = False, f"{type(exc).__name__}"
         duracoes["modelo_3d"] = round(time.monotonic() - t0, 4)
         if not viewer_ready:
@@ -1540,7 +1544,7 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
     except PipelineError as exc:
         _set(job_id, state="done", step="concluido", progress=100,
              result=_graceful(str(exc)))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.exception("Job visual %s: falha inesperada", job_id)
         _set(job_id, state="done", step="concluido", progress=100, result=_graceful(
             "Não foi possível concluir a análise deste exame.",
@@ -1914,7 +1918,9 @@ def _run_delayed_medsiglip_advisory(
     arbitrary DICOM upload whose source domain is unknown.
     """
     from dtwin.learning.exam_to_panels import build_monophase_exam_panels
-    from dtwin.learning.monophase_visual_inference import infer_monophase_case_from_panels
+    from dtwin.learning.monophase_visual_inference import (
+        infer_monophase_case_from_panels,
+    )
     from dtwin.medgemma_screening import _write_json_atomic
 
     started = time.monotonic()
@@ -2195,7 +2201,7 @@ def process_job(
         outcome = "timeout"
         _set(job_id, state="done", result=_graceful(
             "O processamento excedeu o tempo limite.", "timeout"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         outcome = "failed"
         log.exception("Job %s: falha inesperada", job_id)
         _set(job_id, state="done", result=_graceful(
@@ -2228,7 +2234,7 @@ def process_job(
                     timing_path.relative_to((WORKSPACE / job_id).resolve())
                 ),
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception("Job %s: não foi possível persistir a auditoria de tempo", job_id)
         shutil.rmtree(raw_dir, ignore_errors=True)
         shutil.rmtree(WORKSPACE / job_id / "_series", ignore_errors=True)
@@ -2278,7 +2284,7 @@ def _benchmark_model_info(config_path: str | None = None) -> dict:
             ),
             "config": config_path,
         }
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {"model_id": None, "model_version": None, "config": config_path}
 
 
@@ -2542,7 +2548,7 @@ def _run_visual_benchmark_case(
     except PipelineError as exc:
         base["error"] = str(exc)
         return base
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.exception("Benchmark visual %s/%s: falha inesperada", benchmark_id, item["id"])
         base["error"] = f"Falha inesperada: {type(exc).__name__}"
         return base
@@ -2687,7 +2693,7 @@ def _run_benchmark_case(
         base["error"] = "O processamento excedeu o tempo limite."
         base["status"] = "timeout"
         return base
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.exception("Benchmark %s/%s: falha inesperada", benchmark_id, item["id"])
         base["error"] = f"Falha inesperada: {type(exc).__name__}"
         return base
@@ -2864,7 +2870,7 @@ def process_benchmark(benchmark_id: str, manifest: dict, raw_dir: Path) -> None:
             progress=100,
             report=report,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.exception("Benchmark %s: falha inesperada", benchmark_id)
         _set_benchmark(
             benchmark_id,
@@ -3044,7 +3050,7 @@ def health() -> dict:
         with urlopen(HEALTH_URL, timeout=5) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         backend = "pronto" if data.get("status") == "ready" else "carregando"
-    except Exception:  # noqa: BLE001
+    except Exception:
         backend = "desligado"
     return {"backend": backend}
 
@@ -3053,7 +3059,7 @@ def _probe_backend(health_url: str) -> str:
     try:
         with urlopen(health_url, timeout=5) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception:
         return "desligado"
     return "pronto" if data.get("status") == "ready" else "carregando"
 
@@ -3152,7 +3158,7 @@ async def analyze(request: Request) -> dict:
         paths = json.loads(relpaths) if isinstance(relpaths, str) else []
         if not isinstance(paths, list):
             paths = []
-    except Exception:  # noqa: BLE001
+    except Exception:
         paths = []
     for i, uf in enumerate(files):
         rel = (paths[i] if i < len(paths) and paths[i] else uf.filename) or f"file_{i}"
@@ -3253,7 +3259,7 @@ async def create_benchmark(request: Request) -> dict:
                     continue
                 destination = case_upload / f"{local_index:06d}_{original_name}"
                 destination.write_bytes(await upload.read())
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         shutil.rmtree(raw_dir.parent, ignore_errors=True)
         raise HTTPException(status_code=400, detail="Falha ao receber os arquivos do dataset.") from exc
 

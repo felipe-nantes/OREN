@@ -14,16 +14,15 @@ import json
 import math
 import os
 import shutil
-from dataclasses import dataclass
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import pydicom
 from PIL import Image, ImageDraw, ImageFont
 
 from dtwin.benchmark.dataset_audit import select_monophase_evidence_series
-
 
 SCHEMA = "argos-dicom-quality-showcase-v1"
 EXCLUDED_NAME_TOKENS = ("mask", "seg", "label", "lesion", "tumor", "ground_truth")
@@ -336,7 +335,7 @@ def build(
     for case in cases:
         try:
             record, preview = _case_record(case)
-        except Exception as exc:  # noqa: BLE001 - recorded without PHI/UIDs
+        except Exception as exc:
             rejected.append({"case_id": case.name, "reason": f"technical_audit_failure:{type(exc).__name__}"})
             continue
         records.append(record)

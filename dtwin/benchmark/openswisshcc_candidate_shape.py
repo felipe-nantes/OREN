@@ -5,13 +5,13 @@ geometry. Public labels and lesion masks are not part of its API.
 """
 from __future__ import annotations
 
-import json
 import math
 import shutil
 import sys
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -30,7 +30,6 @@ from dtwin.benchmark.openswisshcc_enhancement_maps import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 ALGORITHM_VERSION = "candidate-physical-shape-v1"
 CASE_SCHEMA = "argos-openswisshcc-candidate-shape-case-v23"

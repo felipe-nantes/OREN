@@ -1,10 +1,9 @@
 # tests/conftest.py
-import json
 import numpy as np
-import SimpleITK as sitk
 import pytest
+import SimpleITK as sitk
 
-from dtwin.core import Case, array_to_image, save_image, now_utc
+from dtwin.core import Case, array_to_image, now_utc, save_image
 
 
 def make_sphere_mask(shape, center, radius):

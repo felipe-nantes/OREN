@@ -11,8 +11,9 @@ import hashlib
 import json
 import shutil
 import uuid
+from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
-from typing import Any, Mapping
+from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import (
     _load_input_records,
@@ -27,7 +28,6 @@ from dtwin.core import PipelineError, load_profile
 from dtwin.medgemma_client import load_screening_config, model_trace
 from dtwin.medgemma_panel import generate_liver_panel
 from dtwin.medgemma_panel_multiphase import generate_liver_panel_multiphase
-
 
 VOLUMETRIC_CANDIDATE_VERSION = "openswisshcc-volumetric-choice-pathology-v1"
 _ALLOWED_KINDS = {"multiphase_rgb", "venous_single_phase_fallback"}

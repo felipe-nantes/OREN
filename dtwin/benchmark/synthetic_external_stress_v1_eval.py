@@ -14,9 +14,10 @@ import math
 import os
 import tempfile
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 from PIL import Image
@@ -30,7 +31,6 @@ from dtwin.learning.medsiglip_embeddings import (
 )
 from dtwin.learning.protocol import canonical_sha256, sha256_file
 from dtwin.learning.visual_inference import classify_embeddings, load_production_bundle
-
 
 SCHEMA = "argos-synthetic-external-stress-v1-evaluation"
 RECORD_SCHEMA = "argos-synthetic-external-stress-v1-evaluation-record"
@@ -532,7 +532,7 @@ def _evaluate_synthetic_stress_locked(
                 row.update(_score_case(bundle, embeddings))
                 row["panel_sha256"] = [sha256_file(path) for path in panels.panel_paths]
                 row["technical_failure"] = False
-            except Exception as exc:  # noqa: BLE001 - failure is persisted, never fabricated
+            except Exception as exc:
                 row["error"] = f"{type(exc).__name__}: {exc}"
             unsigned = dict(row)
             row["record_signature"] = canonical_sha256(unsigned)

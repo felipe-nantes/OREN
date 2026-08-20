@@ -8,14 +8,15 @@ import stat
 import urllib.request
 import uuid
 import zipfile
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import BinaryIO, Callable, ContextManager
+from typing import BinaryIO
 
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 MANIFEST_SCHEMA = "argos-chaos-v103-download-manifest-v1"
 EXTRACTION_SCHEMA = "argos-chaos-v103-mri-extraction-manifest-v1"
@@ -84,7 +85,7 @@ def verify_chaos_train_archive(
         raise PipelineError("Arquivo de treino CHAOS ausente ou com nome inesperado.")
     if source.stat().st_size != spec.size_bytes:
         raise PipelineError("Tamanho do arquivo CHAOS diverge do registro oficial.")
-    md5 = hashlib.md5()  # noqa: S324 - checksum required by the publisher
+    md5 = hashlib.md5()
     sha256 = hashlib.sha256()
     with source.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -107,7 +108,7 @@ def download_chaos_train(
     accept_license: bool,
     accepted_by: str,
     spec: ChaosDownloadSpec = CHAOS_TRAIN_SPEC,
-    opener: Callable[[str], ContextManager[BinaryIO]] = urllib.request.urlopen,
+    opener: Callable[[str], AbstractContextManager[BinaryIO]] = urllib.request.urlopen,
 ) -> dict[str, object]:
     """Download exactly the public train ZIP after explicit license acceptance."""
 

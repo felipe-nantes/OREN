@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import joblib
-import numpy as np
 
 from dtwin.core import PipelineError
 from dtwin.learning.external_bundle_evaluation import _jsonl, _metrics
@@ -30,7 +29,6 @@ from dtwin.learning.protocol import (
 )
 from dtwin.learning.splits import validate_nested_splits
 from dtwin.learning.visual_inference import load_production_bundle
-
 
 BUNDLE_SCHEMA = "oren-multi-signal-fusion-production-bundle-v1"
 PREDICTION_SCHEMA = "oren-multi-signal-fusion-external-prediction-v1"

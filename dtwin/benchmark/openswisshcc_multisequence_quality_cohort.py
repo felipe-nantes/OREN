@@ -1,11 +1,19 @@
 """Atomic primary/stress cohort bundle derived from blind v9 quality decisions."""
 from __future__ import annotations
-import hashlib,json,os,shutil,uuid
+
+import hashlib
+import json
+import os
+import shutil
+import uuid
 from pathlib import Path
 from typing import Any
+
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory
 from dtwin.benchmark.openswisshcc_multisequence_batch import COHORT_SCHEMA
-from dtwin.benchmark.openswisshcc_multisequence_gate import validate_multisequence_cohort
+from dtwin.benchmark.openswisshcc_multisequence_gate import (
+ validate_multisequence_cohort,
+)
 from dtwin.benchmark.openswisshcc_multisequence_quality import verify_quality_review
 from dtwin.core import PipelineError
 

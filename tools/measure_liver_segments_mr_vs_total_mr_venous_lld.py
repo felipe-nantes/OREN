@@ -174,7 +174,7 @@ def main() -> int:
         if not lsm_mask.is_file():
             try:
                 segmenta_isolado(venosa_src, lsm_mask)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 feitos[anon] = {"erro": f"{type(exc).__name__}: {exc}"}
                 destino.write_text(json.dumps(feitos, indent=1, ensure_ascii=False), encoding="utf-8")
                 print(f"    falhou: {exc}", flush=True)

@@ -4,10 +4,11 @@ from __future__ import annotations
 import hashlib
 import random
 from collections import Counter, defaultdict
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from dtwin.core import PipelineError
-from dtwin.learning.schemas import ProtectedTrainingCase, SPLIT_SCHEMA
+from dtwin.learning.schemas import SPLIT_SCHEMA, ProtectedTrainingCase
 
 
 def _stable_seed(seed: int, token: str) -> int:

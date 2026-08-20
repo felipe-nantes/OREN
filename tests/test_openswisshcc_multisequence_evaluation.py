@@ -1,10 +1,17 @@
-import hashlib,json
+import hashlib
+import json
+
 import pytest
+
 from dtwin.benchmark import openswisshcc_multisequence_evaluation as ev
 from dtwin.benchmark.openswisshcc_multisequence_freeze import PAIR_BANK
-from dtwin.benchmark.openswisshcc_multisequence_inference import CASE_SCHEMA,RUN_SCHEMA
-from dtwin.benchmark.openswisshcc_multisequence_quality import SCHEMA as QUALITY_SCHEMA,_signature as quality_signature
+from dtwin.benchmark.openswisshcc_multisequence_inference import CASE_SCHEMA, RUN_SCHEMA
+from dtwin.benchmark.openswisshcc_multisequence_quality import SCHEMA as QUALITY_SCHEMA
+from dtwin.benchmark.openswisshcc_multisequence_quality import (
+ _signature as quality_signature,
+)
 from dtwin.core import PipelineError
+
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def run(tmp_path):

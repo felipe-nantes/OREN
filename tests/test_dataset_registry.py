@@ -8,7 +8,11 @@ import SimpleITK as sitk
 
 from dtwin.core import PipelineError
 from dtwin.datasets.ingest import main as ingest_main
-from dtwin.datasets.registry import ingest_dataset_config, load_dataset_config, write_jsonl
+from dtwin.datasets.registry import (
+    ingest_dataset_config,
+    load_dataset_config,
+    write_jsonl,
+)
 from tools.make_synthetic_case import write_dicom_series
 
 

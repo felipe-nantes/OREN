@@ -8,9 +8,11 @@ from dtwin.benchmark.openswisshcc_candidate_volume_score import (
     REVIEW_SCHEMA,
     validate_candidate_volume_bundle,
 )
-from dtwin.benchmark.openswisshcc_highdimensional_inference import _atomic_json, _canonical_hash
+from dtwin.benchmark.openswisshcc_highdimensional_inference import (
+    _atomic_json,
+    _canonical_hash,
+)
 from dtwin.core import PipelineError
-
 
 REQUIRED_CONFIRMATIONS = (
     "roi_contains_liver",

@@ -15,7 +15,6 @@ from dtwin.learning.internal_blind_phase_adapter import (
 )
 from dtwin.learning.multiphase_ingest import ARTERIAL, DELAYED, VENOUS
 
-
 CASE_ID = "ARGOS-BLIND-0001"
 
 

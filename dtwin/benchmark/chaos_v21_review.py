@@ -12,7 +12,6 @@ from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 REVIEW_SCHEMA = "argos-chaos-v21-uniform9-human-review-v1"
 
 

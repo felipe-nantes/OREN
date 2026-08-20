@@ -14,13 +14,13 @@ import re
 import shutil
 import uuid
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import BinaryIO, Iterable
+from typing import BinaryIO
 from zipfile import ZipFile, ZipInfo
 
 from dtwin.core import PipelineError
-
 
 DATASET_ID = "openswisshcc-v1"
 INPUT_DATASET_ALIAS = "public_liver_mri_v1"

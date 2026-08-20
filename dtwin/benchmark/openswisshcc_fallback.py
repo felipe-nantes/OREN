@@ -19,7 +19,6 @@ from dtwin.core import PipelineError, load_profile
 from dtwin.medgemma_client import load_screening_config, model_trace
 from dtwin.medgemma_panel import generate_liver_panel
 
-
 FALLBACK_VERSION = "openswisshcc-venous-fast-pathology-fallback-v1"
 FALLBACK_REASON = "multiphase_alignment_gate_failure"
 REVIEW_FALLBACK_VERSION = "openswisshcc-venous-review-remediation-v1"

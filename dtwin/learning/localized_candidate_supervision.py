@@ -11,8 +11,9 @@ import json
 import os
 import shutil
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import SimpleITK as sitk
@@ -21,7 +22,6 @@ from scipy import ndimage
 
 from dtwin.core import PipelineError
 from dtwin.learning.protocol import canonical_sha256, sha256_file
-
 
 GEOMETRY_SCHEMA = "argos-hybrid-localized-candidate-geometry-v1"
 GEOMETRY_RECORD_SCHEMA = "argos-hybrid-localized-candidate-record-v1"

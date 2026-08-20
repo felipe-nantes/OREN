@@ -12,7 +12,6 @@ from dtwin.benchmark.openswisshcc_holdout_panels import COHORT_SCHEMA, GALLERY_S
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 REVIEW_SCHEMA = "argos-openswisshcc-holdout-uniform9-human-review-v1"
 EXPECTED_CASE_COUNT = 44
 EXPECTED_MULTIPHASE_COUNT = 43

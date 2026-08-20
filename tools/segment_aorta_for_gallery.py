@@ -76,7 +76,7 @@ def main() -> int:
         try:
             receipt = isolado(fonte, destino, label="aorta")
             print(f"    ok em {receipt['elapsed_seconds']:.0f}s", flush=True)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"    falhou: {exc}", flush=True)
 
     print("\nconcluido")

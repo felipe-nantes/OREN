@@ -23,7 +23,6 @@ from dtwin.benchmark.openswisshcc_highdimensional_inference import (
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import load_screening_config
 
-
 PREDICTION_SCHEMA = "argos-openswisshcc-highdimensional-batch-prediction-v1"
 PROGRESS_SCHEMA = "argos-openswisshcc-highdimensional-batch-progress-v1"
 SUMMARY_SCHEMA = "argos-openswisshcc-highdimensional-batch-summary-v1"

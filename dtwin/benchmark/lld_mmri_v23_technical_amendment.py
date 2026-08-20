@@ -17,7 +17,6 @@ from dtwin.core import PipelineError, load_profile
 from dtwin.medgemma_client import load_screening_config
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 AMENDMENT_SCHEMA = "argos-lld-mmri-v23-label-blind-technical-amendment-v1"
 DYNAMIC_ROLES = ("t1_native", "t1_arterial", "t1_venous", "t1_delayed")
 SUPPORT_CUTS = (1.0, 0.99, 0.95, 0.80, 0.50)

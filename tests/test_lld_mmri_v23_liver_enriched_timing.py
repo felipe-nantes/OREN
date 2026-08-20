@@ -18,7 +18,6 @@ from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.core import PipelineError
 from tests.test_lld_mmri_v23_liver_enriched_review import _sources
 
-
 CONFIG = Path("configs/medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml")
 
 

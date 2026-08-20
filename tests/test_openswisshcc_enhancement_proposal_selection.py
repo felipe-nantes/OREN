@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from dtwin.benchmark.openswisshcc_enhancement_proposal_selection import select_top_components
+from dtwin.benchmark.openswisshcc_enhancement_proposal_selection import (
+    select_top_components,
+)
 
 
 def test_selects_exactly_five_largest_components_deterministically():

@@ -1,7 +1,8 @@
-from pathlib import Path
 import pytest
+
 from dtwin.benchmark import openswisshcc_multisequence_quality as q
 from dtwin.core import PipelineError
+
 
 def state(manifest="m1"):
  records=[{"case_id":"anon-a","manifest_sha256":manifest,"panel_set_sha256":"set-a","panel_count":2,"unavailable_tiles":[]},{"case_id":"anon-b","manifest_sha256":"m2","panel_set_sha256":"set-b","panel_count":3,"unavailable_tiles":[{"role":"t2"}]}]

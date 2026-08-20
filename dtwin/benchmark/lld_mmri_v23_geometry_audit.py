@@ -22,7 +22,6 @@ from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 
-
 CASE_SCHEMA = "argos-lld-mmri-v23-geometry-audit-case-v1"
 AUDIT_SCHEMA = "argos-lld-mmri-v23-geometry-audit-v1"
 DYNAMIC_T1_ROLES = ("t1_native", "t1_arterial", "t1_venous", "t1_delayed")

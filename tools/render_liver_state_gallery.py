@@ -30,11 +30,11 @@ warnings.filterwarnings("ignore")
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-import pyvista as pv  # noqa: E402
+import pyvista as pv
 
 pv.OFF_SCREEN = True
 
-from dtwin.stages import (  # noqa: E402
+from dtwin.stages import (
     _isolar_orgao_para_visualizacao,
     _mesh_from_mask,
     _refine_mask,

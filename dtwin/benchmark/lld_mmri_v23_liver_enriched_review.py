@@ -1,18 +1,20 @@
 """Signed technical-review gate for the LLD-MMRI v23 liver-enriched pilot."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from dtwin.benchmark.lld_mmri_v23_liver_enriched_pilot import COHORT_SCHEMA, GALLERY_SCHEMA
+from dtwin.benchmark.lld_mmri_v23_liver_enriched_pilot import (
+    COHORT_SCHEMA,
+    GALLERY_SCHEMA,
+)
 from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
 from dtwin.medgemma_panel_liver_enriched import LIVER_ENRICHED_POLICY
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 REVIEW_SCHEMA = "argos-lld-mmri-v23-liver-enriched-human-review-v1"
 FULL_REVIEW_SCHEMA = "argos-lld-mmri-v23-liver-enriched-full-human-review-v1"

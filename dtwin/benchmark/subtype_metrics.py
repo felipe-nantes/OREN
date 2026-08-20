@@ -6,10 +6,10 @@ métrica primária, em consonância com a política conservadora do benchmark.
 """
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from .metrics import wilson_interval
-
 
 SUBTYPE_CLASSES = ("hcc", "fnh", "hemangioma", "hepatic_cyst")
 SUBTYPE_LABELS_PT = {

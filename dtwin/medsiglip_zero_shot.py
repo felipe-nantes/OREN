@@ -3,14 +3,13 @@
 """Pontuação MedSigLIP zero-shot para pesquisa, sem emitir diagnóstico."""
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
-from PIL import Image
 import yaml
+from PIL import Image
 
 from .core import PipelineError, sha256_of
 
@@ -199,7 +198,10 @@ class MedSigLIPScorer:
     def load(self) -> None:
         try:
             import torch
-            from transformers import AutoModelForZeroShotImageClassification, AutoProcessor
+            from transformers import (
+                AutoModelForZeroShotImageClassification,
+                AutoProcessor,
+            )
 
             self._processor = AutoProcessor.from_pretrained(
                 self.config.model_id,

@@ -14,9 +14,8 @@ from __future__ import annotations
 import json
 import math
 import os
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
-
 
 SCHEMA = "argos-operational-dicom-timing-v1"
 DEFAULT_REPORT_BUDGET_SECONDS = 180.0

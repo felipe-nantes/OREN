@@ -28,7 +28,10 @@ from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import (
     _validate_blind_localizer_run,
 )
 from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _wilson
-from dtwin.benchmark.openswisshcc_volumetric_evaluation import _best_threshold, _binary_metrics
+from dtwin.benchmark.openswisshcc_volumetric_evaluation import (
+    _best_threshold,
+    _binary_metrics,
+)
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 

@@ -7,8 +7,8 @@ import math
 import re
 import statistics
 import time
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 from urllib.request import Request
 
 from PIL import Image
@@ -17,9 +17,11 @@ from dtwin.benchmark.openswisshcc_axial_atlas import (
     CASE_SCHEMA,
     COHORT_SCHEMA,
     GALLERY_SCHEMA,
-    PROTOCOL_SIGNATURE as ATLAS_PROTOCOL_SIGNATURE,
-    REVIEW_SCHEMA,
     REQUIRED_REVIEW_CONFIRMATIONS,
+    REVIEW_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_axial_atlas import (
+    PROTOCOL_SIGNATURE as ATLAS_PROTOCOL_SIGNATURE,
 )
 from dtwin.benchmark.openswisshcc_highdimensional_inference import (
     RESPONSE_PREFIX,
@@ -37,7 +39,6 @@ from dtwin.benchmark.openswisshcc_volume_score import (
 )
 from dtwin.core import PipelineError, sha256_of
 from dtwin.medgemma_client import load_screening_config
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v17-atlas-score-protocol-v1"
 PREDICTION_SCHEMA = "argos-openswisshcc-v17-atlas-score-prediction-v1"

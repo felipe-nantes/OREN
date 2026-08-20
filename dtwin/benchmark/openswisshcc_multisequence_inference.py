@@ -1,10 +1,21 @@
 """Blind, scores-only MedGemma pairwise runner for reviewed multisequence v9 panels."""
 from __future__ import annotations
-import hashlib, json, shutil, statistics, time, uuid
+
+import hashlib
+import json
+import shutil
+import statistics
+import time
+import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
+
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
-from dtwin.benchmark.openswisshcc_multisequence_freeze import PAIR_BANK, verify_multisequence_freeze
+from dtwin.benchmark.openswisshcc_multisequence_freeze import (
+    PAIR_BANK,
+    verify_multisequence_freeze,
+)
 from dtwin.benchmark.openswisshcc_multisequence_gate import verify_multisequence_review
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic

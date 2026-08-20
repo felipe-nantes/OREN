@@ -23,7 +23,7 @@ class CertificateHandler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         path = urlsplit(self.path).path
         if path == "/health":
             body = b'{"status":"ready","service":"oren-quest-certificate"}'

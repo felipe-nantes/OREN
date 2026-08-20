@@ -20,7 +20,6 @@ from dtwin.benchmark.v23_retrospective_multicohort import (
 )
 from dtwin.core import PipelineError
 
-
 SUMMARY_SCHEMA = "argos-v23-retrospective-multicohort-phase2-summary-v1"
 CASE_SCHEMA = "argos-v23-retrospective-openswisshcc-case-inventory-v1"
 FOLD_SCHEMA = "argos-v23-retrospective-openswisshcc-protected-fold-v1"

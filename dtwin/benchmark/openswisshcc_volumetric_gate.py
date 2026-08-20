@@ -12,14 +12,14 @@ import hashlib
 import json
 import os
 import uuid
+from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _load_json, _sha256
 from dtwin.core import PipelineError
 from dtwin.medgemma_client import effective_config_sha256, load_screening_config
-
 
 REVIEW_SCHEMA = "argos-openswisshcc-volumetric-review-v1"
 FREEZE_SCHEMA = "argos-openswisshcc-volumetric-freeze-v1"

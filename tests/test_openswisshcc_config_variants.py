@@ -9,7 +9,6 @@ from dtwin.benchmark.openswisshcc_freeze import (
 )
 from dtwin.benchmark.openswisshcc_inference import _validated_config
 
-
 MULTI = Path("configs/medgemma_local_4b_multiphase_fast_pathology.yaml")
 FALLBACK = Path("configs/medgemma_local_4b_venous_review_fallback_pathology.yaml")
 CONTRAST = Path("configs/medgemma_local_4b_venous_review_fallback_high_contrast_pathology.yaml")

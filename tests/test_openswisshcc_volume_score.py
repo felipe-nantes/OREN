@@ -6,7 +6,6 @@ import pytest
 import dtwin.benchmark.openswisshcc_volume_score as score
 from dtwin.core import PipelineError, sha256_of
 
-
 CASE_IDS = [
     "anon-openswiss-0123456789abcdef",
     "anon-openswiss-fedcba9876543210",

@@ -72,6 +72,7 @@ def test_medgemma_stage_rejects_non_normalized_probabilities(tmp_path: Path):
             return {"choice_probabilities": {"POSITIVA": 0.5, "NEGATIVA": 0.5, "INCONCLUSIVA": 0.5}}
     panels, context = _context(tmp_path)
     import pytest
+
     from dtwin.core import PipelineError
     with pytest.raises(PipelineError, match="somam 1"):
         module.run_v21_medgemma_scores(

@@ -6,8 +6,8 @@ import pytest
 
 from dtwin.benchmark.openswisshcc_alignment import _sha256
 from dtwin.benchmark.openswisshcc_volumetric_pairwise import (
-    PAIRWISE_SCHEMA,
     PAIR_BANK,
+    PAIRWISE_SCHEMA,
     _axial_indices,
     run_volumetric_pairwise_scores,
 )

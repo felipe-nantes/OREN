@@ -40,7 +40,6 @@ from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
 from dtwin.medsiglip_zero_shot import load_medsiglip_config
 
-
 LOCALIZER_INPUT_SCHEMA = "argos-public-liver-mri-input-v1"
 MEDGEMMA_CASE_SCHEMA = "argos-openswisshcc-holdout-v21-medgemma-choice-score-v1"
 MEDGEMMA_RUN_SCHEMA = "argos-openswisshcc-holdout-v21-medgemma-choice-batch-v1"

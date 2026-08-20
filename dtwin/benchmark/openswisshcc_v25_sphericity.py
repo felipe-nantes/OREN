@@ -7,7 +7,6 @@ decision threshold are fitted only inside training folds.
 from __future__ import annotations
 
 import csv
-import json
 import shutil
 import time
 import uuid
@@ -33,7 +32,6 @@ from dtwin.benchmark.openswisshcc_v24_planarity_contrast import (
     _write_json,
 )
 from dtwin.core import PipelineError
-
 
 PROTOCOL_SCHEMA = "argos-openswisshcc-v25-inverse-sphericity-protocol-v1"
 EVALUATION_SCHEMA = "argos-openswisshcc-v25-inverse-sphericity-evaluation-v1"

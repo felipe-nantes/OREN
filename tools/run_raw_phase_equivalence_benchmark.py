@@ -17,13 +17,27 @@ import yaml
 from dtwin.benchmark.lld_mmri_v23_mask_quality import evaluate_liver_mask_quality
 from dtwin.core import PipelineError, sha256_of
 from dtwin.learning.exam_to_panels import build_exam_panels
-from dtwin.learning.raw_phase_equivalence import (
-    SCHEMA, panel_hashes, positive_arm_metrics, selection_key, verified_review,
-)
-from dtwin.learning.raw_dicom_phase_resolver import REQUIRED_PHASES, resolve_raw_dicom_phases
 from dtwin.learning.multiphase_ingest import build_multiphase_case
-from dtwin.learning.visual_inference import classify_embeddings, embed_panels, load_production_bundle
-from dtwin.segmentation_subprocess import run_segmentation_subprocess, segmentation_error
+from dtwin.learning.raw_dicom_phase_resolver import (
+    REQUIRED_PHASES,
+    resolve_raw_dicom_phases,
+)
+from dtwin.learning.raw_phase_equivalence import (
+    SCHEMA,
+    panel_hashes,
+    positive_arm_metrics,
+    selection_key,
+    verified_review,
+)
+from dtwin.learning.visual_inference import (
+    classify_embeddings,
+    embed_panels,
+    load_production_bundle,
+)
+from dtwin.segmentation_subprocess import (
+    run_segmentation_subprocess,
+    segmentation_error,
+)
 
 
 def _atomic_json(path: Path, payload: dict[str, Any]) -> None:

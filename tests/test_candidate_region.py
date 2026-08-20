@@ -3,10 +3,18 @@ import json
 import numpy as np
 import pytest
 
-from dtwin.candidate_region import validate_and_store_candidate
-from dtwin.core import PipelineError, array_from, array_to_image, read_image, save_image, sha256_of
-from dtwin.engine import Engine
 from dtwin import stages
+from dtwin.candidate_region import validate_and_store_candidate
+from dtwin.core import (
+    PipelineError,
+    array_from,
+    array_to_image,
+    read_image,
+    save_image,
+    sha256_of,
+)
+from dtwin.engine import Engine
+
 from .conftest import make_sphere_mask
 
 

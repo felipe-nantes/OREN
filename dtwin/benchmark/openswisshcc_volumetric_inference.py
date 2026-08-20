@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 import copy
-import json
 import math
 import shutil
 import time
 import uuid
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any
 
-from dtwin.benchmark.openswisshcc_alignment import _load_json, _publish_directory, _sha256
+from dtwin.benchmark.openswisshcc_alignment import (
+    _load_json,
+    _publish_directory,
+    _sha256,
+)
 from dtwin.benchmark.openswisshcc_volumetric_gate import (
     AGGREGATION_RULE,
     validate_volumetric_candidate,
@@ -31,7 +35,6 @@ from dtwin.medgemma_screening import (
     build_report_envelope,
     sha256_of_text,
 )
-
 
 INFERENCE_SCHEMA = "argos-openswisshcc-volumetric-inference-case-v1"
 RUN_SCHEMA = "argos-openswisshcc-volumetric-inference-run-v1"

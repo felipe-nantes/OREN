@@ -21,7 +21,6 @@ from dtwin.medgemma_client import (
     load_screening_config,
 )
 
-
 FREEZE_SCHEMA = "argos-openswisshcc-experiment-freeze-v1"
 FREEZE_SIGNED_FIELDS = (
     "schema",

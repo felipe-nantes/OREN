@@ -13,14 +13,12 @@ import hashlib
 import json
 import os
 import random
-import shutil
-import tempfile
 import uuid
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import date
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import pydicom
@@ -30,7 +28,6 @@ from pydicom.sequence import Sequence
 from pydicom.uid import EnhancedMRImageStorage, ExplicitVRLittleEndian
 
 from dtwin.benchmark.dataset_audit import select_best_mr_series
-
 
 SEED = 20260726
 OUTPUT_NAME = "ARGOS_INTERNAL_BLIND_BENCHMARK_120_V1"

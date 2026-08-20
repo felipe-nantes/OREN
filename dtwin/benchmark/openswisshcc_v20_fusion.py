@@ -25,6 +25,8 @@ from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import (
 from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _wilson
 from dtwin.benchmark.openswisshcc_v11_fusion import (
     WEIGHTS as V11_WEIGHTS,
+)
+from dtwin.benchmark.openswisshcc_v11_fusion import (
     verify_fusion_protocol as verify_v11_protocol,
 )
 from dtwin.benchmark.openswisshcc_volumetric_evaluation import (
@@ -33,7 +35,6 @@ from dtwin.benchmark.openswisshcc_volumetric_evaluation import (
 )
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 BLIND_BUNDLE_SCHEMA = "argos-openswisshcc-v20-blind-fusion-bundle-v1"
 BLIND_SIGNAL_SCHEMA = "argos-openswisshcc-v20-blind-fusion-signal-v1"

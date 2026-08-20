@@ -14,8 +14,9 @@ import os
 import tempfile
 import zipfile
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import nibabel as nib
 import numpy as np
@@ -23,7 +24,6 @@ import numpy as np
 from dtwin.core import PipelineError
 from dtwin.learning.external_bundle_evaluation import _metrics
 from dtwin.learning.protocol import canonical_sha256, sha256_file
-
 
 AUDIT_SCHEMA = "oren-monophase-external-failure-audit-v1"
 CASE_SCHEMA = "oren-monophase-external-failure-case-v1"

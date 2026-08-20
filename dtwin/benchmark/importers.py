@@ -13,9 +13,15 @@ import SimpleITK as sitk
 import yaml
 
 from dtwin import stages
+from dtwin.benchmark.dataset_audit import (
+    describe_selected_series,
+    select_best_mr_series,
+)
 from dtwin.core import Case, PipelineError, load_profile, sha256_of
-from dtwin.benchmark.dataset_audit import describe_selected_series, select_best_mr_series
-from dtwin.segmentation_subprocess import run_segmentation_subprocess, segmentation_error
+from dtwin.segmentation_subprocess import (
+    run_segmentation_subprocess,
+    segmentation_error,
+)
 
 from .hashing import input_hashes, sha256_paths
 from .models import (
@@ -27,7 +33,6 @@ from .models import (
     GroundTruthLabel,
     InferenceCase,
 )
-
 
 SUPPORTED_FORMATS = {"DICOM", "NIFTI", "MIDS"}
 PROTECTED_LABEL_KEYS = {

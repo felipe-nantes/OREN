@@ -18,7 +18,9 @@ from typing import Any
 
 from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_candidate_shape import CASE_SCHEMA, COHORT_SCHEMA
-from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import _load_development_labels
+from dtwin.benchmark.openswisshcc_lesion_localizer_evaluation import (
+    _load_development_labels,
+)
 from dtwin.benchmark.openswisshcc_localizer_roi_evaluation import _wilson
 from dtwin.benchmark.openswisshcc_v20_fusion import (
     V11_WEIGHTS,
@@ -26,10 +28,12 @@ from dtwin.benchmark.openswisshcc_v20_fusion import (
     _ecdf,
     verify_fusion_protocol,
 )
-from dtwin.benchmark.openswisshcc_volumetric_evaluation import _best_threshold, _binary_metrics
+from dtwin.benchmark.openswisshcc_volumetric_evaluation import (
+    _best_threshold,
+    _binary_metrics,
+)
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 EVALUATION_SCHEMA = "argos-openswisshcc-v23-shape-fusion-development-evaluation-v1"
 CALIBRATOR_SCHEMA = "argos-openswisshcc-v23-shape-fusion-calibrator-v1"

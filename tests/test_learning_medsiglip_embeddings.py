@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 
@@ -14,7 +13,7 @@ from dtwin.learning.medsiglip_embeddings import (
     extract_embeddings,
     verify_embeddings,
 )
-from dtwin.learning.protocol import canonical_sha256, sha256_file
+from dtwin.learning.protocol import sha256_file
 
 
 class FakeBackend:

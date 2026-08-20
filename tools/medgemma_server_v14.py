@@ -12,7 +12,6 @@ import argparse
 import base64
 import io
 import math
-import os
 import time
 from pathlib import Path
 from typing import Literal
@@ -20,8 +19,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 import tools.medgemma_server_base as _base
-from tools.medgemma_server_base import *  # noqa: F401,F403
-
+from tools.medgemma_server_base import *
 
 VOLUME_SCORE_CONTRACT = "dtwin-medgemma-volume-score-v1"
 VOLUME_SCORE_METHOD = "first_token_restricted_softmax_v1"
@@ -286,7 +284,7 @@ def create_app(config_path: Path):
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.exception("Falha de pontuação volumétrica MedGemma")
             raise HTTPException(
                 status_code=500,

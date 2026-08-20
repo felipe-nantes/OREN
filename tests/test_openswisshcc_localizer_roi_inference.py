@@ -5,10 +5,15 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from dtwin.benchmark.openswisshcc_alignment import _sha256
-from dtwin.benchmark.openswisshcc_lesion_localizer import CASE_SCHEMA as LOCALIZER_CASE_SCHEMA
-from dtwin.benchmark.openswisshcc_localizer_roi_freeze import QUESTION_BANK, SCORING_PROTOCOL
 from dtwin.benchmark import openswisshcc_localizer_roi_inference as inference
+from dtwin.benchmark.openswisshcc_alignment import _sha256
+from dtwin.benchmark.openswisshcc_lesion_localizer import (
+    CASE_SCHEMA as LOCALIZER_CASE_SCHEMA,
+)
+from dtwin.benchmark.openswisshcc_localizer_roi_freeze import (
+    QUESTION_BANK,
+    SCORING_PROTOCOL,
+)
 from dtwin.core import PipelineError
 
 

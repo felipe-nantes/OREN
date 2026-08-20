@@ -6,8 +6,9 @@ import math
 import os
 import shutil
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from dtwin.benchmark.lld_mmri_v23_download import _load_and_validate_protocol
 from dtwin.benchmark.lld_mmri_v23_evaluation import TIMING_SCHEMA, _verify_predictions
@@ -15,7 +16,6 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory, _sha256
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 CASE_TIMING_SCHEMA = "argos-lld-mmri-v23-direct-case-timing-v1"
 RUNNER_ID = "argos-lld-mmri-v23-direct-case-runner-v1"

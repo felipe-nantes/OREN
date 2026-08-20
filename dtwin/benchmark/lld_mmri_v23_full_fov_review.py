@@ -1,8 +1,8 @@
 """Signed human-review gate for the label-blind LLD-MMRI full-FOV 3x9 pilot."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +12,6 @@ from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.core import PipelineError
 from dtwin.medgemma_panel_full_fov import FULL_FOV_MULTIPANEL_POLICY
 from dtwin.medgemma_screening import _write_json_atomic
-
 
 REVIEW_SCHEMA = "argos-lld-mmri-v23-full-fov-3x9-human-review-v1"
 

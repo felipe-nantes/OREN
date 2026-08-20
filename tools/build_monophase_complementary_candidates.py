@@ -4,7 +4,9 @@ import argparse
 import json
 from pathlib import Path
 
-from dtwin.learning.monophase_complementary_candidates import build_complementary_candidates
+from dtwin.learning.monophase_complementary_candidates import (
+    build_complementary_candidates,
+)
 
 
 def main() -> int:

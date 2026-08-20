@@ -19,7 +19,6 @@ from dtwin.benchmark.openswisshcc_fallback import (
 from dtwin.benchmark.openswisshcc_freeze import verify_experiment_freeze
 from dtwin.core import PipelineError
 
-
 TRIAGE_SCHEMA = "argos-openswisshcc-technical-triage-v1"
 REMEDIATION_SCHEMA = "argos-openswisshcc-technical-remediation-v1"
 ALLOWED_CODES = frozenset({"M", "C", "I"})

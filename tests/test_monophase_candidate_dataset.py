@@ -8,8 +8,13 @@ import yaml
 from PIL import Image
 
 from dtwin.core import PipelineError
-from dtwin.learning.candidate_dataset import build_candidate_dataset, verify_candidate_dataset
-from dtwin.learning.monophase_candidate_dataset import derive_monophase_candidate_dataset
+from dtwin.learning.candidate_dataset import (
+    build_candidate_dataset,
+    verify_candidate_dataset,
+)
+from dtwin.learning.monophase_candidate_dataset import (
+    derive_monophase_candidate_dataset,
+)
 from dtwin.learning.protocol import atomic_write_json, canonical_sha256, sha256_file
 from dtwin.learning.schemas import PROTOCOL_SCHEMA, ProtectedTrainingCase
 from dtwin.learning.splits import build_nested_splits

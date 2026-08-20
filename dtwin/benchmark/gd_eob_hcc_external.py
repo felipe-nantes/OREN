@@ -15,8 +15,9 @@ import re
 import shutil
 import uuid
 import zipfile
+from collections.abc import Callable, Iterable
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable, Iterable
+from typing import Any
 
 import nibabel as nib
 import numpy as np
@@ -25,7 +26,6 @@ from dtwin.benchmark.openswisshcc_alignment import _publish_directory
 from dtwin.benchmark.openswisshcc_v20_fusion import _canonical_sha
 from dtwin.benchmark.openswisshcc_v23_baseline import verify_v23_baseline_lock
 from dtwin.core import PipelineError
-
 
 DATASET_ID = "gd_eob_dtpa_phlf_2026"
 ZENODO_RECORD_ID = 18622298

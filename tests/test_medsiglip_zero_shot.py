@@ -1,8 +1,7 @@
-import json
 
 import numpy as np
-from PIL import Image, PngImagePlugin
 import pytest
+from PIL import Image, PngImagePlugin
 
 from dtwin.core import PipelineError
 from dtwin.medsiglip_zero_shot import (

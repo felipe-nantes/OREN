@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from PIL import Image
 import pytest
+from PIL import Image
 
 from dtwin.benchmark.lld_mmri_v23_panels import COHORT_SCHEMA, GALLERY_SCHEMA
 from dtwin.benchmark.lld_mmri_v23_review import (
