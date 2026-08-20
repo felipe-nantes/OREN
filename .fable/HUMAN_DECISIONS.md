@@ -72,3 +72,15 @@ Formato mínimo de HUMAN_GATES.md. Aprovador em todas: **Felipe Nantes (fnantes0
     (voxel fantasma a 8 mm via OR em array space). O sítio
     `multiphase_ingest` foi verificado e INOCENTADO (resample físico já trata
     direction).
+
+14. **APROVO HG-02 para TASK-2026-08-20-PH09-HRR-02, opção B1 (auditabilidade
+    apenas), escopo `dtwin/learning/raw_dicom_phase_resolver.py`, aprovador
+    Felipe Nantes, 2026-08-20**: o manifesto de resolução de fases passa a
+    registrar (a) colisões de papel no texto da série
+    (`ambiguous_text_roles` por série selecionada +
+    `series_with_ambiguous_text_roles` global) e (b) séries dinâmicas
+    elegíveis não selecionadas pela heurística primeira/segunda/última
+    (`unselected_eligible_dynamic_series`). NENHUMA heurística de seleção
+    alterada — mesmas séries, mesmos códigos de erro, mesma confiança; campos
+    são aditivos ao schema v1 (único consumidor externo lê apenas
+    series_hash). Fecha os 2 itens abertos do TD-014.

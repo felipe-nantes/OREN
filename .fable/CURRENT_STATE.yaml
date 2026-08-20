@@ -18,10 +18,10 @@ phases:
   PHASE_06_SCIENTIFIC_REGRESSION: {status: DONE, date: "2026-08-18", note: "451/16 reconciliado; tolerâncias medidas (delta ZERO bitwise CPU) e RATIFICADAS; 3 blockers declarados"}
   PHASE_07_ADVERSARIAL: {status: DONE, date: "2026-08-19", note: "3 waves. Núcleo 82,6→89,5% branch (splits/metrics 100%, seg_contract 95,7%); 15/15 mutantes KILLED (SCI-003/004/013, GEO-004, gates); 59 testes negativos novos; pip-audit limpo; mutmut incompatível Windows→sondas dirigidas; S5/S6/G8/G9 justificados. Exit review: TASK-2026-08-19-PH07-EXIT.md"}
   PHASE_08_LOW_RISK_REFACTOR: {status: DONE, date: "2026-08-19", note: "2 waves. W1: TD-015/TD-007 RESOLVED, mypy robustness zerado, 7×B023 zerados. W2: 731→2 achados mecânicos (819 safe fixes, 452 arquivos), residuais justificados. Portões idênticos 1768/4/1-ambiental — zero regressões em ~830 mudanças. Exit review: TASK-2026-08-19-PH08-EXIT.md"}
-  PHASE_09_HIGH_RISK_REVIEW: {status: IN_PROGRESS, note: "autorizada 2026-08-20; wave 1 = proposta governada dos direction-blind comparators (HG-03): reproduzir → evidenciar → propor → PARAR no gate"}
+  PHASE_09_HIGH_RISK_REVIEW: {status: IN_PROGRESS, note: "waves 1-2 DONE 2026-08-20. W1: HG-03 item 13 (direction nos 2 comparadores; ingest inocentado; 2/2 KILLED). W2: HG-02 item 14 (auditoria do manifesto DICOM; TD-014 RESOLVED; seleção idêntica; 2/2 KILLED). Portões idênticos 1769/4/1-ambiental. Wave 3 em curso: seg_worker.py órfão (prova de alcançabilidade)"}
   PHASE_10_CONSOLIDATION: {status: NOT_STARTED}
 
-last_completed_task: TASK-2026-08-19-PH08-REF-02 (wave 2 + exit review — PHASE_08 encerrada)
+last_completed_task: TASK-2026-08-20-PH09-HRR-02 (wave 2 — auditoria DICOM, TD-014 RESOLVED)
 next_recommended_task: >
   Iniciar PHASE_09_HIGH_RISK_REVIEW (aguarda autorização humana). Handoff no
   exit review: (1) direction-blind comparators, 3 ocorrências, HG-03;
@@ -41,9 +41,9 @@ tooling:
   ainda_ausentes: [pytest-benchmark, Serena/Context7 (MCP não disponível nesta sessão)]
 
 commits_main:
-  pushed: [7efa2dc, 0ba6f01, bd278b5, 8c31c76, "5087041", 42a8514, e4dd3cc, b66002a, dfb36b5, 515b7b3, 637d9e1, 3f06f48, 3d146d5, c986e17, "072c3e6", 73ccb3e, daa878c, 29be45b]
-  push_status: "origin/main = 29be45b (OREN.git; verificado via ls-remote 2026-08-20)"
-  nao_commitado: "PHASE_09 em curso (task card + este estado) — commit quando solicitado"
+  pushed: [7efa2dc, 0ba6f01, bd278b5, 8c31c76, "5087041", 42a8514, e4dd3cc, b66002a, dfb36b5, 515b7b3, 637d9e1, 3f06f48, 3d146d5, c986e17, "072c3e6", 73ccb3e, daa878c, 29be45b, 77727b3, 0d0ccc2]
+  push_status: "origin/main = 0d0ccc2 (OREN.git; verificado via ls-remote 2026-08-20)"
+  nao_commitado: "PHASE_09 wave 2 em curso — commit quando solicitado"
 
 migracao_docker_nativo:
   task: TASK-2026-08-18-MIGR-01

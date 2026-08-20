@@ -1,0 +1,14 @@
+[
+  {
+    "id": "P18-manifesto-sem-lista-de-descartadas",
+    "verdict": "KILLED",
+    "restored_ok": true,
+    "pytest_exit": 1
+  },
+  {
+    "id": "P19-manifesto-sem-contagem-de-colisoes",
+    "verdict": "KILLED",
+    "restored_ok": true,
+    "pytest_exit": 1
+  }
+]
