@@ -1,32 +1,32 @@
 schema: argos-fable-current-state-v2
 migrated_from: CURRENT_STATE.md (2026-08-18, autorização do operador; conteúdo normalizado — inconsistências de header acumuladas corrigidas nesta migração)
-last_updated: "2026-08-18 America/Sao_Paulo"
+last_updated: "2026-08-20 America/Sao_Paulo"
 pack_schema: argos-fable-engineering-pack-v1
 
 base_commit: 9683eaa796d01e946597f3fe1351556aa8fcb141
 branch: main
 worktree_da_sessao: claude/fable-engineering-phase-00-b0172f
-head_main_atual: 637d9e1 (pushed)
+head_main_atual: b5e739e (pushed)
 
 phases:
   PHASE_00_FREEZE: {status: DONE, date: "2026-08-17"}
   PHASE_01_CARTOGRAPHY: {status: DONE, date: "2026-08-17"}
   PHASE_02_CONTRACTS: {status: DONE, date: "2026-08-17"}
-  PHASE_03_CHARACTERIZATION: {status: IN_PROGRESS, note: "4 P0s caracterizados + HG-candidates revisadas; waves adicionais opcionais"}
+  PHASE_03_CHARACTERIZATION: {status: DONE, date: "2026-08-20", note: "4 P0s caracterizados + HG-candidates revisadas (2026-08-17/18); fechamento formal na PHASE_10 (HUMAN_DECISIONS item 18; waves extras opcionais declinadas)"}
   PHASE_04_INVARIANTS: {status: DONE, date: "2026-08-18", note: "11 contratos com invariante executável; 61 testes; 8 mutantes detectados"}
   PHASE_05_INTEGRATION: {status: DONE, date: "2026-08-18", note: "13 testes de fronteira real; achado TD-015; blockers GPU declarados"}
   PHASE_06_SCIENTIFIC_REGRESSION: {status: DONE, date: "2026-08-18", note: "451/16 reconciliado; tolerâncias medidas (delta ZERO bitwise CPU) e RATIFICADAS; 3 blockers declarados"}
   PHASE_07_ADVERSARIAL: {status: DONE, date: "2026-08-19", note: "3 waves. Núcleo 82,6→89,5% branch (splits/metrics 100%, seg_contract 95,7%); 15/15 mutantes KILLED (SCI-003/004/013, GEO-004, gates); 59 testes negativos novos; pip-audit limpo; mutmut incompatível Windows→sondas dirigidas; S5/S6/G8/G9 justificados. Exit review: TASK-2026-08-19-PH07-EXIT.md"}
   PHASE_08_LOW_RISK_REFACTOR: {status: DONE, date: "2026-08-19", note: "2 waves. W1: TD-015/TD-007 RESOLVED, mypy robustness zerado, 7×B023 zerados. W2: 731→2 achados mecânicos (819 safe fixes, 452 arquivos), residuais justificados. Portões idênticos 1768/4/1-ambiental — zero regressões em ~830 mudanças. Exit review: TASK-2026-08-19-PH08-EXIT.md"}
   PHASE_09_HIGH_RISK_REVIEW: {status: DONE, date: "2026-08-20", note: "3 waves, 3 decisões formais (itens 13-15): HG-03 direction nos comparadores (ingest inocentado), HG-02 auditoria DICOM (TD-014 RESOLVED), remoção do seg_worker legado. 4/4 mutantes KILLED; portões idênticos 1769/4/1-ambiental. Exit review: TASK-2026-08-20-PH09-EXIT.md"}
-  PHASE_10_CONSOLIDATION: {status: NOT_STARTED}
+  PHASE_10_CONSOLIDATION: {status: DONE, date: "2026-08-20", note: "registros vivos atualizados (SR-011 RESOLVED, legacy, system map); graphify regenerado (12.195 nós/782 comunidades); baseline v1 aposentado como histórico (item 16); SAFETY_KERNEL ratificado (item 17); PHASE_03 fechada (item 18); baseline final 1769/4/1-ambiental. Evidence: TASK-2026-08-20-PH10-CON-01_EVIDENCE.md"}
 
-last_completed_task: TASK-2026-08-20-PH09-EXIT (PHASE_09 encerrada)
+last_completed_task: TASK-2026-08-20-PH10-CON-01 (PHASE_10 — pack COMPLETO, 10/10 fases DONE)
 next_recommended_task: >
-  Iniciar PHASE_10_CONSOLIDATION (aguarda autorização humana): mapas/
-  contratos/evidências finais refletindo as fases 07-09; destino do mecanismo
-  de baseline v1 (5/5 pins stale, sem verificador); revisão do SAFETY_KERNEL
-  pelo operador; baseline final consolidado.
+  AUDITORIA COMPLETA (10/10 fases DONE em 2026-08-20). Operação normal sob os
+  contratos congelados e gates; re-auditoria ou novas waves somente sob
+  demanda do operador. Pendências externas: correção editorial de "assinado"
+  no manuscrito (SW-001) e ambiguidades restantes de MANUSCRIPT_VS_CODE.
 
 tooling:
   venv_win: ".venv-win (Python 3.13.14, pytest 9.1.1)"
@@ -41,9 +41,9 @@ tooling:
   ainda_ausentes: [pytest-benchmark, Serena/Context7 (MCP não disponível nesta sessão)]
 
 commits_main:
-  pushed: [7efa2dc, 0ba6f01, bd278b5, 8c31c76, "5087041", 42a8514, e4dd3cc, b66002a, dfb36b5, 515b7b3, 637d9e1, 3f06f48, 3d146d5, c986e17, "072c3e6", 73ccb3e, daa878c, 29be45b, 77727b3, 0d0ccc2]
-  push_status: "origin/main = 0d0ccc2 (OREN.git; verificado via ls-remote 2026-08-20)"
-  nao_commitado: "pack da PHASE_09 wave 3 + exit review — commit em curso"
+  pushed: [7efa2dc, 0ba6f01, bd278b5, 8c31c76, "5087041", 42a8514, e4dd3cc, b66002a, dfb36b5, 515b7b3, 637d9e1, 3f06f48, 3d146d5, c986e17, "072c3e6", 73ccb3e, daa878c, 29be45b, 77727b3, 0d0ccc2, b3cd61d, b634f71, 5fa342e, b5e739e]
+  push_status: "origin/main = b5e739e (OREN.git; verificado via ls-remote 2026-08-20)"
+  nao_commitado: "PHASE_10 completa (registros + graphify + anotações + este estado) — commit quando solicitado"
 
 migracao_docker_nativo:
   task: TASK-2026-08-18-MIGR-01
@@ -54,7 +54,7 @@ migracao_docker_nativo:
 snapshot_observado:
   repo: "1.267 paths versionados no snapshot 9683eaa; 147.797 linhas Python em 792 arquivos"
   hotspots: ["webapp/server.py (3.610)", "dtwin/learning/medsiglip_multiclass_classifier.py (1.395)", "dtwin/stages.py (1.243)"]
-  suite_atual: "1768 passed / 4 skipped / 1 failed ambiental (test_environment_report_accepts_free_gpu: exige GPU livre) — portão PH08 wave 1, 2026-08-19"
+  suite_atual: "1769 passed / 4 skipped / 1 failed ambiental (test_environment_report_accepts_free_gpu: exige GPU livre) — BASELINE FINAL da auditoria, PHASE_10, 2026-08-20"
   container: "argos-runtime:local sha256:a5e278043304 (py3.11.11, torch 2.6.0+cu124)"
   hardware: "Lenovo Legion 5 83DG, 31.7GiB RAM, RTX 4060 Laptop 8GB, driver 610.62"
   ci: "GitHub Actions ubuntu-latest py3.13: doctor + pytest -q; sem gates de lint/typing/coverage/mutação"
@@ -75,8 +75,6 @@ blockers:
     text: "Reexecução completa do pipeline científico impossível nesta máquina (fontes+GPU)"
 
 awaiting_human_decisions:
-  - "Autorizar PHASE_10_CONSOLIDATION (handoff em TASK-2026-08-20-PH09-EXIT.md)"
-  - "Revisar SAFETY_KERNEL.md (redigido sob autorização; não autoaprovável)"
   - "Correção editorial de 'assinado' no manuscrito (pendência externa ao repo; SW-001)"
   - "Ambiguidades restantes de MANUSCRIPT_VS_CODE.md não cobertas pelas decisões de 2026-08-17/18"
 
@@ -89,7 +87,7 @@ open_bugs:
 
 test_baseline:
   canonico: "container argos-runtime:local (decisão 2026-08-17); host .venv-win como segundo backend"
-  atual_host: "1706 passed / 4 skipped"
+  atual_host: "1769 passed / 4 skipped / 1 falha ambiental (2026-08-20)"
   tolerancias_backend: "RATIFICADAS 2026-08-18 (HUMAN_DECISIONS item 9): LOGIC exato; escalar CPU rel<=1e-12; array CPU zero divergência; GPU em aberto"
 
 known_failures:

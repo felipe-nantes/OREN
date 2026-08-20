@@ -62,7 +62,7 @@ flowchart TD
 - Core/geometry: `dtwin/core.py`.
 - Orchestration/stages: `dtwin/engine.py`, `dtwin/stages.py`, `webapp/server.py`.
 - DICOM/phase: `dtwin/core.py`, `dtwin/learning/raw_dicom_phase_resolver.py`, `multiphase_ingest.py`.
-- Segmentation: `dtwin/segmentation_subprocess.py`, `seg_worker.py`, `segmentation_contract.py`, `segmentation_shadow.py`, `webapp/seg_worker.py` (status incerto).
+- Segmentation: `dtwin/segmentation_subprocess.py`, `seg_worker.py`, `segmentation_contract.py`, `segmentation_shadow.py`. (`webapp/seg_worker.py` REMOVIDO em 2026-08-20 — HUMAN_DECISIONS item 15.)
 - Representation/inference: `dtwin/medgemma_panel*.py`, `dtwin/learning/exam_to_panels.py`, MedGemma/MedSigLIP modules.
 - Evaluation: `dtwin/benchmark/` and `dtwin/learning/*classifier.py`.
 - Knowledge: `dtwin/rag/`, `dtwin/graphrag/`, `dtwin/datasets/`.

@@ -16,6 +16,8 @@ Fontes canônicas (git hash-object em 2026-08-18):
 | `.fable/CONTRACTS.md` | `28b631b130f11349ed363aa8772a8605b12bc76f` |
 | `.fable/HUMAN_DECISIONS.md` | `6775b3a97f8194de67e83bdbf3edbbe6bc4deba3` |
 
+**RATIFICADO por Felipe Nantes em 2026-08-20 (HUMAN_DECISIONS item 17).**
+
 Este kernel é CONTEXTO PROTEGIDO: nunca comprimir, nunca resumir para tomada
 de decisão, nunca substituir por embedding/summary. Ler da fonte exata.
 

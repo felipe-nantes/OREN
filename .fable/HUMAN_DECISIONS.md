@@ -95,3 +95,20 @@ Formato mínimo de HUMAN_GATES.md. Aprovador em todas: **Felipe Nantes (fnantes0
     (5/5 pins já stale; sem verificador programático). Follow-up PHASE_10:
     decidir destino do mecanismo de baseline (freeze v2 verificado ou
     aposentadoria).
+
+## Bloco 6 — 2026-08-20 (PHASE_10, encerramento)
+
+16. **APROVO aposentadoria do mecanismo de baseline v1 para
+    TASK-2026-08-20-PH10-CON-01, aprovador Felipe Nantes, 2026-08-20**:
+    `configs/baselines/segmentation_visualization_v1.json` fica anotado como
+    registro HISTÓRICO congelado do snapshot original (5/5 pins stale por
+    evolução aprovada; nenhum verificador programático jamais o consumiu);
+    o freeze tool ganha a mesma anotação. Nenhum freeze v2.
+17. **RATIFICO o SAFETY_KERNEL.md** (redigido em 2026-08-18 sob autorização,
+    exclusivamente de conteúdo já ratificado, com hashes das 5 fontes
+    canônicas), aprovador Felipe Nantes, 2026-08-20. Em divergência, a fonte
+    canônica prevalece (SOURCE_OF_TRUTH_CONFLICT), como declarado no próprio
+    documento.
+18. **APROVO o fechamento formal da PHASE_03_CHARACTERIZATION** (os 4 P0s
+    caracterizados e revisados em 2026-08-17/18; waves extras opcionais
+    declinadas no encerramento), aprovador Felipe Nantes, 2026-08-20.

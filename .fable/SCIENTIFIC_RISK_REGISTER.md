@@ -183,8 +183,8 @@ Este registro contém riscos que podem alterar população, labels, geometria, r
 - **ROUTE:** GEOMETRY + SEGMENTATION + RECONSTRUCTION_3D
 - **RECOMMENDED_PHASE:** PHASE_03_CHARACTERIZATION e PHASE_04_INVARIANTS
 - **HUMAN_GATE:** HG-03, HG-05, HG-10
-- **STATUS:** OPEN
-- **DECISION_REQUIRED:** Antes de qualquer patch, criar phantom assimétrico e aprovar contrato/tolerância de direction.
+- **STATUS:** RESOLVED (2026-08-20, PHASE_09 wave 1 — HG-03 HUMAN_DECISIONS item 13)
+- **RESOLUTION:** `stage5_refine` e `webapp/server._mesma_geometria_sitk` passaram a exigir direction (`np.allclose(rtol=0, atol=1e-6)`); risco reproduzido com demo determinística (voxel fantasma a 8 mm, `evidence/PH09/`); characterization invertida para spec em 2 arquivos; teste de fallback novo; 2/2 mutantes KILLED; `multiphase_ingest` verificado e INOCENTADO (resample físico já tratava direction).
 
 ## SR-012 — Deriva de fonte de segmentação entre classificação e visualização
 

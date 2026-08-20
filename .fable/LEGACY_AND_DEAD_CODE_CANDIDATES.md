@@ -7,7 +7,7 @@ Ausência de referência estática não prova morte. Antes de remover, verificar
 | `webapp/server.py::_find_largest_compatible_series_legacy` | PROBABLY_DEAD | definição encontrada; nenhum uso estático fora dela no snapshot | Graphify/path, monkeypatch/tests/manual, coverage runtime, git history |
 | `webapp/server.py::_legacy_completed_job_from_artifacts` | LEGACY_ACTIVE | chamado por restore de jobs | preservar ou migrar com fixture de restart |
 | `dtwin/seg_worker.py` | LEGACY_ACTIVE / PRODUCTION_RUNTIME | copiado e invocado por `dtwin/segmentation_subprocess.py` | não remover; subprocess integration |
-| `webapp/seg_worker.py` | UNKNOWN / BASELINE-PROTECTED | hash em baseline de segmentação e docs históricas; uso atual deve ser traçado | configs, launchers, tests, git history |
+| `webapp/seg_worker.py` | REMOVIDO (2026-08-20, PHASE_09 wave 3, HUMAN_DECISIONS item 15) | prova de inalcançabilidade em `tasks/TASK-2026-08-20-PH09-HRR-03_EVIDENCE.md`; baseline v1 é registro histórico (5/5 pins stale, sem verificador — decisão de destino na PHASE_10) | — |
 | `tools/medgemma_server_base.py` | LEGACY_ACTIVE | importado por `tools/medgemma_server_v14.py` | mapear launcher/config antes de consolidar |
 | famílias `openswisshcc_v11`…`v27` | DUPLICATED_WITH_INTENT | protocolos/ablation versionados e testes próprios | ledger experimental e artifacts; não consolidar mecanicamente |
 | múltiplos atomic writers/hash helpers | DUPLICATED_SUSPECTED | implementações locais repetidas | characterization + failure injection + compatibility |
