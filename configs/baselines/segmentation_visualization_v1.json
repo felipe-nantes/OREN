@@ -24,5 +24,6 @@
     "webapp/server.py": "909c2665f069f91664d6bb1222ad1450ebd022535d75b42ca1e63f16b63b9412"
   },
   "git_commit": "b7aed9b2eab253c9ae13f673fc9d1048b9926251",
-  "schema": "argos-segmentation-visualization-baseline-v1"
+  "schema": "argos-segmentation-visualization-baseline-v1",
+  "status": "HISTORICAL_FROZEN_SNAPSHOT — aposentado em 2026-08-20 (HUMAN_DECISIONS item 16): pins refletem o snapshot original e NAO o codigo atual; nenhum verificador programatico consome este arquivo."
 }

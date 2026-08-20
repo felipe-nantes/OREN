@@ -1,4 +1,9 @@
-"""Freeze or independently verify the current segmentation/viewer baseline."""
+"""Freeze or independently verify the current segmentation/viewer baseline.
+
+APOSENTADO em 2026-08-20 (HUMAN_DECISOES item 16): o baseline v1 e registro
+historico congelado; nenhum verificador programatico o consome e nenhum
+freeze v2 foi autorizado. Mantido apenas como ferramenta manual de referencia.
+"""
 from __future__ import annotations
 
 import argparse
