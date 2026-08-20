@@ -54,3 +54,21 @@ Formato mínimo de HUMAN_GATES.md. Aprovador em todas: **Felipe Nantes (fnantes0
     `ROUTER.yaml` são os canônicos; os `.md` viraram stubs de ponteiro
     (histórico preservado no git). Inconsistências de header acumuladas no
     CURRENT_STATE.md foram normalizadas na migração.
+
+## Bloco 5 — 2026-08-20 (PHASE_09)
+
+13. **APROVO HG-03 para TASK-2026-08-20-PH09-HRR-01, opção A1 nos dois
+    sítios, escopo `webapp/server.py::_mesma_geometria_sitk` (gate da união
+    de fases) e `dtwin/stages.py::stage5_refine` (defesa de geometria),
+    aprovador Felipe Nantes, 2026-08-20**: adicionar checagem de direction
+    (`np.allclose(..., rtol=0, atol=1e-6)`) à conjunção existente de ambos os
+    comparadores, mantendo size/spacing/origin EXATOS como hoje (delta
+    mínimo, estritamente mais fail-closed). Máscara de fase com direction
+    divergente cai no bucket `geometria_divergente`; união divergente no
+    stage5 é descartada com warning e fallback para a venosa. Os
+    characterization tests da PHASE_03 são atualizados para o novo
+    comportamento aprovado (viram spec tests citando esta decisão). Evidência
+    da reprodução: `evidence/PH09/demo_direction_blind_2026-08-20.json`
+    (voxel fantasma a 8 mm via OR em array space). O sítio
+    `multiphase_ingest` foi verificado e INOCENTADO (resample físico já trata
+    direction).

@@ -1,0 +1,14 @@
+{
+  "gate_webapp_aceita_flip": true,
+  "voxels_uniao_array_space": 2,
+  "voxels_uniao_fisica_correta": 1,
+  "voxels_divergentes_entre_as_duas_unioes": 1,
+  "indices_z_ligados_array_space": [
+    1,
+    4
+  ],
+  "indices_z_ligados_fisica": [
+    1
+  ],
+  "defesa_stage5_descartaria_flip": false
+}
