@@ -115,7 +115,7 @@ def _orientation(ds: Any) -> str:
     return ("sagittal", "coronal", "axial")[max(range(3), key=lambda index: abs(normal[index]))]
 
 
-def _explicit_role(text: str) -> str | None:
+def _explicit_role_matches(text: str) -> list[str]:
     matches: list[str] = []
     if any(token in text for token in _ARTERIAL):
         matches.append(ARTERIAL)
@@ -123,6 +123,11 @@ def _explicit_role(text: str) -> str | None:
         matches.append(VENOUS)
     if any(token in text for token in _DELAYED):
         matches.append(DELAYED)
+    return matches
+
+
+def _explicit_role(text: str) -> str | None:
+    matches = _explicit_role_matches(text)
     return matches[0] if len(matches) == 1 else None
 
 
@@ -140,6 +145,9 @@ class RawSeries:
     contrast_present: bool = False
     text: str = ""
     explicit_role: str | None = None
+    # HG-02 (HUMAN_DECISOES item 14): texto que casa com 2+ papeis nao recebe
+    # explicit_role, mas a colisao fica registrada para o manifesto.
+    ambiguous_roles: tuple[str, ...] = ()
 
     @property
     def order_key(self) -> tuple[float, int, str]:
@@ -189,6 +197,7 @@ def _read_series(root: Path) -> list[RawSeries]:
             acquisition_seconds = _time_seconds(getattr(ds, "AcquisitionTime", None))
             if acquisition_seconds is None:
                 acquisition_seconds = _time_seconds(getattr(ds, "SeriesTime", None))
+            role_matches = _explicit_role_matches(text)
             grouped[key] = RawSeries(
                 study_hash=_hash(study_uid),
                 series_hash=_hash(series_uid),
@@ -199,7 +208,8 @@ def _read_series(root: Path) -> list[RawSeries]:
                 columns=_safe_int(getattr(ds, "Columns", None)),
                 contrast_present=bool(str(getattr(ds, "ContrastBolusAgent", "") or "").strip()),
                 text=text,
-                explicit_role=_explicit_role(text),
+                explicit_role=role_matches[0] if len(role_matches) == 1 else None,
+                ambiguous_roles=tuple(role_matches) if len(role_matches) > 1 else (),
             )
         item = grouped[key]
         item.files.append(source)
@@ -214,7 +224,17 @@ def _geometry_compatible(items: list[RawSeries]) -> bool:
     return len(rows) <= 1 and len(columns) <= 1 and orientations <= {"axial"}
 
 
-def _select(series: list[RawSeries]) -> tuple[dict[str, RawSeries], str, float]:
+def _audit_record(item: RawSeries) -> dict[str, Any]:
+    return {
+        "series_hash": item.series_hash,
+        "series_number": item.series_number,
+        "frames": item.frames,
+    }
+
+
+def _select(
+    series: list[RawSeries],
+) -> tuple[dict[str, RawSeries], str, float, list[dict[str, Any]]]:
     studies: dict[str, list[RawSeries]] = defaultdict(list)
     for item in series:
         studies[item.study_hash].append(item)
@@ -239,7 +259,7 @@ def _select(series: list[RawSeries]) -> tuple[dict[str, RawSeries], str, float]:
             else:
                 geometry_rejected_a_complete_candidate = True
     if len(explicit_candidates) == 1:
-        return explicit_candidates[0], "explicit_dicom_phase_semantics", 1.0
+        return explicit_candidates[0], "explicit_dicom_phase_semantics", 1.0, []
     if len(explicit_candidates) > 1:
         raise RawPhaseResolutionError(
             "Mais de um estudo contém um conjunto multifásico explicitamente rotulado.",
@@ -247,6 +267,7 @@ def _select(series: list[RawSeries]) -> tuple[dict[str, RawSeries], str, float]:
         )
 
     ordered_candidates: list[dict[str, RawSeries]] = []
+    ordered_unselected: list[list[dict[str, Any]]] = []
     for items in studies.values():
         dynamic = [
             item for item in items
@@ -283,8 +304,16 @@ def _select(series: list[RawSeries]) -> tuple[dict[str, RawSeries], str, float]:
             VENOUS: dynamic[1],
             DELAYED: dynamic[-1],
         })
+        # HG-02 (HUMAN_DECISOES item 14): intermediarias elegiveis que a
+        # heuristica primeira/segunda/ultima deixa de fora ficam auditaveis.
+        ordered_unselected.append([_audit_record(item) for item in dynamic[2:-1]])
     if len(ordered_candidates) == 1:
-        return ordered_candidates[0], "ordered_axial_t1_postcontrast_series", 0.8
+        return (
+            ordered_candidates[0],
+            "ordered_axial_t1_postcontrast_series",
+            0.8,
+            ordered_unselected[0],
+        )
     if len(ordered_candidates) > 1:
         raise RawPhaseResolutionError(
             "Mais de um estudo possui séries T1 pós-contraste temporalmente elegíveis.",
@@ -328,7 +357,7 @@ def resolve_raw_dicom_phases(root: Path, destination: Path) -> RawPhaseResolutio
     series = _read_series(root)
     if not series:
         raise PipelineError("Nenhuma série DICOM de RM válida foi encontrada no envio bruto.")
-    selected, method, confidence = _select(series)
+    selected, method, confidence, unselected_dynamic = _select(series)
     if destination.exists():
         shutil.rmtree(destination)
     phase_dirs = _materialize(selected, destination)
@@ -340,6 +369,12 @@ def resolve_raw_dicom_phases(root: Path, destination: Path) -> RawPhaseResolutio
         "clinical_use_allowed": False,
         "phi_persisted": False,
         "series_discovered": len(series),
+        # Campos aditivos de auditoria (HG-02, HUMAN_DECISOES item 14):
+        # nenhuma heuristica de selecao mudou, o manifesto apenas registra.
+        "series_with_ambiguous_text_roles": sum(
+            1 for item in series if item.ambiguous_roles
+        ),
+        "unselected_eligible_dynamic_series": unselected_dynamic,
         "selected": {
             role: {
                 "study_hash": selected[role].study_hash,
@@ -348,6 +383,11 @@ def resolve_raw_dicom_phases(root: Path, destination: Path) -> RawPhaseResolutio
                 "frames": selected[role].frames,
                 "series_number": selected[role].series_number,
                 "orientation": selected[role].orientation,
+                **(
+                    {"ambiguous_text_roles": list(selected[role].ambiguous_roles)}
+                    if selected[role].ambiguous_roles
+                    else {}
+                ),
             }
             for role in REQUIRED_PHASES
         },

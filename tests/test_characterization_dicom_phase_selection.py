@@ -93,8 +93,13 @@ def test_observed_rotulo_com_dois_papeis_nao_e_confiavel_e_cai_para_ordem_tempor
 
     assert resultado.method == "ordered_axial_t1_postcontrast_series"
     assert resultado.confidence == 0.8
-    selecionado = _manifest(resultado)["selected"]
+    manifesto = _manifest(resultado)
+    selecionado = manifesto["selected"]
     assert selecionado[ARTERIAL]["series_number"] == 7
+    # HG-02 item 14 (2026-08-20): a colisao original agora e auditavel — a
+    # serie que casou com dois papeis carrega o registro no manifesto.
+    assert manifesto["series_with_ambiguous_text_roles"] == 1
+    assert selecionado[ARTERIAL]["ambiguous_text_roles"] == [ARTERIAL, VENOUS]
 
 
 def test_observed_nome_da_pasta_sozinho_determina_o_papel_explicito(tmp_path):
@@ -169,7 +174,8 @@ def test_observed_serie_com_menos_de_tres_frames_nao_e_elegivel(tmp_path):
 
 def test_observed_com_quatro_dinamicas_a_fase_do_meio_e_descartada(tmp_path):
     """OBSERVED_BEHAVIOR: no caminho temporal a seleção é primeira/segunda/ÚLTIMA.
-    Com quatro séries dinâmicas, a terceira é silenciosamente descartada."""
+    Com quatro séries dinâmicas, a terceira não é usada — e, desde o HG-02
+    item 14, o descarte fica registrado no manifesto."""
     raw, estudo = tmp_path / "raw", generate_uid()
     for numero, hora in ((7, "120100"), (8, "120145"), (9, "120300"), (10, "120400")):
         _dicom(raw / f"serie_{numero}" / "img.dcm", study_uid=estudo, number=numero,
@@ -182,6 +188,10 @@ def test_observed_com_quatro_dinamicas_a_fase_do_meio_e_descartada(tmp_path):
     assert selecionado[ARTERIAL]["series_number"] == 7
     assert selecionado[VENOUS]["series_number"] == 8
     assert selecionado[DELAYED]["series_number"] == 10
+    # HG-02 item 14 (2026-08-20): o descarte deixou de ser silencioso — a
+    # intermediaria (serie 9) fica listada no manifesto.
+    descartadas = _manifest(resultado)["unselected_eligible_dynamic_series"]
+    assert [item["series_number"] for item in descartadas] == [9]
 
 
 def test_observed_series_in_phase_e_opposed_sao_ignoradas_mesmo_com_rotulo_de_fase(tmp_path):
