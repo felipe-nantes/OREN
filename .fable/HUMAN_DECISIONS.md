@@ -84,3 +84,14 @@ Formato mínimo de HUMAN_GATES.md. Aprovador em todas: **Felipe Nantes (fnantes0
     alterada — mesmas séries, mesmos códigos de erro, mesma confiança; campos
     são aditivos ao schema v1 (único consumidor externo lê apenas
     series_hash). Fecha os 2 itens abertos do TD-014.
+
+15. **APROVO remoção para TASK-2026-08-20-PH09-HRR-03, opção R1, escopo
+    `webapp/seg_worker.py` + `tools/freeze_segmentation_visualization_baseline.py`
+    (lista TRACKED_FILES), aprovador Felipe Nantes, 2026-08-20**: remoção do
+    launcher legado comprovadamente inalcançável em runtime (zero imports,
+    zero invocações por string; sucessor ativo = `dtwin/seg_worker.py`,
+    coberto por teste de integração). O baseline histórico
+    `configs/baselines/segmentation_visualization_v1.json` permanece intocado
+    (5/5 pins já stale; sem verificador programático). Follow-up PHASE_10:
+    decidir destino do mecanismo de baseline (freeze v2 verificado ou
+    aposentadoria).
