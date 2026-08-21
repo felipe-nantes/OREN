@@ -32,7 +32,22 @@ if (-not $SkipMedGemmaStart) {
   }
 }
 try {
-  Invoke-RestMethod -Uri "https://127.0.0.1:8443/api/health" -TimeoutSec 3 -SkipCertificateCheck | Out-Null
+  # -SkipCertificateCheck so existe no PowerShell 7+; esta maquina roda 5.1
+  # (Windows PowerShell), entao o bypass de certificado autoassinado precisa
+  # ser feito via ServicePointManager, valido so' para esta sessao.
+  if ($PSVersionTable.PSVersion.Major -lt 6) {
+    Add-Type -TypeDefinition @"
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class OrenQuestTrustAll : ICertificatePolicy {
+    public bool CheckValidationResult(ServicePoint sp, X509Certificate cert, WebRequest req, int problem) { return true; }
+}
+"@ -ErrorAction SilentlyContinue
+    [System.Net.ServicePointManager]::CertificatePolicy = New-Object OrenQuestTrustAll
+    Invoke-RestMethod -Uri "https://127.0.0.1:8443/api/health" -TimeoutSec 3 | Out-Null
+  } else {
+    Invoke-RestMethod -Uri "https://127.0.0.1:8443/api/health" -TimeoutSec 3 -SkipCertificateCheck | Out-Null
+  }
 } catch {
   throw "Webapp HTTPS do Quest (:8443) nao esta no ar. Execute .\run_quest_win.ps1 em outra janela antes de usar este atalho."
 }
