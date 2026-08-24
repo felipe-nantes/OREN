@@ -1,0 +1,94 @@
+{
+  "seed": 20260824,
+  "familias": {
+    "stage_a_global": {
+      "dir": "medsiglip_embeddings_stage_a_v1",
+      "casos": 451,
+      "por_coorte": {
+        "lld_mmri": 321,
+        "openswisshcc": 130
+      },
+      "casos_sem_predicao_oficial": 0,
+      "auc_origem_global": 1.0,
+      "auc_controle_permutado": 0.52509,
+      "condicionada_por_predicao": {
+        "pred_POSITIVE": {
+          "n": 215,
+          "auc": 1.0
+        },
+        "pred_NEGATIVE": {
+          "n": 236,
+          "auc": 1.0
+        }
+      }
+    },
+    "monophase_venous": {
+      "dir": "medsiglip_monophase_embeddings_v1",
+      "casos": 451,
+      "por_coorte": {
+        "lld_mmri": 321,
+        "openswisshcc": 130
+      },
+      "casos_sem_predicao_oficial": 0,
+      "auc_origem_global": 1.0,
+      "auc_controle_permutado": 0.530937,
+      "condicionada_por_predicao": {
+        "pred_POSITIVE": {
+          "n": 215,
+          "auc": 1.0
+        },
+        "pred_NEGATIVE": {
+          "n": 236,
+          "auc": 1.0
+        }
+      }
+    },
+    "monophase_arterial": {
+      "dir": "medsiglip_monophase_arterial_embeddings_v1",
+      "casos": 448,
+      "por_coorte": {
+        "lld_mmri": 321,
+        "openswisshcc": 127
+      },
+      "casos_sem_predicao_oficial": 0,
+      "auc_origem_global": 1.0,
+      "auc_controle_permutado": 0.512841,
+      "condicionada_por_predicao": {
+        "pred_POSITIVE": {
+          "n": 215,
+          "auc": 1.0
+        },
+        "pred_NEGATIVE": {
+          "n": 233,
+          "auc": 1.0
+        }
+      }
+    },
+    "monophase_delayed": {
+      "dir": "medsiglip_monophase_delayed_embeddings_v1",
+      "casos": 448,
+      "por_coorte": {
+        "lld_mmri": 321,
+        "openswisshcc": 127
+      },
+      "casos_sem_predicao_oficial": 0,
+      "auc_origem_global": 1.0,
+      "auc_controle_permutado": 0.494787,
+      "condicionada_por_predicao": {
+        "pred_POSITIVE": {
+          "n": 215,
+          "auc": 1.0
+        },
+        "pred_NEGATIVE": {
+          "n": 233,
+          "auc": 1.0
+        }
+      }
+    }
+  },
+  "reproducibilidade": {
+    "execucoes": 2,
+    "identicas": true,
+    "sha256_do_resultado": "6b56f4f0e9274a658c7d0b5ac9ed27f09021de045f9430654a19ad42b8792ea9"
+  }
+}

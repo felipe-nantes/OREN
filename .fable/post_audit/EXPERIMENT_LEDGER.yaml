@@ -89,3 +89,31 @@ entries:
     reverted: n/a
     lessons: "melhorar classificação não fecha o gap de localização; qualquer hipótese de localizador é experimento separado"
     do_not_repeat_without_new_evidence: true
+
+  - experiment_id: DS-PROBE-01
+    baseline_commit: "a5023b7 (medição; nada alterado)"
+    candidate_commit: n/a
+    hypothesis: "a separabilidade de origem difere entre variantes de representação, localizando onde o sinal entra (H-01)"
+    change: "nenhuma (medição sobre artefatos congelados; scripts em post_audit/analysis/ds_probe_01*.py)"
+    result: >
+      REFUTADA a premissa de localização por fase: AUC de origem = 1,0 nas 4
+      famílias multi-coorte (stage_a/venosa/arterial/delayed; n=448-451;
+      controle permutado ~0,5; idêntico condicionado à predição OOF). O sinal
+      está a MONTANTE da escolha de fase. Espectral (stage_a): top-1 PC
+      sozinho separa (0,9997) — origem é o eixo dominante de variância — e o
+      sinal é DIFUSO (resíduo 0,772 mesmo após deflacionar 32 direções).
+      Variantes crop/fixed/enhancement/edgeonly/t2dwi são LLD-only (probe de
+      origem impossível nelas — registrado no inventário).
+    metrics: {auc_origem_todas_familias: 1.0, top1_pc: 0.9997, residuo_apos_32_deflacoes: 0.772, controle_permutado: "0.49-0.53", n: 451}
+    decision: "H-01 CONCLUÍDA; família de hipóteses 'remoção de domínio em embedding' marcada do-not-attempt"
+    reason: "sinal dominante E difuso: projeção/adversarial em embedding não tem subespaço pequeno para remover; destruiria sinal clínico"
+    evidence: "post_audit/evidence/DS-PROBE-01/probe_results_2026-08-24.json e spectrum_results_2026-08-24.json; task TASK-2026-08-24-DS-PROBE-01"
+    reverted: n/a
+    lessons: >
+      (1) origin-probe AUC saturada não discrimina candidatos — endpoint útil
+      de dependência de domínio é LODO/transfer/por-coorte; (2) intervenção
+      anti-shortcut, se algum dia proposta, deve agir no nível da
+      imagem/pré-processamento como CONTROLLED_EXPERIMENT gated com LODO
+      primário; (3) p>>n exige apoiar conclusões em resultados imunes
+      (top-1 PC, curva de deflação, invariância entre variantes).
+    do_not_repeat_without_new_evidence: true

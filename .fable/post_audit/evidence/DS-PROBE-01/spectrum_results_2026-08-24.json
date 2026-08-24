@@ -1,0 +1,23 @@
+{
+  "familia": "medsiglip_embeddings_stage_a_v1",
+  "seed": 20260824,
+  "n_casos": 451,
+  "auc_por_topk_pcs": {
+    "1": 0.999712,
+    "2": 0.999712,
+    "4": 0.999856,
+    "8": 1.0,
+    "16": 1.0,
+    "32": 1.0,
+    "64": 1.0
+  },
+  "auc_residuo_apos_deflacionar_k_direcoes": {
+    "1": 0.991661,
+    "2": 0.9896,
+    "4": 0.98265,
+    "8": 0.95399,
+    "16": 0.856866,
+    "32": 0.771867
+  },
+  "leitura": "topk alto com k pequeno = sinal em subespaco de baixa dimensao; residuo alto mesmo com k grande = sinal difuso/replicado"
+}
