@@ -463,7 +463,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "sondas PH06 reutilizáveis (CPU)"
     current_protection: "blocker declarado"
-    missing_protection: "sonda GPU determinística + proposta de tolerância p/ ratificação"
+    missing_protection: "FECHADO em 2026-08-24 (REP-01, item 20): sonda 7 ops × 2 regimes × 3 reps + 3 processos (hash idêntico); tolerância ratificada; blocker encerrado"
     possible_root_causes: ["GPU indisponível/ocupada durante PH06"]
     unknowns: ["não-determinismo cuDNN por op — a sonda mede isso"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -473,7 +473,7 @@ weaknesses:
     expected_information_gain: HIGH
     human_gate: "ratificação da tolerância estende decisão 9 (gate leve, mesmo formato)"
     recommended_fable_effort: HIGH
-    status: OPEN
+    status: RESOLVED
 
   - id: W-017
     title: "Higiene operacional: .tmp*/environments/artefatos grandes coexistem com o repo"

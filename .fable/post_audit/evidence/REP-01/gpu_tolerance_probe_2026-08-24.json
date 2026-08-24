@@ -1,0 +1,128 @@
+{
+  "ambiente": {
+    "torch": "2.6.0+cu124",
+    "cuda": "12.4",
+    "cudnn": 90100,
+    "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "cublas_workspace": ":4096:8"
+  },
+  "seed": 20260824,
+  "repeticoes": 3,
+  "gpu_run_to_run_deterministico": {
+    "matmul": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "softmax": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "layernorm": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "conv3d": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "interpolate_trilinear": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "sum_reduction": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "mean_reduction": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    }
+  },
+  "gpu_run_to_run_padrao_producao": {
+    "matmul": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "softmax": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "layernorm": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "conv3d": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "interpolate_trilinear": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "sum_reduction": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    },
+    "mean_reduction": {
+      "bitwise_igual_3runs": true,
+      "max_abs": 0.0,
+      "max_rel": 0.0
+    }
+  },
+  "gpu_vs_cpu_float32": {
+    "matmul": {
+      "bitwise_igual": false,
+      "max_abs": 6.866455078125e-05,
+      "max_rel": 0.06457156886815615
+    },
+    "softmax": {
+      "bitwise_igual": false,
+      "max_abs": 5.587935447692871e-09,
+      "max_rel": 4.410830388221883e-07
+    },
+    "layernorm": {
+      "bitwise_igual": false,
+      "max_abs": 7.152557373046875e-07,
+      "max_rel": 0.0007728706099810426
+    },
+    "conv3d": {
+      "bitwise_igual": false,
+      "max_abs": 0.022579193115234375,
+      "max_rel": 1401.1485460069443
+    },
+    "interpolate_trilinear": {
+      "bitwise_igual": false,
+      "max_abs": 9.775161743164062e-06,
+      "max_rel": 0.20866076823049717
+    },
+    "sum_reduction": {
+      "bitwise_igual": false,
+      "max_abs": 3.97705078125,
+      "max_rel": 0.0035588523632058768
+    },
+    "mean_reduction": {
+      "bitwise_igual": false,
+      "max_abs": 1.4842953532934189e-09,
+      "max_rel": 7.734322485300725e-05
+    }
+  },
+  "cross_process_check": {
+    "modo": "padrao de producao (sem flags deterministicas)",
+    "processos_independentes": 3,
+    "sha256_das_saidas": "9b5cebae111e19cbaf4784f698b4286e9a74a5ae3a7d95ed7b8a90d72105b4db",
+    "identicos": true
+  }
+}

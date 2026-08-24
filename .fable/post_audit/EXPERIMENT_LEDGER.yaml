@@ -193,3 +193,21 @@ entries:
       (treinos menores) — otimismo mora na seleção-sobre-outer; (3) em n=44,
       deltas por coorte <15 pp são ruído — calibrar o promotion gate.
     do_not_repeat_without_new_evidence: true
+
+  - experiment_id: REP-01
+    baseline_commit: "c17f365 (medição; nada alterado)"
+    candidate_commit: n/a
+    hypothesis: "o comportamento numérico GPU é caracterizável e uma tolerância ratificável pode fechar BLK-GPU-TOLERANCES"
+    change: "nenhuma (sonda determinística; script em post_audit/analysis/rep_01_gpu_tolerance_probe.py)"
+    result: >
+      GPU run-to-run BITWISE em 7 famílias de ops × 2 regimes (determinístico
+      E padrão de produção) × 3 reps + 3 processos independentes (sha256
+      idêntico). GPU vs CPU nunca bitwise: elementwise ~1e-7 rel; acumulações
+      (conv3d/sum/matmul) até ~4e-3 rel fora da vizinhança de zero.
+    metrics: {run_to_run_bitwise: true, gpu_vs_cpu_max_rel_acumulacao: 0.004, elementwise_rel: 1e-7}
+    decision: "tolerância RATIFICADA (HUMAN_DECISIONS item 20); BLK-GPU-TOLERANCES FECHADO"
+    reason: "medição direta no stack canônico (torch 2.6.0+cu124 = o mesmo do container)"
+    evidence: "post_audit/evidence/REP-01/gpu_tolerance_probe_2026-08-24.json"
+    reverted: n/a
+    lessons: "nesta geração de stack, o modo padrão de produção JÁ é bitwise-reprodutível run-to-run — a não-reprodutibilidade GPU clássica não se manifesta nas famílias de ops usadas; o risco residual é mudança de stack (cláusula de re-sonda)"
+    do_not_repeat_without_new_evidence: true

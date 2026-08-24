@@ -129,3 +129,21 @@ Formato mínimo de HUMAN_GATES.md. Aprovador em todas: **Felipe Nantes (fnantes0
     candidato promovível, com endpoints PRÉ-registrados
     (CANDIDATE_COMPARISON antes da leitura); toda leitura registrada no
     `outer_inspection_counter` do EXPERIMENT_LEDGER com experiment_id.
+
+20. **RATIFICO as tolerâncias GPU/CUDA para TASK-2026-08-24-REP-01
+    (estende e fecha o item EM ABERTO da decisão 9), aprovador Felipe
+    Nantes, 2026-08-24**:
+    - **GPU run-to-run** (mesmo stack: RTX 4060 Laptop, torch 2.6.0+cu124,
+      cudnn 90100): igualdade BITWISE exigível — medida com delta ZERO em
+      7 famílias de ops (matmul, softmax, layernorm, conv3d, interpolate
+      trilinear, sum, mean) × 2 regimes (determinístico E padrão de
+      produção) × 3 repetições in-process + 3 processos independentes com
+      sha256 idêntico. Mudança de GPU/driver/torch/cudnn exige re-sonda
+      antes de aceitar novos números (mesma cláusula do item 9).
+    - **GPU vs CPU**: igualdade bitwise NUNCA assumida. Arrays float32:
+      rtol ≤ 1e-2 com atol ≤ 1e-4 × amplitude do tensor (medidos:
+      elementwise ~1e-7 rel; acumulações até ~4e-3 rel). Decisões
+      derivadas (máscaras binárias, classes, contagens/LOGIC) devem
+      coincidir EXATAMENTE.
+    Evidência: post_audit/evidence/REP-01/gpu_tolerance_probe_2026-08-24.json.
+    **BLK-GPU-TOLERANCES FECHADO.**
