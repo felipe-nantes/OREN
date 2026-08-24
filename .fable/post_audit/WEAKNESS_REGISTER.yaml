@@ -1014,7 +1014,21 @@ weaknesses:
     affected_modules: [docs, webapp]
     upstream_dependencies: []
     downstream_dependencies: ["credibilidade do manuscrito"]
-    observed_problem: "MVC-021 (CRITICAL): regra universal de revisão humana não aplicada uniformemente — demo autoassume PHI-review (ratificado na decisão 3) e uma rota registra requires_human_review:false; outros CONFLICTs/PARTIALs pendentes de reconciliação editorial"
+    observed_problem: >
+      Detalhado em OPT_00 (2026-08-24). CONFLICTs: MVC-021 (CRITICAL — revisão
+      humana não uniforme; demo autoassume ratificado na decisão 3; rota com
+      requires_human_review:false; lado editorial pendente, liga W-044/SR-020);
+      MVA-001 (HIGH — Dice 0,80 de alinhamento, mediana 0,64 entre fases e
+      coverage 0,50 do ingest conflados no texto; lado de ENGENHARIA JÁ
+      RESOLVIDO pela decisão 1/GEO-002 com dois contratos escopados; falta só a
+      separação editorial); MVA-003 (MEDIUM — 568 vs 569 mL sem regra declarada;
+      = W-037/SR-026); MVA-013 (CRITICAL — resolver automático vs docs antigas,
+      bytes DICOM retidos com phi_persisted:false apenas declarado, burned-in
+      PHI não detectada, demo autoassume; parcialmente governado por DOM-002
+      ratificado + W-020/SR-010 + W-039/SR-009). UNVERIFIED: MVA-008 (HIGH —
+      Tabela 3 sem n por análise; alimenta PROV-01/W-033). Relacionado:
+      MVA-002 MANUSCRIPT_ONLY (TCGA 11 vs 12; SR-004) e MVA-014 (Dices CHAOS já
+      mapeados por docs/189 — resolução editorial direta).
     possible_consequence: "claim do manuscrito mais forte que o comportamento do código"
     scientific_impact: HIGH
     geometric_impact: LOW
@@ -1028,13 +1042,13 @@ weaknesses:
     current_protection: "decisão 3 governa o modo demo; MVC documenta o resto"
     missing_protection: "reconciliação item a item (editorial + HG-01/08/11 conforme claim)"
     possible_root_causes: ["manuscrito e código evoluíram em paralelo"]
-    unknowns: ["conteúdo dos CONFLICTs 2-4 e do UNVERIFIED (ler na task)"]
+    unknowns: []
     candidate_action_type: SCIENTIFIC_WEAKNESS
     priority: MEDIUM
     estimated_cost: HIGH
     estimated_risk: LOW
     expected_information_gain: HIGH
-    human_gate: "HG-01/HG-08/HG-11 conforme item; MVC-021 toca HG-11/12"
+    human_gate: "HG-01/HG-08/HG-11 conforme item; MVC-021/MVA-013 tocam HG-11/12"
     recommended_fable_effort: UltraCode
     status: OPEN
 

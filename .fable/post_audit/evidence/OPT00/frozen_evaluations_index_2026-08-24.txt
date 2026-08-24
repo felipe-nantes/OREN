@@ -1,0 +1,47 @@
+Indice das avaliacoes congeladas em casos/qualification/hybrid_v1 (OPT_00, 2026-08-24)
+Fonte: */evaluation.json, campo overall/primary. Percentuais; n = case_count.
+
+dir                                                                sens   spec    bal    n 75/75
+ablation_lld_binary_oof_evaluation_v1                              76.4   75.8   76.1  335 True
+ablation_lld_clinical_subtype_oof_evaluation_v1                    75.2   77.0   76.1  335 True
+late_fusion_oof_evaluation_v1                                      73.0   71.0   72.0  132 False
+localized_candidate_dynamic_hgb_top8_oof_evaluation_v2             64.1   41.7   52.9   87 False
+localized_candidate_dynamic_top8_oof_evaluation_v1                 48.7   54.2   51.4   87 False
+localized_candidate_fused_top8_oof_evaluation_v1                   48.7   56.2   52.5   87 False
+localized_candidate_top8_oof_evaluation_v1                         46.2   54.2   50.2   87 False
+medsiglip_head_oof_evaluation_v1                                   70.5   69.6   70.0  467 False
+medsiglip_lora_oof_evaluation_v1                                   75.0   70.4   72.7  467 False
+medsiglip_monophase_arterial_oof_evaluation_v1                     73.2   75.3   74.3  335 False
+medsiglip_monophase_delayed_adc_fusion_oof_evaluation_v1           61.5   65.3   63.4   88 False
+medsiglip_monophase_delayed_axial_adc_fusion_oof_evaluation_v1     69.2   67.3   68.3   88 False
+medsiglip_monophase_delayed_axial_adc_missing_aware_fusion_oof_evaluation_v1   71.8   73.5   72.6   88 False
+medsiglip_monophase_delayed_domain_balanced_oof_evaluation_v3      73.5   70.0   71.8  423 False
+medsiglip_monophase_delayed_multidomain_oof_evaluation_v2          74.5   71.8   73.1  423 False
+medsiglip_monophase_delayed_oof_evaluation_v1                      77.7   75.8   76.8  335 True
+medsiglip_monophase_delayed_openswiss_evaluation_v1                25.4   81.2   53.3  132 False
+medsiglip_monophase_delayed_openswiss_oof_evaluation_v3            56.4   61.2   58.8   88 False
+medsiglip_monophase_delayed_pairwise_subtype_oof_evaluation_v1   (schema diferente)
+medsiglip_monophase_delayed_slice_multiclass_oof_evaluation_v1     75.8   76.4   76.1  335 True
+medsiglip_monophase_delayed_slice_pairwise_oof_evaluation_v1     (schema diferente)
+medsiglip_monophase_delayed_subtype_oof_evaluation_v1              75.8   77.5   76.7  335 True
+medsiglip_monophase_five_signal_missing_aware_fusion_oof_evaluation_v1   66.7   69.4   68.0   88 False
+medsiglip_monophase_oof_evaluation_v1                              74.5   73.6   74.1  335 False
+medsiglip_monophase_openswiss_all132_delayed_oof_evaluation_v4     54.0   55.1   54.5  132 False
+medsiglip_multiclass_oof_evaluation_v1                             75.9   76.1   76.0  467 True
+medsiglip_oof_evaluation_v1                                        72.3   73.3   72.8  467 False
+medsiglip_openswiss_adc_mil_oof_evaluation_v1                      64.1   61.2   62.7   88 False
+medsiglip_openswiss_adc_oof_evaluation_v1                          61.5   65.3   63.4   88 False
+medsiglip_openswiss_axial_mil_oof_evaluation_v1                    51.3   53.1   52.2   88 False
+medsiglip_openswiss_dwi_oof_evaluation_v1                          48.7   59.2   54.0   88 False
+medsiglip_openswiss_holdout_adc_external_evaluation_v1             41.7   65.0   53.3   44 False
+medsiglip_openswiss_holdout_axial_external_evaluation_v1           25.0   95.0   60.0   44 False
+medsiglip_openswiss_holdout_delayed_external_evaluation_v1         79.2   45.0   62.1   44 False
+medsiglip_openswiss_holdout_missing_aware_fusion_evaluation_v1     54.2   50.0   52.1   44 False
+medsiglip_openswiss_monophase_axial_oof_evaluation_v1              53.8   63.3   58.6   88 False
+medsiglip_openswiss_monophase_complementary_combined_oof_evaluation_v1   51.3   53.1   52.2   88 False
+medsiglip_openswiss_t2_oof_evaluation_v1                           41.0   49.0   45.0   88 False
+medsiglip_partial_oof_evaluation_v1                                57.3   55.5   56.4  467 False
+multi_signal_fusion_oof_evaluation_v1                              72.7   72.9   72.8  467 False
+multi_signal_fusion_v23_oof_evaluation_v1                          68.3   69.6   68.9  132 False
+patch25d_oof_evaluation_v1                                         46.2   45.8   46.0   87 False
+radiomics_oof_evaluation_v1                                        53.6   57.1   55.4  467 False

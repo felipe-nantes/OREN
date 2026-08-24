@@ -24,45 +24,56 @@ entries:
     do_not_repeat_without_new_evidence: true
 
   - experiment_id: LEDGER-SEED-002
-    baseline_commit: TO_ENUMERATE
+    baseline_commit: "artefatos assinados (prediction_signature nos freezes; enumerado em OPT_00 2026-08-24)"
     candidate_commit: n/a
     hypothesis: "vocabulário clínico fino (subtipos) melhora sobre binário"
-    change: "ablação lld binary vs clinical_subtype"
-    result: "artefatos congelados em hybrid_v1/ablation_lld_*; conclusão TO_ENUMERATE dos evaluation jsons"
-    metrics: TO_ENUMERATE
-    decision: TO_ENUMERATE
-    reason: TO_ENUMERATE
-    evidence: "casos/qualification/hybrid_v1/ablation_lld_binary_oof_* e ablation_lld_clinical_subtype_oof_*"
+    change: "ablação lld binary vs clinical_subtype (n=335 LLD, 157+178, 14 falhas no denominador)"
+    result: "EMPATE no agregado: binário sens 76,4/spec 75,8/bal 76,14 vs subtipo 75,2/77,0/76,06 — ambos passed_75_75; delta de balanced accuracy 0,08 pp"
+    metrics: {binario: {sens: 0.7643, spec: 0.7584, bal: 0.7614}, subtipo: {sens: 0.7516, spec: 0.7697, bal: 0.7606}, n: 335}
+    decision: "vocabulário fino não pagou no agregado do LLD; multiclass oficial usa a via consolidada"
+    reason: "sem ganho mensurável; complexidade extra sem retorno agregado (trade sens↔spec apenas)"
+    evidence: "hybrid_v1/ablation_lld_binary_oof_evaluation_v1/evaluation.json e ablation_lld_clinical_subtype_oof_evaluation_v1/evaluation.json; índice em post_audit/evidence/OPT00/"
     reverted: n/a
-    lessons: "existe comparação congelada de vocabulários — insumo direto para H-05 fase A"
+    lessons: "existe comparação congelada de vocabulários — insumo direto para H-05 fase A; o eixo útil do vocabulário é DISTRIBUIÇÃO por coorte, não agregado"
     do_not_repeat_without_new_evidence: true
 
   - experiment_id: LEDGER-SEED-003
-    baseline_commit: TO_ENUMERATE
+    baseline_commit: "artefatos assinados em hybrid_v1 (enumerado em OPT_00 2026-08-24)"
     candidate_commit: n/a
     hypothesis: "fusão tardia de sinais melhora o estimador"
-    change: "late fusion v1; fusão estimador oficial v1→v2"
-    result: "artefatos em hybrid_v1/late_fusion_oof_*, fusao_estimador_oficial_v1/v2; conclusão TO_ENUMERATE"
-    metrics: TO_ENUMERATE
-    decision: "v2 tornou-se o oficial (TO_CONFIRM em docs)"
-    reason: TO_ENUMERATE
-    evidence: "casos/qualification/hybrid_v1/"
+    change: "late fusion (subset 132); multi_signal_fusion (467); fusão estimador oficial v1→v2 (por coorte, gate II)"
+    result: >
+      TRÊS resultados NEGATIVOS: late fusion 73,0/71,0/bal 72,0 em n=132 (REPROVADA
+      75/75, embora acima de cada componente: medsiglip 68,0, v23 63,0, radiomics
+      55,4, patch2.5D 46,0); multi_signal_fusion em n=467 bal 72,8 — ABAIXO do
+      baseline oficial single (76,0); fusão estimador oficial gate_ii_passed=False
+      em v1 E v2 (v2 adicionou estimador H e continuou reprovada).
+    metrics: {late_fusion_132: {sens: 0.730, spec: 0.710, bal: 0.720, passed: false}, multi_signal_467: {bal: 0.728, passed: false}, fusao_oficial: {gate_ii_v1: false, gate_ii_v2: false}}
+    decision: "NENHUMA fusão promovida; Etapa C single permaneceu o regime oficial"
+    reason: "fusões batem componentes fracos mas não batem o baseline oficial nem o gate"
+    evidence: "hybrid_v1/late_fusion_oof_evaluation_v1, multi_signal_fusion_oof_evaluation_v1, fusao_estimador_oficial_v1/v2/results.json"
     reverted: n/a
-    lessons: "manuscrito: novas fontes de complexidade nem sempre produziram ganho — checar estes números antes de propor nova fusão"
+    lessons: "confirma o manuscrito: complexidade nem sempre produz ganho; nova proposta de fusão precisa explicar POR QUE superaria estes 3 negativos congelados"
     do_not_repeat_without_new_evidence: true
 
   - experiment_id: LEDGER-SEED-004
-    baseline_commit: TO_ENUMERATE
+    baseline_commit: "embeddings congelados em hybrid_v1 (enumerado em OPT_00 2026-08-24)"
     candidate_commit: n/a
-    hypothesis: "variantes de representação (enhancement, edgeonly, t2dwi, fixed crop) mudam o desempenho"
-    change: "famílias de embeddings alternativas"
-    result: "embeddings congelados por variante em hybrid_v1/; comparações TO_ENUMERATE"
-    metrics: TO_ENUMERATE
-    decision: TO_ENUMERATE
-    reason: TO_ENUMERATE
-    evidence: "casos/qualification/hybrid_v1/*embeddings*"
+    hypothesis: "variantes de representação/modalidade/fase mudam o desempenho"
+    change: "famílias de embeddings e avaliações por variante (43 evaluation.json congeladas)"
+    result: >
+      Índice completo em post_audit/evidence/OPT00/frozen_evaluations_index_2026-08-24.txt.
+      Somente 5/43 passaram 75/75 (todas nos regimes LLD-335 ou 467-multiclass);
+      monophase_delayed v1 chegou a 76,8 no LLD-335 mas TODAS as variantes
+      OpenSwiss-only ficaram entre 45-63 bal (n=44-132) — perda de transferência
+      do SR-007 quantificada; LoRA 72,7 > head 70,0 (ambas reprovadas em 467);
+      baseline oficial = multiclass_oof_v1 (75,9/76,1, n=467, passed).
+    metrics: {passaram_75_75: 5, total_avaliacoes: 43, oficial: {sens: 0.759, spec: 0.761, n: 467}}
+    decision: "multiclass (Etapa C) promovida; variantes documentadas como não-superiores ou coorte-dependentes"
+    reason: "nenhuma variante generalizou para OpenSwiss; ganhos locais no LLD não transferem"
+    evidence: "post_audit/evidence/OPT00/frozen_evaluations_index_2026-08-24.txt (43 dirs)"
     reverted: n/a
-    lessons: "estas variantes congeladas são exatamente o insumo de H-01 (probes comparativas) — reuso, não recomputação"
+    lessons: "os embeddings destas variantes são o insumo de H-01 (probes comparativas) — reuso, não recomputação; o índice é a lista do-not-repeat"
     do_not_repeat_without_new_evidence: true
 
   - experiment_id: LEDGER-SEED-005
@@ -70,8 +81,8 @@ entries:
     candidate_commit: n/a
     hypothesis: "ROI correta (manual) tem teto superior ao da seleção automática"
     change: "avaliação com ROI de referência"
-    result: "teto distinto demonstrado (manuscrito; SR-013 nota que métricas históricas ≠ localizador atual)"
-    metrics: TO_ENUMERATE
+    result: "teto distinto demonstrado; a linha de candidatos LOCALIZADOS automáticos congelada em hybrid_v1 ficou em bal 50,2-52,9 (n=87; top8/fused/dynamic/hgb — nenhuma passou), confirmando que a seleção automática de ROI não captura o sinal que a ROI correta demonstra"
+    metrics: {localized_top8: 0.502, fused_top8: 0.525, dynamic_top8: 0.514, dynamic_hgb: 0.529, n: 87}
     decision: "localização e classificação tratadas como problemas distintos"
     reason: "gap de localização identificado"
     evidence: "manuscrito; SR-013"
