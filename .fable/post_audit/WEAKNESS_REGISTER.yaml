@@ -630,7 +630,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "nenhum teste negativo contra promoção da métrica de seleção"
     current_protection: "docs/123 declara generalization_estimate_source"
-    missing_protection: "campo de proveniência do estimando em toda apresentação + teste negativo + regime anti-consumo (POST_AUDIT_PLAN §2)"
+    missing_protection: "FECHADO em 2026-08-24 (GOV-01, item 19): 5 testes negativos + sonda P20 KILLED + regime c+d+b decidido"
     possible_root_causes: ["seleção final pragmática sobre folds externos"]
     unknowns: ["quantas leituras do outer já ocorreram historicamente"]
     candidate_action_type: SCIENTIFIC_CHANGE
@@ -638,9 +638,9 @@ weaknesses:
     estimated_cost: MEDIUM
     estimated_risk: LOW
     expected_information_gain: HIGH
-    human_gate: "HG-07/HG-08 (proposta de campo+teste é aditiva; regime é decisão)"
+    human_gate: "HG-07/HG-08 — DECIDIDO (HUMAN_DECISIONS item 19)"
     recommended_fable_effort: UltraCode
-    status: OPEN
+    status: RESOLVED
 
   - id: W-031
     title: "Forte separabilidade de coorte/possível shortcut (probes 100%/98,75%)"

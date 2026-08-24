@@ -103,8 +103,9 @@ Este registro contém riscos que podem alterar população, labels, geometria, r
 - **ROUTE:** ML_CLASSIFICATION + CROSS_VALIDATION + METRICS_STATISTICS + FRONTEND
 - **RECOMMENDED_PHASE:** PHASE_02_CONTRACTS e PHASE_04_INVARIANTS
 - **HUMAN_GATE:** HG-07, HG-08
-- **STATUS:** OPEN
-- **DECISION_REQUIRED:** Exigir campo de proveniência do estimando em toda apresentação e teste negativo contra promoção da métrica de seleção.
+- **STATUS:** RESOLVED-ENGENHARIA (2026-08-24, POST_AUDIT GOV-01 — HG-07/08 HUMAN_DECISIONS item 19); ponta editorial do manuscrito permanece
+- **RESOLUTION:** o enquadramento honesto já vigente (bundle com `generalization_estimate_source`/`in_sample_performance_is_not_a_generalization_estimate`; apresentação com âncora 75,91/76,11 e sem a métrica de seleção 79,1/80,1-sobre-451) foi CONGELADO como spec por 5 testes negativos (`tests/test_estimand_provenance_negative.py`; sonda de envenenamento P20 KILLED). Regime de consumo do outer para o ciclo experimental formalizado: c+d+b (item 19).
+- **DECISION_REQUIRED:** ~~Exigir campo de proveniência do estimando em toda apresentação e teste negativo contra promoção da métrica de seleção.~~ Atendido.
 
 ## SR-007 — Forte separabilidade de coorte e possível shortcut
 

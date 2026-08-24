@@ -112,3 +112,20 @@ Formato mínimo de HUMAN_GATES.md. Aprovador em todas: **Felipe Nantes (fnantes0
 18. **APROVO o fechamento formal da PHASE_03_CHARACTERIZATION** (os 4 P0s
     caracterizados e revisados em 2026-08-17/18; waves extras opcionais
     declinadas no encerramento), aprovador Felipe Nantes, 2026-08-20.
+
+## Bloco 7 — 2026-08-24 (ciclo POST_AUDIT)
+
+19. **APROVO HG-07/HG-08 para TASK-2026-08-24-GOV-01, aprovador Felipe
+    Nantes, 2026-08-24**, nas duas propostas:
+    (A) testes negativos de proveniência do estimando (test-only; produção
+    intocada): a superfície de apresentação nunca expõe
+    `cross_validated_selection_metrics` (otimista: 79,1/80,1 em população
+    de 451 computáveis) como generalização; âncora honesta obrigatória
+    (nested-OOF 75,91/76,11 em 467 com falhas no denominador, SCI-004).
+    Fecha o lado de engenharia do SR-006.
+    (B) regime de consumo do outer OOF para o ciclo POST_AUDIT = **c+d+b**:
+    triagem/desenvolvimento somente com dev signals/inner CV (zero leituras
+    do outer); promoção com no máximo 1 leitura LOCKED do outer por
+    candidato promovível, com endpoints PRÉ-registrados
+    (CANDIDATE_COMPARISON antes da leitura); toda leitura registrada no
+    `outer_inspection_counter` do EXPERIMENT_LEDGER com experiment_id.

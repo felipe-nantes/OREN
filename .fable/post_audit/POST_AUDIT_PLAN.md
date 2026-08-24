@@ -39,11 +39,15 @@ Opções de regime (decisão humana antes de OPT_04; trade-offs explícitos):
 | d | Avaliação final LOCKED: 1 leitura do outer por candidato promovível | máxima proteção | lenta; exige pré-comprometimento |
 | e | Se o conjunto já estiver excessivamente consumido: novo regime de avaliação (nova partição/coorte) | reset limpo | custo alto; HG-06/07 obrigatório |
 
-Recomendação do planner (não decidida): **c para triagem + d para promoção +
-b como contador de auditoria** — toda leitura do outer é registrada em
-`EXPERIMENT_LEDGER.yaml` (campo `outer_inspections_consumed` no promotion
-gate). Medições que NÃO leem o outer (probes sobre embeddings congelados,
-análises de falha) não consomem orçamento.
+**REGIME DECIDIDO em 2026-08-24 (HUMAN_DECISIONS item 19): c + d + b.**
+Triagem/desenvolvimento somente com dev signals/inner CV (zero leituras do
+outer); promoção com no máximo 1 leitura LOCKED do outer por candidato
+promovível, com endpoints PRÉ-registrados (CANDIDATE_COMPARISON preenchido
+ANTES da leitura); toda leitura registrada em `EXPERIMENT_LEDGER.yaml`
+(`outer_inspection_counter` + experiment_id). Medições que NÃO leem o outer
+(probes sobre embeddings congelados, análises de falha) não consomem
+orçamento. Guarda de engenharia: testes negativos de proveniência do
+estimando (`tests/test_estimand_provenance_negative.py`, sonda P20 KILLED).
 
 ## 3. Regra de hipótese única
 
