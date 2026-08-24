@@ -265,7 +265,7 @@ weaknesses:
     confidence: MEDIUM
     current_tests: "parcial (fail-closed testado nos gates principais)"
     current_protection: "alguns sítios têm noqa deliberado com racional"
-    missing_protection: "triagem sítio a sítio com CAN_CHANGE_SCIENTIFIC_RESULT"
+    missing_protection: "FECHADO em 2026-08-24 (ROB-01): 62 sítios triados, TODOS categoria A (deliberados: falha registrada/contabilizada, fail-closed ou degradação com recibo); ZERO fail-open científico; ledger em evidence/ROB-01/"
     possible_root_causes: ["padrão defensivo aplicado amplamente"]
     unknowns: ["quantos são deliberados vs acidentais"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -275,7 +275,7 @@ weaknesses:
     expected_information_gain: HIGH
     human_gate: "por sítio: none se log-only; HG conforme rota se estreitar altera resultado"
     recommended_fable_effort: HIGH
-    status: OPEN
+    status: RESOLVED
 
   - id: W-011
     title: "test_environment_report_accepts_free_gpu falha em toda suíte com GPU ocupada"
@@ -364,7 +364,7 @@ weaknesses:
     confidence: HIGH
     current_tests: n/a
     current_protection: "suíte na CI"
-    missing_protection: "APLICADO em 2026-08-24 (CI-01): coleta consertada (hypothesis/sklearn/torch-guard) + 4 gates no workflow; resta CONFIRMAR Actions verde pós-push"
+    missing_protection: "FECHADO em 2026-08-24 (CI-01): coleta consertada + 4 gates; Actions VERDE confirmado pelo operador no push e4d4cc5"
     possible_root_causes: ["CI mínima da era pré-auditoria"]
     unknowns: ["estado real da CI (verificar via web/gh)"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -374,7 +374,7 @@ weaknesses:
     expected_information_gain: MEDIUM
     human_gate: none
     recommended_fable_effort: MEDIUM
-    status: OPEN
+    status: RESOLVED
 
   - id: W-014
     title: "Imagem runtime sem git; 6 testes dependem do binário (divergência imagem-vs-teste)"
