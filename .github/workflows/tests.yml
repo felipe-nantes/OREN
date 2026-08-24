@@ -16,13 +16,35 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install (núcleo + dev, sem GPU/torch)
+      - name: Install (núcleo + dev + training, sem GPU/torch)
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .[dev]
+          python -m pip install -e .[dev,training]
 
       - name: Preflight (doctor — não roda segmentação)
         run: python digital_twin.py doctor
 
-      - name: Run test suite
-        run: python -m pytest -q
+      # Gates mecânicos (CI-01, 2026-08-24): protegem as conquistas da
+      # auditoria — regras de defeito real e mecânicas zeradas nas fases
+      # 07-08 (residuais justificados excluídos por per-file-ignores),
+      # mypy zerado em robustness (PH08) e piso de cobertura do núcleo
+      # científico (89,5% na auditoria; piso conservador de 85%).
+      - name: Gate ruff (regras de defeito real)
+        run: python -m ruff check dtwin webapp tools tests --select F821,F811,F702,B002,B006,B008,B015,B023,B031,B032,PLE
+
+      - name: Gate ruff (regras mecânicas zeradas)
+        run: python -m ruff check dtwin webapp tools tests --select I001,RUF100,UP035,F401 --per-file-ignores "tests/test_openswisshcc_lesion_localizer.py:I001" --per-file-ignores "tests/test_openswisshcc_multisequence_chunks.py:I001"
+
+      - name: Gate mypy (módulo zerado — robustness)
+        run: |
+          python -m mypy dtwin/learning/robustness.py > mypy_out.txt 2>&1 || true
+          if grep "robustness.py:" mypy_out.txt; then
+            echo "::error::mypy voltou a acusar dtwin/learning/robustness.py (zerado na PHASE_08)"
+            exit 1
+          fi
+
+      - name: Run test suite (com cobertura)
+        run: python -m pytest -q --cov=dtwin --cov=webapp --cov-branch --cov-report=
+
+      - name: Gate cobertura (núcleo científico >= 85% branch)
+        run: python -m coverage report --include="dtwin/learning/splits.py,dtwin/benchmark/metrics.py,dtwin/learning/robustness.py,dtwin/volumetry.py,dtwin/segmentation_contract.py,dtwin/learning/multiphase_ingest.py,dtwin/learning/raw_dicom_phase_resolver.py,dtwin/learning/visual_inference.py" --fail-under=85 --precision=1

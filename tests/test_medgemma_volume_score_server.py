@@ -3,7 +3,13 @@ import io
 from types import SimpleNamespace
 
 import pytest
-import torch
+
+# CI roda deliberadamente sem a stack de GPU (workflow: "sem GPU/torch");
+# nesses ambientes o arquivo inteiro é pulado — onde torch existe (host de
+# desenvolvimento), os testes rodam integralmente, sem enfraquecimento.
+torch = pytest.importorskip("torch", reason="ambiente sem torch (CI é deliberadamente sem GPU)")
+pytest.importorskip("transformers", reason="ambiente sem a stack medgemma")
+
 from fastapi.testclient import TestClient
 from PIL import Image
 

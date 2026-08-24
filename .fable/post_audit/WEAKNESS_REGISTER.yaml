@@ -364,7 +364,7 @@ weaknesses:
     confidence: HIGH
     current_tests: n/a
     current_protection: "suíte na CI"
-    missing_protection: "gates: ruff regras de defeito, mypy módulos zerados, coverage floor do núcleo"
+    missing_protection: "APLICADO em 2026-08-24 (CI-01): coleta consertada (hypothesis/sklearn/torch-guard) + 4 gates no workflow; resta CONFIRMAR Actions verde pós-push"
     possible_root_causes: ["CI mínima da era pré-auditoria"]
     unknowns: ["estado real da CI (verificar via web/gh)"]
     candidate_action_type: ROBUSTNESS_FIX
