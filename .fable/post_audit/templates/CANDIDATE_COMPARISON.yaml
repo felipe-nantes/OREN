@@ -1,0 +1,41 @@
+# Template: comparação candidato vs baseline (OPT_05/OPT_06)
+# Preenchido ANTES da leitura final do outer (pré-registro dos endpoints).
+
+comparison_id: ""
+experiment_id: ""                    # do EXPERIMENT_LEDGER
+baseline_commit: ""
+candidate_commit: ""
+
+preregistered_endpoints:
+  primary: ""
+  secondary: []
+  domain: ["origin_probe", "LODO", "por coorte"]
+  failure: ["failure_rate", "composição", "denominador"]
+  cost: ["runtime", "VRAM", "RAM se medido"]
+
+results:
+  aggregate:
+    baseline: {}
+    candidate: {}
+  per_cohort: {}                     # coorte -> {baseline, candidate}
+  lodo: {}
+  origin_probe: {baseline: null, candidate: null}
+  failures: {baseline: null, candidate: null}
+  variance_reproducibility: ""       # 2+ runs; dispersão
+  cost: {}
+
+adversarial_validation:              # OPT_05 — tentativas de refutação
+  attempts: []                       # cada uma: {attack, result}
+  survived: null
+
+red_flags:                           # qualquer um bloqueia promoção sem decisão explícita
+  cohort_worse_than_tolerance: null
+  origin_dependence_increased: null
+  failures_increased: null
+  variance_increased: null
+  leakage_suspected: null
+
+outer_readings_consumed_by_this_candidate: 0
+promotion_gate: "CANDIDATE_PROMOTION_GATE.yaml (checklist integral anexado)"
+recommendation: ""
+human_decision: ""

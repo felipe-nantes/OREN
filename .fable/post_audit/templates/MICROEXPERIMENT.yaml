@@ -1,0 +1,66 @@
+# Template: microexperimento controlado (OPT_04)
+# Regra: ONE SCIENTIFIC HYPOTHESIS -> ONE MINIMAL PATCH -> ONE EVIDENCE PACKAGE.
+
+experiment_id: ""
+
+baseline: ""            # id/descrição do baseline vigente
+base_commit: ""
+
+hypothesis: ""
+
+evidence_supporting_hypothesis: []   # citações obrigatórias (SR/TD/docs/ledger)
+
+targeted_weakness: ""                # W-### do WEAKNESS_REGISTER
+
+single_change: ""                    # UMA mudança; se precisar de duas, são dois experimentos
+
+explicitly_unchanged:
+  - "folds/seeds do protocolo (SCI-003)"
+  - "labels e coortes (SCI-002/HG-06)"
+  - "denominadores e contabilização de falha (SCI-004/HG-08)"
+  - "thresholds oficiais (HG-08)"
+  - "preprocessing semantics (HG-07)"
+  - "convenções geométricas (HG-03/04)"
+  - "..."                            # completar por experimento
+
+files: []
+modules: []
+
+scientific_contracts: []             # contratos tocados/adjacentes (IDs)
+human_gates: []                      # gates aplicáveis + status da aprovação
+
+tests_before: []                     # suíte/âncoras que devem estar verdes antes
+tests_added: []                      # testes novos do experimento
+
+evaluation_protocol: ""              # descrição textual do protocolo
+
+inner_cv: ""                         # como o inner é usado (seleção SÓ aqui)
+outer_cv: ""                         # regime de leitura do outer (POST_AUDIT_PLAN §2); toda leitura vai ao ledger
+grouping: "patient_group_id (sempre)"
+seeds: []
+cohorts: []
+
+primary_metric: ""
+secondary_metrics: []
+
+domain_metrics: ["origin_probe antes/depois", "LODO", "por coorte"]
+failure_metrics: ["failure rate e composição; denominador constante"]
+
+expected_direction: ""               # predição falsificável declarada A PRIORI
+
+success_threshold: ""
+failure_threshold: ""
+
+reproducibility_requirement: ">=2 runs/seeds com mesmo veredito dentro das tolerâncias ratificadas"
+
+compute_budget: ""
+
+model: "Fable 5"
+effort: "UltraCode"                  # padrão p/ científico; justificar se menor
+
+approval_before_change: ""           # decisão humana formal ANTES do patch
+approval_before_promotion: ""        # CANDIDATE_PROMOTION_GATE integral
+
+rollback_plan: ""                    # revert do patch único; candidato nunca sobrescreve baseline
+
+evidence_output: ""                  # caminho do evidence package + entrada no EXPERIMENT_LEDGER

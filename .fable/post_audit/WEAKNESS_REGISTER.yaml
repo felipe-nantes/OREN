@@ -1,0 +1,1171 @@
+schema: argos-post-audit-weakness-register-v1
+created: "2026-08-20"
+base_commit: "9288785"
+notes: >
+  Inventário integral extraído das PHASES 00-10 (evidence packages, TD/SR
+  registers, MANUSCRIPT_VS_CODE, HUMAN_DECISIONS, blockers). Campos com
+  escala usam HIGH/MEDIUM/LOW/NONE. status usa OPEN/BLOCKED_ENV/
+  AWAITING_HUMAN/EXTERNAL. candidate_action_type usa as categorias da missão.
+
+weaknesses:
+
+  # ================= ARCHITECTURE / PURE_REFACTOR =================
+
+  - id: W-001
+    title: "webapp/server.py monolito (3.610 linhas, 7 responsabilidades)"
+    category: ARCHITECTURE
+    source: "TD-001 (PHASE_01)"
+    source_evidence: ".fable/TECHNICAL_DEBT_REGISTER.md; hotspots em CURRENT_STATE"
+    affected_files: [webapp/server.py]
+    affected_modules: [webapp]
+    upstream_dependencies: [dtwin.segmentation_subprocess, dtwin.stages, dtwin.learning]
+    downstream_dependencies: [viewer, XR, jobs, benchmark web]
+    observed_problem: "API, upload, subprocessos, jobs, benchmark, viewer/XR e persistência num módulo"
+    possible_consequence: "blast radius alto; testabilidade baixa; mudanças arriscadas"
+    scientific_impact: LOW
+    geometric_impact: MEDIUM
+    statistical_impact: NONE
+    performance_impact: LOW
+    reproducibility_impact: LOW
+    maintainability_impact: HIGH
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "test_webapp.py + integration boundary (PH05) + specs de geometria"
+    current_protection: "suíte 1769; characterization/specs dos comparadores"
+    missing_protection: "testes por seam após decomposição"
+    possible_root_causes: ["crescimento orgânico do produto"]
+    unknowns: ["seams naturais exatos — mapear antes de cortar"]
+    candidate_action_type: PURE_REFACTOR
+    priority: MEDIUM
+    estimated_cost: HIGH
+    estimated_risk: MEDIUM
+    expected_information_gain: LOW
+    human_gate: "none para reorganização pura; HG-03/05 se tocar semântica de união/persistência"
+    recommended_fable_effort: "UltraCode (arquitetura com downstream científico) para o DESIGN; MEDIUM por seam na execução"
+    status: OPEN
+
+  - id: W-002
+    title: "dtwin/stages.py acoplado (7 estágios: DICOM, masks, mesh/export)"
+    category: ARCHITECTURE
+    source: "TD-002 (PHASE_01)"
+    source_evidence: ".fable/TECHNICAL_DEBT_REGISTER.md"
+    affected_files: [dtwin/stages.py]
+    affected_modules: [dtwin]
+    upstream_dependencies: [dtwin.core, SimpleITK, pyvista]
+    downstream_dependencies: [volumetria, viewer, XR, benchmark]
+    observed_problem: "1.243+ linhas com geometria/3D entrelaçados"
+    possible_consequence: "refactor arrisca semântica geométrica (HG-03/05/10)"
+    scientific_impact: MEDIUM
+    geometric_impact: HIGH
+    statistical_impact: NONE
+    performance_impact: LOW
+    reproducibility_impact: LOW
+    maintainability_impact: HIGH
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "gates_extra, engine_finalize, volumetry, specs de direction"
+    current_protection: "specs HG-03 (item 13) + property tests PH04"
+    missing_protection: "oracle de hash de malha/volumetria por estágio"
+    possible_root_causes: ["pipeline construído incrementalmente"]
+    unknowns: ["custo real de separar mesh de mask sem tocar números"]
+    candidate_action_type: PURE_REFACTOR
+    priority: LOW
+    estimated_cost: HIGH
+    estimated_risk: HIGH
+    expected_information_gain: LOW
+    human_gate: "HG-03/05/10 se qualquer semântica mudar — EXCLUÍDO da trilha refactor simples"
+    recommended_fable_effort: "UltraCode (geometria) — somente se autorizado"
+    status: OPEN
+
+  - id: W-003
+    title: "56 helpers 'atomic' duplicados (comportamento agora uniforme, duplicação permanece)"
+    category: TECHNICAL_DEBT
+    source: "TD-007 (PHASE_04/08)"
+    source_evidence: "auditoria AST 2026-08-18; PH08 fechou a divergência de vazamento"
+    affected_files: [dtwin/learning/protocol.py, dtwin/volumetry.py, dtwin/benchmark/reporting.py, "+53 sítios"]
+    affected_modules: [dtwin, webapp, tools]
+    upstream_dependencies: []
+    downstream_dependencies: ["todos os writers de artefatos"]
+    observed_problem: "mesma semântica reimplementada 56 vezes"
+    possible_consequence: "nova divergência futura (a de vazamento já ocorreu e foi corrigida)"
+    scientific_impact: LOW
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: HIGH
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "test_property_atomic_and_artifact.py + TD-007 fix tests"
+    current_protection: "property tests dos 4 canônicos"
+    missing_protection: "helper único canônico importado por todos"
+    possible_root_causes: ["copy-paste entre scripts experimentais"]
+    unknowns: ["quantos dos 56 estão em código morto/one-shot"]
+    candidate_action_type: PURE_REFACTOR
+    priority: MEDIUM
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: none
+    recommended_fable_effort: MEDIUM
+    status: OPEN
+
+  - id: W-004
+    title: "3 comparadores de geometria com 2 regimes de tolerância (1e-6 exato vs 1e-5)"
+    category: GEOMETRIC_WEAKNESS
+    source: "TD-008 + PHASE_09 wave 1"
+    source_evidence: "tests/test_characterization_geometry_equality.py (documenta os regimes)"
+    affected_files: [webapp/server.py, dtwin/segmentation_contract.py, dtwin/volumetry.py]
+    affected_modules: [webapp, dtwin]
+    upstream_dependencies: []
+    downstream_dependencies: [união de fases, gate de exibição, volumetria]
+    observed_problem: "webapp: size/spacing/origin exatos + direction atol=1e-6; contract/volumetry: atol=1e-5"
+    possible_consequence: "aceitação/rejeição inconsistente do mesmo par de grades entre rotas"
+    scientific_impact: MEDIUM
+    geometric_impact: MEDIUM
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: MEDIUM
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "specs cobrem os 3 comparadores com os regimes atuais"
+    current_protection: "qualquer mudança quebra spec e força gate"
+    missing_protection: "contrato único de tolerância — exige decisão"
+    possible_root_causes: ["evolução independente por rota"]
+    unknowns: ["distribuição real de desvios de header em campo"]
+    candidate_action_type: SCIENTIFIC_CHANGE
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: MEDIUM
+    expected_information_gain: MEDIUM
+    human_gate: "HG-03 (unificar tolerância É mudança semântica — NÃO é refactor)"
+    recommended_fable_effort: HIGH
+    status: OPEN
+
+  - id: W-005
+    title: "~19 achados mypy residuais; stages.py:1096 mesh arg-type é candidato a defeito real"
+    category: CORRECTNESS_BUG
+    source: "PHASE_07 wave 1 (mypy) + PHASE_08"
+    source_evidence: ".fable/evidence/PH07/mypy_nucleo_2026-08-18.txt; run PH08"
+    affected_files: [dtwin/stages.py, "viewer typing"]
+    affected_modules: [dtwin]
+    upstream_dependencies: [pyvista]
+    downstream_dependencies: [malha 3D/XR]
+    observed_problem: "build_xr_render_asset recebe DataSet|MultiBlock onde espera PolyData (stages.py:1096/1109)"
+    possible_consequence: "TypeError latente em caminho de malha sob entrada composta"
+    scientific_impact: LOW
+    geometric_impact: MEDIUM
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: NONE
+    maintainability_impact: MEDIUM
+    silent_failure_risk: MEDIUM
+    confidence: MEDIUM
+    current_tests: "engine_finalize cobre malha feliz; caminho MultiBlock incerto"
+    current_protection: parcial
+    missing_protection: "triagem: reproduzir ou provar inalcançável"
+    possible_root_causes: ["extract_surface pode devolver tipos compostos"]
+    unknowns: ["se MultiBlock ocorre em dados reais"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: MEDIUM
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: "none para triagem; HG-10 se corrigir alterar malha"
+    recommended_fable_effort: MEDIUM
+    status: OPEN
+
+  - id: W-006
+    title: "Drift de naming ARGOS/OREN/Volyrcs em docs e caminhos"
+    category: TECHNICAL_DEBT
+    source: "TD-013"
+    source_evidence: ".fable/TECHNICAL_DEBT_REGISTER.md"
+    affected_files: ["docs/", "tools/"]
+    affected_modules: [docs]
+    upstream_dependencies: []
+    downstream_dependencies: [onboarding]
+    observed_problem: "três nomes de produto coexistem"
+    possible_consequence: "confusão operacional"
+    scientific_impact: NONE
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: MEDIUM
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: n/a
+    current_protection: n/a
+    missing_protection: "glossário canônico"
+    possible_root_causes: ["renomeações históricas do produto"]
+    unknowns: []
+    candidate_action_type: PURE_REFACTOR
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: none
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  - id: W-007
+    title: "README declara Couinaud/vasculatura fora de escopo; profiles/figado.yaml os habilita"
+    category: TECHNICAL_DEBT
+    source: "TD-006"
+    source_evidence: ".fable/TECHNICAL_DEBT_REGISTER.md"
+    affected_files: [README.md, profiles/figado.yaml]
+    affected_modules: [docs]
+    upstream_dependencies: []
+    downstream_dependencies: [onboarding, expectativa de usuários]
+    observed_problem: "doc viva contradiz configuração de produção"
+    possible_consequence: "onboarding incorreto"
+    scientific_impact: LOW
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: MEDIUM
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: n/a
+    current_protection: n/a
+    missing_protection: "doc alinhada ao profile vigente"
+    possible_root_causes: ["escopo evoluiu; README ficou"]
+    unknowns: []
+    candidate_action_type: PURE_REFACTOR
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: none
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  # ================= ROBUSTNESS =================
+
+  - id: W-010
+    title: "65 blind-excepts (BLE001) sem triagem de engolimento de erro"
+    category: ROBUSTNESS_FIX
+    source: "PHASE_08 wave 2 (estatística ruff pós-fix)"
+    source_evidence: "TASK-2026-08-19-PH08-REF-02_EVIDENCE.md"
+    affected_files: ["dtwin/**", "webapp/**", "tools/**"]
+    affected_modules: [dtwin, webapp, tools]
+    upstream_dependencies: []
+    downstream_dependencies: ["qualquer caminho com except Exception"]
+    observed_problem: "65 sítios capturam Exception genérica; alguns podem mascarar falhas reais (fail-open)"
+    possible_consequence: "falha silenciosa; resultado científico computado sobre erro engolido"
+    scientific_impact: MEDIUM
+    geometric_impact: MEDIUM
+    statistical_impact: MEDIUM
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: MEDIUM
+    silent_failure_risk: HIGH
+    confidence: MEDIUM
+    current_tests: "parcial (fail-closed testado nos gates principais)"
+    current_protection: "alguns sítios têm noqa deliberado com racional"
+    missing_protection: "triagem sítio a sítio com CAN_CHANGE_SCIENTIFIC_RESULT"
+    possible_root_causes: ["padrão defensivo aplicado amplamente"]
+    unknowns: ["quantos são deliberados vs acidentais"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: HIGH
+    estimated_cost: MEDIUM
+    estimated_risk: MEDIUM
+    expected_information_gain: HIGH
+    human_gate: "por sítio: none se log-only; HG conforme rota se estreitar altera resultado"
+    recommended_fable_effort: HIGH
+    status: OPEN
+
+  - id: W-011
+    title: "test_environment_report_accepts_free_gpu falha em toda suíte com GPU ocupada"
+    category: ROBUSTNESS_FIX
+    source: "PHASES 07-10 (falha ambiental constante nos portões)"
+    source_evidence: "todos os portões: 1 failed ambiental"
+    affected_files: [tests/test_learning_environment.py]
+    affected_modules: [tests]
+    upstream_dependencies: [torch/CUDA]
+    downstream_dependencies: ["sinal da suíte"]
+    observed_problem: "teste exige GPU livre; qualquer processo residente o quebra"
+    possible_consequence: "ruído permanente no sinal da suíte; risco de normalizar '1 failed'"
+    scientific_impact: NONE
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: MEDIUM
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "é o próprio teste"
+    current_protection: "falha documentada como ambiental"
+    missing_protection: "marker/skipif de pré-condição ambiental SEM enfraquecer o assert quando roda"
+    possible_root_causes: ["pré-condição de ambiente embutida como assert"]
+    unknowns: []
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: MEDIUM
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: "none (gating de pré-condição; teste não é enfraquecido)"
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  - id: W-012
+    title: "Flake único do Hypothesis em splits isolation sob carga da suíte"
+    category: ROBUSTNESS_FIX
+    source: "PHASE_09 wave 1 (portão)"
+    source_evidence: "TASK-2026-08-20-PH09-HRR-01_EVIDENCE.md (não reproduziu em 3 reexecuções)"
+    affected_files: [tests/test_property_splits_isolation.py]
+    affected_modules: [tests]
+    upstream_dependencies: [hypothesis]
+    downstream_dependencies: ["sinal da suíte"]
+    observed_problem: "falha 1x sob carga; saída truncada impediu diagnóstico (deadline? exemplo raro?)"
+    possible_consequence: "flakes intermitentes minam confiança nos portões"
+    scientific_impact: NONE
+    geometric_impact: NONE
+    statistical_impact: LOW
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: LOW
+    silent_failure_risk: LOW
+    confidence: LOW
+    current_tests: "o próprio property test"
+    current_protection: "registrado; monitorar"
+    missing_protection: "profile Hypothesis p/ CI (deadline=None, derandomize) + captura de counterexample"
+    possible_root_causes: ["DeadlineExceeded sob carga", "exemplo raro real"]
+    unknowns: ["causa exata (saída perdida)"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: none
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  - id: W-013
+    title: "CI sem gates de lint/typing/coverage; estado real da CI não verificado"
+    category: TECHNICAL_DEBT
+    source: "TD-004 + open_bugs (gh ausente)"
+    source_evidence: "CURRENT_STATE snapshot ci"
+    affected_files: [".github/workflows/"]
+    affected_modules: [ci]
+    upstream_dependencies: []
+    downstream_dependencies: ["todas as mudanças futuras"]
+    observed_problem: "CI roda doctor+pytest apenas; conquistas da auditoria (ruff defeito zero, mypy módulos zerados) não são protegidas"
+    possible_consequence: "regressão mecânica silenciosa pós-auditoria"
+    scientific_impact: LOW
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: HIGH
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: n/a
+    current_protection: "suíte na CI"
+    missing_protection: "gates: ruff regras de defeito, mypy módulos zerados, coverage floor do núcleo"
+    possible_root_causes: ["CI mínima da era pré-auditoria"]
+    unknowns: ["estado real da CI (verificar via web/gh)"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: MEDIUM
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: none
+    recommended_fable_effort: MEDIUM
+    status: OPEN
+
+  - id: W-014
+    title: "Imagem runtime sem git; 6 testes dependem do binário (divergência imagem-vs-teste)"
+    category: REPRODUCIBILITY
+    source: "PHASE_00 / open_bugs"
+    source_evidence: "CURRENT_STATE open_bugs"
+    affected_files: ["docker/", "tests com git"]
+    affected_modules: [docker, tests]
+    upstream_dependencies: []
+    downstream_dependencies: ["baseline canônico em container"]
+    observed_problem: "backend canônico (container) não roda 6 testes que o host roda"
+    possible_consequence: "cobertura assimétrica entre backends"
+    scientific_impact: NONE
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: LOW
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: "os 6 testes (host-only de fato)"
+    current_protection: documentado
+    missing_protection: "git na imagem OU skipif declarado"
+    possible_root_causes: ["imagem enxuta"]
+    unknowns: []
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: none
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  - id: W-015
+    title: "Sem lockfile integral por hardware (ranges amplos)"
+    category: REPRODUCIBILITY
+    source: "TD-005 / BLK-DEPS-LOCK"
+    source_evidence: "evidence/PH00/container_pip_freeze.txt (parcial)"
+    affected_files: [pyproject.toml]
+    affected_modules: [dependencies]
+    upstream_dependencies: []
+    downstream_dependencies: ["tudo"]
+    observed_problem: "reinstalação futura pode divergir do ambiente auditado"
+    possible_consequence: "drift numérico fora do escopo das tolerâncias ratificadas"
+    scientific_impact: MEDIUM
+    geometric_impact: MEDIUM
+    statistical_impact: MEDIUM
+    performance_impact: LOW
+    reproducibility_impact: HIGH
+    maintainability_impact: MEDIUM
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "sondas PH06 fixam o escopo de versões testado"
+    current_protection: "freeze do container + tolerâncias com cláusula de re-sonda em major"
+    missing_protection: "lock por backend (host win/py3.13; container linux/py3.11)"
+    possible_root_causes: ["extras opcionais e hardware heterogêneo"]
+    unknowns: ["ferramenta preferida (pip-compile/uv) — decidir na task"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: MEDIUM
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: "HG-09 somente se travar versão de modelo"
+    recommended_fable_effort: MEDIUM
+    status: OPEN
+
+  - id: W-016
+    title: "Tolerâncias GPU/CUDA nunca sondadas (blocker fechável nesta máquina)"
+    category: REPRODUCIBILITY
+    source: "BLK-GPU-TOLERANCES / HUMAN_DECISIONS item 9 (GPU EM ABERTO)"
+    source_evidence: "evidence/PH06/probe_*.json (CPU apenas)"
+    affected_files: [dtwin/learning/, dtwin/stages.py]
+    affected_modules: [dtwin]
+    upstream_dependencies: [torch cu124, RTX 4060]
+    downstream_dependencies: ["qualquer claim de reprodutibilidade GPU"]
+    observed_problem: "igualdade bitwise GPU não medida; decisão 9 deixou explícito EM ABERTO"
+    possible_consequence: "divergência GPU desconhecida; migração de hardware sem referência"
+    scientific_impact: MEDIUM
+    geometric_impact: MEDIUM
+    statistical_impact: MEDIUM
+    performance_impact: NONE
+    reproducibility_impact: HIGH
+    maintainability_impact: LOW
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "sondas PH06 reutilizáveis (CPU)"
+    current_protection: "blocker declarado"
+    missing_protection: "sonda GPU determinística + proposta de tolerância p/ ratificação"
+    possible_root_causes: ["GPU indisponível/ocupada durante PH06"]
+    unknowns: ["não-determinismo cuDNN por op — a sonda mede isso"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: MEDIUM
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: HIGH
+    human_gate: "ratificação da tolerância estende decisão 9 (gate leve, mesmo formato)"
+    recommended_fable_effort: HIGH
+    status: OPEN
+
+  - id: W-017
+    title: "Higiene operacional: .tmp*/environments/artefatos grandes coexistem com o repo"
+    category: TECHNICAL_DEBT
+    source: "TD-010"
+    source_evidence: ".fable/TECHNICAL_DEBT_REGISTER.md"
+    affected_files: ["dirs ignorados locais"]
+    affected_modules: [ops]
+    upstream_dependencies: []
+    downstream_dependencies: [storage, confusão]
+    observed_problem: "acúmulo local sem política de retenção"
+    possible_consequence: "disco cheio (já causou falha de teste na PH00); confusão"
+    scientific_impact: NONE
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: LOW
+    reproducibility_impact: LOW
+    maintainability_impact: MEDIUM
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: n/a
+    current_protection: gitignore
+    missing_protection: "política de retenção documentada (HG-11 se tocar dados)"
+    possible_root_causes: ["experimentos longos locais"]
+    unknowns: ["o que é lixo vs artefato citado"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: MEDIUM
+    expected_information_gain: LOW
+    human_gate: "HG-11 se qualquer dado de paciente estiver envolvido"
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  - id: W-018
+    title: "TODO server.py:2554 — fallback lento/CPU e detecção problemática"
+    category: PERFORMANCE
+    source: "TD-011"
+    source_evidence: ".fable/TECHNICAL_DEBT_REGISTER.md"
+    affected_files: [webapp/server.py]
+    affected_modules: [webapp]
+    upstream_dependencies: [torch/CUDA detection]
+    downstream_dependencies: ["latência do exame"]
+    observed_problem: "comentário registra fallback problemático; nunca reproduzido"
+    possible_consequence: "degradação de performance silenciosa"
+    scientific_impact: NONE
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: MEDIUM
+    reproducibility_impact: LOW
+    maintainability_impact: LOW
+    silent_failure_risk: MEDIUM
+    confidence: LOW
+    current_tests: nenhum
+    current_protection: nenhuma
+    missing_protection: "reprodução + medição antes de qualquer fix"
+    possible_root_causes: ["detecção de device frágil"]
+    unknowns: ["se ainda ocorre no runtime nativo"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: LOW
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: "maybe HG-05 (se tocar seleção de backend de segmentação)"
+    recommended_fable_effort: MEDIUM
+    status: OPEN
+
+  - id: W-019
+    title: "Coberturas restantes justificadas (S5 render report, S6 volumetry advisory, G8 fallbacks)"
+    category: TECHNICAL_DEBT
+    source: "PHASE_07 exit review"
+    source_evidence: "TASK-2026-08-19-PH07-EXIT.md (justificados formalmente)"
+    affected_files: [dtwin/learning/robustness.py, dtwin/volumetry.py]
+    affected_modules: [dtwin]
+    upstream_dependencies: []
+    downstream_dependencies: []
+    observed_problem: "braços de apresentação/consultivos sem teste"
+    possible_consequence: "regressão de formatação/graduação passaria despercebida"
+    scientific_impact: LOW
+    geometric_impact: NONE
+    statistical_impact: LOW
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: LOW
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: "núcleo 89,5% branch; esses braços fora"
+    current_protection: "justificativa formal no exit review"
+    missing_protection: "smoke tests opcionais"
+    possible_root_causes: []
+    unknowns: []
+    candidate_action_type: PURE_REFACTOR
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: none
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  - id: W-020
+    title: "PHI pode persistir em artefatos de trabalho (DICOM originais retidos)"
+    category: ROBUSTNESS_FIX
+    source: "SR-010 (AWAITING_HUMAN)"
+    source_evidence: ".fable/SCIENTIFIC_RISK_REGISTER.md SR-010; DOM-002 ratificado cobre parte"
+    affected_files: ["workspace de casos", dtwin/learning/raw_dicom_phase_resolver.py]
+    affected_modules: [dtwin, webapp]
+    upstream_dependencies: []
+    downstream_dependencies: ["política de storage/retention"]
+    observed_problem: "bytes DICOM originais retidos por design (DOM-002); política de retenção/de-ID não formalizada"
+    possible_consequence: "PHI residente além do necessário"
+    scientific_impact: NONE
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: NONE
+    maintainability_impact: LOW
+    silent_failure_risk: HIGH
+    confidence: MEDIUM
+    current_tests: "test_property_failclosed_http_xr_phi.py (gitignore de casos/)"
+    current_protection: "DOM-002 + POL-PHI-01 + revisão humana obrigatória"
+    missing_protection: "política de storage/retention aprovada (decisão humana pendente do SR-010)"
+    possible_root_causes: ["retenção necessária ao resolver, sem TTL"]
+    unknowns: ["inventário real de PHI em artefatos de trabalho — revisar SEM inserir PHI no pack"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: HIGH
+    estimated_cost: MEDIUM
+    estimated_risk: MEDIUM
+    expected_information_gain: MEDIUM
+    human_gate: "HG-11 obrigatório"
+    recommended_fable_effort: HIGH
+    status: AWAITING_HUMAN
+
+  # ============ SCIENTIFIC / STATISTICAL / DOMAIN / REPRODUCIBILITY ============
+
+  - id: W-030
+    title: "Seleção do bundle final ≠ estimativa nested-OOF; proveniência do estimando não é obrigatória"
+    category: STATISTICAL_WEAKNESS
+    source: "SR-006 (OPEN)"
+    source_evidence: "medsiglip_multiclass_classifier.py:1216-1309; docs/123; manuscrito §§2.5.2/2.6/3.5"
+    affected_files: [dtwin/learning/medsiglip_multiclass_classifier.py, webapp/server.py]
+    affected_modules: [dtwin.learning, webapp]
+    upstream_dependencies: []
+    downstream_dependencies: ["qualquer apresentação de métrica; TODO o ciclo OPT"]
+    observed_problem: "modelo servível escolhe C/agregação/threshold por CV nos folds EXTERNOS; métrica de seleção é otimista (~79/80 vs 75,91/76,11 honesto)"
+    possible_consequence: "relatório/UI promove métrica de seleção como generalização; outer OOF consumido em desenvolvimento"
+    scientific_impact: HIGH
+    geometric_impact: NONE
+    statistical_impact: HIGH
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: LOW
+    silent_failure_risk: HIGH
+    confidence: HIGH
+    current_tests: "nenhum teste negativo contra promoção da métrica de seleção"
+    current_protection: "docs/123 declara generalization_estimate_source"
+    missing_protection: "campo de proveniência do estimando em toda apresentação + teste negativo + regime anti-consumo (POST_AUDIT_PLAN §2)"
+    possible_root_causes: ["seleção final pragmática sobre folds externos"]
+    unknowns: ["quantas leituras do outer já ocorreram historicamente"]
+    candidate_action_type: SCIENTIFIC_CHANGE
+    priority: HIGH
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: HIGH
+    human_gate: "HG-07/HG-08 (proposta de campo+teste é aditiva; regime é decisão)"
+    recommended_fable_effort: UltraCode
+    status: OPEN
+
+  - id: W-031
+    title: "Forte separabilidade de coorte/possível shortcut (probes 100%/98,75%)"
+    category: DOMAIN_SHIFT
+    source: "SR-007 (DOCUMENTED_LIMITATION)"
+    source_evidence: "manuscrito pp.13,16-17,23; docs/131:21,85; docs/134:53"
+    affected_files: [dtwin/learning/, "casos/qualification/hybrid_v1/*embeddings*"]
+    affected_modules: [dtwin.learning]
+    upstream_dependencies: [aquisição, preprocessing, panels, crops]
+    downstream_dependencies: ["validade externa de qualquer claim agregado"]
+    observed_problem: "embeddings e medidas físicas codificam origem quase perfeitamente; Etapa C usa classes *_unspecified específicas de OpenSwiss; transferência LLD→OpenSwiss cai"
+    possible_consequence: "métrica agregada explora coorte e não transfere a 3º domínio"
+    scientific_impact: HIGH
+    geometric_impact: LOW
+    statistical_impact: HIGH
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: NONE
+    silent_failure_risk: HIGH
+    confidence: HIGH
+    current_tests: "LODO + subgroup no robustness.py"
+    current_protection: "claims restritos no manuscrito; DOCUMENTED_LIMITATION"
+    missing_protection: "localização do PONTO DE ENTRADA do sinal (DS-PROBE-01); coorte independente p/ promoção"
+    possible_root_causes: ["aquisição/intensidade/panel/crop/label structure — ver DOMAIN_SHIFT_INVESTIGATION_PLAN"]
+    unknowns: ["ONDE o sinal entra e o quanto o classificador o usa além do label"]
+    candidate_action_type: EXPERIMENTAL_OPPORTUNITY
+    priority: HIGH
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: HIGH
+    human_gate: "none para medição; HG-06/07 para qualquer mitigação"
+    recommended_fable_effort: UltraCode
+    status: OPEN
+
+  - id: W-032
+    title: "Denominadores mistos no liver-enriched (n=321 comp. vs denominador 335; AUC só computáveis)"
+    category: STATISTICAL_WEAKNESS
+    source: "SR-003 (OPEN)"
+    source_evidence: "manuscrito p.11 §3.2, p.22 Tabela 2; lld_mmri_v23_liver_enriched_evaluation.py:192-220,520-610"
+    affected_files: [dtwin/benchmark/lld_mmri_v23_liver_enriched_evaluation.py, "manuscrito Tabela 2"]
+    affected_modules: [dtwin.benchmark]
+    upstream_dependencies: []
+    downstream_dependencies: ["leitura correta da Tabela 2"]
+    observed_problem: "tabela apresenta n=321 mas sens/spec penalizam falhas num denominador de 335; AUC usa inference_eligible_cases_only"
+    possible_consequence: "leitor recalcula proporções com população errada"
+    scientific_impact: HIGH
+    geometric_impact: NONE
+    statistical_impact: HIGH
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: NONE
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "código registra roc_auc_scope explicitamente"
+    current_protection: "escopo declarado no artefato"
+    missing_protection: "legenda declarando n de CADA estimando (decisão HG-08; editorial)"
+    possible_root_causes: ["convenção SCI-004 aplicada a sens/spec mas não a AUC"]
+    unknowns: []
+    candidate_action_type: SCIENTIFIC_CHANGE
+    priority: MEDIUM
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: HG-08
+    recommended_fable_effort: MEDIUM
+    status: OPEN
+
+  - id: W-033
+    title: "Lacunas de ledger: executável incompleto p/ 467/451/16; TCGA contraditório; n ausente em LLD secundários"
+    category: REPRODUCIBILITY
+    source: "SR-002 (AWAITING_HUMAN), SR-004 (AWAITING_HUMAN), SR-005 (OPEN)"
+    source_evidence: ".fable/SCIENTIFIC_RISK_REGISTER.md"
+    affected_files: ["casos/qualification/", "manuscrito"]
+    affected_modules: [dtwin.benchmark, docs]
+    upstream_dependencies: []
+    downstream_dependencies: ["auditabilidade externa dos números"]
+    observed_problem: "cadeia executável de reproveniência incompleta para partes dos números publicados"
+    possible_consequence: "números não re-deriváveis de artefatos por terceiros"
+    scientific_impact: HIGH
+    geometric_impact: NONE
+    statistical_impact: HIGH
+    performance_impact: NONE
+    reproducibility_impact: HIGH
+    maintainability_impact: LOW
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: "reconciliação 451/16 fechada na PH06 (parcial)"
+    current_protection: "lock + assinaturas verificadas onde existem"
+    missing_protection: "ledger executável completo por claim (junto com W-034)"
+    possible_root_causes: ["experimentos anteriores ao regime de lock"]
+    unknowns: ["quais claims têm artefato local vs só doc"]
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: MEDIUM
+    estimated_cost: HIGH
+    estimated_risk: LOW
+    expected_information_gain: HIGH
+    human_gate: "HG-01/HG-08 para decisões de legenda/escopo"
+    recommended_fable_effort: UltraCode
+    status: OPEN
+
+  - id: W-034
+    title: "Evidence IDs do manuscrito (E016..E154) sem mapa para comandos/artefatos/commits"
+    category: REPRODUCIBILITY
+    source: "TD-012"
+    source_evidence: ".fable/TECHNICAL_DEBT_REGISTER.md"
+    affected_files: ["manuscrito", "casos/qualification/", docs/]
+    affected_modules: [docs]
+    upstream_dependencies: []
+    downstream_dependencies: [W-033]
+    observed_problem: "resultados numerados no manuscrito não apontam para reprodutor"
+    possible_consequence: "reprodutibilidade científica quebrada na prática"
+    scientific_impact: HIGH
+    geometric_impact: NONE
+    statistical_impact: MEDIUM
+    performance_impact: NONE
+    reproducibility_impact: HIGH
+    maintainability_impact: LOW
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: n/a
+    current_protection: "docs numeradas existem"
+    missing_protection: "PROVENANCE_MAP.yaml E### → {doc, comando, artefato, commit}"
+    possible_root_causes: ["numeração editorial posterior aos experimentos"]
+    unknowns: ["cobertura alcançável com artefatos locais"]
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: MEDIUM
+    estimated_cost: HIGH
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: HG-01
+    recommended_fable_effort: MEDIUM
+    status: OPEN
+
+  - id: W-035
+    title: "Métricas do localizador histórico não pertencem ao localizador atual; ROI correta demonstra teto distinto"
+    category: SCIENTIFIC_WEAKNESS
+    source: "SR-013 (OPEN); manuscrito (ROI ceiling)"
+    source_evidence: ".fable/SCIENTIFIC_RISK_REGISTER.md SR-013"
+    affected_files: [dtwin/benchmark/, docs/]
+    affected_modules: [dtwin.benchmark]
+    upstream_dependencies: []
+    downstream_dependencies: ["expectativa sobre localização automática"]
+    observed_problem: "números citados podem descrever versão anterior do localizador"
+    possible_consequence: "atribuição errada de capacidade"
+    scientific_impact: MEDIUM
+    geometric_impact: NONE
+    statistical_impact: MEDIUM
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: NONE
+    silent_failure_risk: MEDIUM
+    confidence: MEDIUM
+    current_tests: n/a
+    current_protection: "SR documenta"
+    missing_protection: "re-atribuição de métricas por versão no ledger"
+    possible_root_causes: ["evolução v11-v27 sem re-benchmark de tudo"]
+    unknowns: ["quais números do manuscrito citam qual versão"]
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: LOW
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: HG-01
+    recommended_fable_effort: MEDIUM
+    status: OPEN
+
+  - id: W-036
+    title: "Threshold 0,90 de limpeza 3D altera volume/topologia sem análise de sensibilidade"
+    category: GEOMETRIC_WEAKNESS
+    source: "SR-016 (OPEN); SR-015 relacionado"
+    source_evidence: ".fable/SCIENTIFIC_RISK_REGISTER.md"
+    affected_files: [dtwin/stages.py, profiles/figado.yaml]
+    affected_modules: [dtwin]
+    upstream_dependencies: []
+    downstream_dependencies: [volumetria, malha]
+    observed_problem: "parâmetro numérico com efeito quantitativo sem justificativa medida"
+    possible_consequence: "volumes sensíveis a parâmetro arbitrário"
+    scientific_impact: MEDIUM
+    geometric_impact: HIGH
+    statistical_impact: LOW
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: NONE
+    silent_failure_risk: MEDIUM
+    confidence: MEDIUM
+    current_tests: "volumetria GEO-004 protege a fórmula, não o parâmetro"
+    current_protection: "parâmetro fixo em profile versionado"
+    missing_protection: "análise de sensibilidade (medição, sem mudar o parâmetro)"
+    possible_root_causes: ["escolha empírica não documentada"]
+    unknowns: ["gradiente real de volume vs threshold em casos sintéticos/reais locais"]
+    candidate_action_type: EXPERIMENTAL_OPPORTUNITY
+    priority: LOW
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: "none para medir; HG-10 para mudar"
+    recommended_fable_effort: HIGH
+    status: OPEN
+
+  - id: W-037
+    title: "Volume piloto 568/569 mL sem regra de reconciliação"
+    category: SCIENTIFIC_WEAKNESS
+    source: "SR-026 (OPEN)"
+    source_evidence: ".fable/SCIENTIFIC_RISK_REGISTER.md"
+    affected_files: [docs/, dtwin/volumetry.py]
+    affected_modules: [dtwin]
+    upstream_dependencies: []
+    downstream_dependencies: ["consistência de relato de volume"]
+    observed_problem: "dois valores próximos relatados sem regra de qual prevalece"
+    possible_consequence: "inconsistência editorial/numérica"
+    scientific_impact: LOW
+    geometric_impact: LOW
+    statistical_impact: LOW
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: NONE
+    silent_failure_risk: LOW
+    confidence: MEDIUM
+    current_tests: n/a
+    current_protection: "GEO-004 define a fórmula autoritativa"
+    missing_protection: "regra de arredondamento/fonte declarada"
+    possible_root_causes: ["fontes de arredondamento distintas"]
+    unknowns: []
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: HG-08
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  - id: W-038
+    title: "Faixa hepática 'típica' 900-2400 mL sem fonte aprovada"
+    category: SCIENTIFIC_WEAKNESS
+    source: "SR-014 (AWAITING_HUMAN)"
+    source_evidence: ".fable/SCIENTIFIC_RISK_REGISTER.md"
+    affected_files: [dtwin/volumetry.py, webapp/]
+    affected_modules: [dtwin]
+    upstream_dependencies: []
+    downstream_dependencies: ["graduação consultiva de qualidade"]
+    observed_problem: "faixa usada em heurística sem citação aprovada"
+    possible_consequence: "graduação baseada em número não referenciado"
+    scientific_impact: MEDIUM
+    geometric_impact: NONE
+    statistical_impact: LOW
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: NONE
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: parcial
+    current_protection: "graduação é consultiva (não clínica)"
+    missing_protection: "fonte bibliográfica aprovada pelo humano OU remoção da faixa"
+    possible_root_causes: ["heurística de conveniência"]
+    unknowns: []
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: "HG-08/HG-12-adjacente (decisão humana pendente)"
+    recommended_fable_effort: LOW
+    status: AWAITING_HUMAN
+
+  - id: W-039
+    title: "Docs do resolver DICOM obsoletas; campos de auditoria novos (item 14) ainda sem consumidor"
+    category: TECHNICAL_DEBT
+    source: "SR-009 (OPEN) + PHASE_09 wave 2"
+    source_evidence: "SR-009; TASK-2026-08-20-PH09-HRR-02_EVIDENCE.md"
+    affected_files: [docs/, dtwin/learning/raw_dicom_phase_resolver.py, tools/run_raw_phase_equivalence_benchmark.py]
+    affected_modules: [dtwin.learning, docs]
+    upstream_dependencies: []
+    downstream_dependencies: ["triagem de exames; H-02"]
+    observed_problem: "doc descreve heurística antiga; ambiguous_text_roles/unselected_eligible_dynamic_series existem mas nada os agrega/reporta"
+    possible_consequence: "auditoria criada e não usada; docs enganosas"
+    scientific_impact: LOW
+    geometric_impact: NONE
+    statistical_impact: LOW
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: MEDIUM
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: "characterization estendida cobre os campos"
+    current_protection: "campos testados"
+    missing_protection: "doc atualizada + agregador dos campos no benchmark arm"
+    possible_root_causes: ["campos recém-criados (2026-08-20)"]
+    unknowns: ["frequência real de colisões/descartes em campo"]
+    candidate_action_type: ROBUSTNESS_FIX
+    priority: MEDIUM
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: none
+    recommended_fable_effort: LOW
+    status: OPEN
+
+  - id: W-040
+    title: "Composição das 16 falhas técnicas do denominador nunca decomposta"
+    category: SCIENTIFIC_WEAKNESS
+    source: "SCI-004 + reconciliação 451/16 (PH06)"
+    source_evidence: "evidence PH06 (467=451+16, tp+fn=220, tn+fp=247)"
+    affected_files: ["casos/qualification/ (artefatos congelados)", dtwin/learning/robustness.py]
+    affected_modules: [dtwin.learning]
+    upstream_dependencies: [resolver DICOM, segmentação, gateway]
+    downstream_dependencies: ["sensitivity/specificity honestas; H-02"]
+    observed_problem: "16 falhas contam como erro (correto por SCI-004) mas suas CAUSAS não estão classificadas"
+    possible_consequence: "oportunidade de recuperação legítima invisível; upper bound de ganho desconhecido"
+    scientific_impact: HIGH
+    geometric_impact: LOW
+    statistical_impact: HIGH
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: NONE
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: "SCI-004 protegido por property tests"
+    current_protection: "falhas ficam no denominador (imutável sem HG-08)"
+    missing_protection: "taxonomia de causas + upper bound (medição H-02)"
+    possible_root_causes: ["resolução de fase, segmentação, timeout, gateway — a medir"]
+    unknowns: ["se artefatos de falha suficientes existem localmente (passo 1 = inventário)"]
+    candidate_action_type: EXPERIMENTAL_OPPORTUNITY
+    priority: HIGH
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: HIGH
+    human_gate: "none para medir; HG-02/05 para qualquer recuperação"
+    recommended_fable_effort: UltraCode
+    status: OPEN
+
+  - id: W-041
+    title: "Resultados centrais não reproduzíveis a partir deste checkout (ambiental)"
+    category: REPRODUCIBILITY
+    source: "SR-001 (OPEN) + BLK-PROTECTED-SOURCES + BLK-FULL-REEXECUTION"
+    source_evidence: "CURRENT_STATE blockers; PH06 REG-01"
+    affected_files: ["ambiente"]
+    affected_modules: [all]
+    upstream_dependencies: ["máquina detentora das 3 fontes protegidas; GPU de treino"]
+    downstream_dependencies: ["qualquer reexecução completa"]
+    observed_problem: "labels protegidos ausentes; reexecução completa impossível aqui"
+    possible_consequence: "verificação integral só em outra máquina"
+    scientific_impact: MEDIUM
+    geometric_impact: NONE
+    statistical_impact: MEDIUM
+    performance_impact: NONE
+    reproducibility_impact: HIGH
+    maintainability_impact: NONE
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: "verificação parcial 100% OK (PH06)"
+    current_protection: "blockers declarados; assinaturas verificadas"
+    missing_protection: "sessão na máquina detentora (fora do escopo desta)"
+    possible_root_causes: ["dados protegidos legitimamente fora desta máquina"]
+    unknowns: []
+    candidate_action_type: UNKNOWN
+    priority: LOW
+    estimated_cost: HIGH
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: "HG-11 (dados protegidos)"
+    recommended_fable_effort: n/a
+    status: BLOCKED_ENV
+
+  - id: W-042
+    title: "MANUSCRIPT_VS_CODE: 4 CONFLICTs, ~16 PARTIAL_MATCH, 1 UNVERIFIED remanescentes"
+    category: SCIENTIFIC_WEAKNESS
+    source: "MANUSCRIPT_VS_CODE.md (PHASE_02)"
+    source_evidence: "MVC-001..022+; CONFLICT em ~linhas 221,243,263,363; MVC-021 detalhado"
+    affected_files: ["manuscrito", webapp/server.py, dtwin/]
+    affected_modules: [docs, webapp]
+    upstream_dependencies: []
+    downstream_dependencies: ["credibilidade do manuscrito"]
+    observed_problem: "MVC-021 (CRITICAL): regra universal de revisão humana não aplicada uniformemente — demo autoassume PHI-review (ratificado na decisão 3) e uma rota registra requires_human_review:false; outros CONFLICTs/PARTIALs pendentes de reconciliação editorial"
+    possible_consequence: "claim do manuscrito mais forte que o comportamento do código"
+    scientific_impact: HIGH
+    geometric_impact: LOW
+    statistical_impact: MEDIUM
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: LOW
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: parcial
+    current_protection: "decisão 3 governa o modo demo; MVC documenta o resto"
+    missing_protection: "reconciliação item a item (editorial + HG-01/08/11 conforme claim)"
+    possible_root_causes: ["manuscrito e código evoluíram em paralelo"]
+    unknowns: ["conteúdo dos CONFLICTs 2-4 e do UNVERIFIED (ler na task)"]
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: MEDIUM
+    estimated_cost: HIGH
+    estimated_risk: LOW
+    expected_information_gain: HIGH
+    human_gate: "HG-01/HG-08/HG-11 conforme item; MVC-021 toca HG-11/12"
+    recommended_fable_effort: UltraCode
+    status: OPEN
+
+  - id: W-043
+    title: "'Assinatura' do bundle é checksum sem identidade; termo 'assinado' pendente no manuscrito"
+    category: SCIENTIFIC_WEAKNESS
+    source: "SR-019 (OPEN) + SW-001 ratificado (decisão 2)"
+    source_evidence: "HUMAN_DECISIONS item 2; SR-019"
+    affected_files: ["manuscrito"]
+    affected_modules: [docs]
+    upstream_dependencies: []
+    downstream_dependencies: []
+    observed_problem: "contrato ratificado = hash-integridade; manuscrito ainda diz 'assinado'"
+    possible_consequence: "leitor infere autenticação criptográfica inexistente"
+    scientific_impact: LOW
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: NONE
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: n/a
+    current_protection: "SW-001 congelado define a verdade"
+    missing_protection: "correção editorial (EXTERNA ao repo)"
+    possible_root_causes: ["terminologia editorial"]
+    unknowns: []
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: LOW
+    estimated_cost: LOW
+    estimated_risk: LOW
+    expected_information_gain: LOW
+    human_gate: "editorial (decisão 2 já registra a pendência)"
+    recommended_fable_effort: LOW
+    status: EXTERNAL
+
+  - id: W-044
+    title: "Gate de revisão humana não uniforme entre rotas"
+    category: SCIENTIFIC_WEAKNESS
+    source: "SR-020 (AWAITING_HUMAN); relacionado a W-042/MVC-021"
+    source_evidence: ".fable/SCIENTIFIC_RISK_REGISTER.md SR-020"
+    affected_files: [webapp/server.py, dtwin/stages.py]
+    affected_modules: [webapp, dtwin]
+    upstream_dependencies: []
+    downstream_dependencies: ["política de revisão"]
+    observed_problem: "exigência de revisão varia por rota (viewer vs candidato vs demo)"
+    possible_consequence: "saída consumida sem revisão onde o manuscrito promete revisão"
+    scientific_impact: MEDIUM
+    geometric_impact: NONE
+    statistical_impact: NONE
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: LOW
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: parcial
+    current_protection: "decisão 3 cobre demo"
+    missing_protection: "matriz rota×exigência aprovada (decisão humana pendente)"
+    possible_root_causes: ["rotas criadas em momentos distintos"]
+    unknowns: ["inventário completo de rotas com flag"]
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: MEDIUM
+    estimated_cost: MEDIUM
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: "HG-11/HG-12-adjacente"
+    recommended_fable_effort: HIGH
+    status: AWAITING_HUMAN
+
+  - id: W-045
+    title: "Parâmetros 3D parcialmente justificados; Couinaud sem validação anatômica no manuscrito"
+    category: SCIENTIFIC_WEAKNESS
+    source: "SR-015 (OPEN), SR-027 (OPEN); SR-017/018/021/024/025 relacionados como DOCUMENTED_LIMITATION"
+    source_evidence: ".fable/SCIENTIFIC_RISK_REGISTER.md"
+    affected_files: [dtwin/stages.py, dtwin/volumetry.py, "manuscrito"]
+    affected_modules: [dtwin]
+    upstream_dependencies: []
+    downstream_dependencies: ["claims 3D/volumetria"]
+    observed_problem: "parâmetros numéricos 3D e partição Couinaud sem justificativa/validação anatômica publicada"
+    possible_consequence: "claims 3D mais fortes que a evidência"
+    scientific_impact: MEDIUM
+    geometric_impact: MEDIUM
+    statistical_impact: LOW
+    performance_impact: NONE
+    reproducibility_impact: LOW
+    maintainability_impact: NONE
+    silent_failure_risk: LOW
+    confidence: HIGH
+    current_tests: "gate Couinaud de partição exata (engenharia) testado e kill-verificado"
+    current_protection: "GEO-003 restringe claims (auditoria/visualização, não anatomia)"
+    missing_protection: "validação anatômica externa (clínica — fora da alçada de engenharia)"
+    possible_root_causes: ["validação clínica não realizada"]
+    unknowns: []
+    candidate_action_type: SCIENTIFIC_WEAKNESS
+    priority: LOW
+    estimated_cost: HIGH
+    estimated_risk: LOW
+    expected_information_gain: MEDIUM
+    human_gate: "HG-12 (claim clínico) — fora da engenharia"
+    recommended_fable_effort: n/a
+    status: EXTERNAL
+
+  - id: W-046
+    title: "307 tools com 157 STATIC_ORPHAN; famílias v11-v27 sem status machine-readable"
+    category: TECHNICAL_DEBT
+    source: "TD-003 + TD-009 (121 configs)"
+    source_evidence: ".fable/TOOLS_STATUS.md; evidence/PH01/tools_status_9683eaa.csv"
+    affected_files: ["tools/", "configs/", "dtwin/benchmark/"]
+    affected_modules: [tools, configs]
+    upstream_dependencies: []
+    downstream_dependencies: ["seleção de workflow correta"]
+    observed_problem: "intenção/status de scripts e configs nem sempre visível; risco de executar workflow errado"
+    possible_consequence: "experimento rodado com config/tool legado"
+    scientific_impact: MEDIUM
+    geometric_impact: NONE
+    statistical_impact: LOW
+    performance_impact: NONE
+    reproducibility_impact: MEDIUM
+    maintainability_impact: HIGH
+    silent_failure_risk: MEDIUM
+    confidence: HIGH
+    current_tests: n/a
+    current_protection: "TOOLS_STATUS.md (censo estático); STATIC_ORPHAN ≠ morto"
+    missing_protection: "campo status machine-readable em configs de produção vs experimentais"
+    possible_root_causes: ["sprawl experimental legítimo do desenvolvimento"]
+    unknowns: ["prova de alcançabilidade runtime dos 157 (método da PH09 wave 3 é reutilizável)"]
+    candidate_action_type: TECHNICAL_DEBT
+    priority: LOW
+    estimated_cost: HIGH
+    estimated_risk: MEDIUM
+    expected_information_gain: MEDIUM
+    human_gate: "remoções exigem prova + autorização (precedente item 15)"
+    recommended_fable_effort: MEDIUM
+    status: OPEN

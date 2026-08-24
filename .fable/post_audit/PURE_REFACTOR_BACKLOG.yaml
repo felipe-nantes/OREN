@@ -1,0 +1,115 @@
+schema: argos-post-audit-pure-refactor-backlog-v1
+created: "2026-08-20"
+principle: >
+  BEHAVIOR PRESERVATION. Se OOF, previsões, scores, embeddings, folds,
+  preprocessing, threshold, labels, representação, população, denominador,
+  geometria ou comportamento do modelo mudar além das tolerâncias ratificadas
+  (LOGIC exato; escalar CPU rel<=1e-12; array CPU zero voxels divergentes):
+  STOP_AND_RECLASSIFY_AS_SCIENTIFIC_CHANGE.
+excluded_from_this_track:
+  - "W-004 unificação de tolerâncias de geometria — É mudança semântica (HG-03)"
+  - "W-002 decomposição de stages.py — geometria entrelaçada; só com plano gated próprio"
+
+refactors:
+
+  - refactor_id: REF-01
+    weakness: W-003
+    objective: "Consolidar os 56 helpers 'atomic' num helper canônico único (protocol.atomic_write_json + variante texto), migrando sítios por lote"
+    affected_files: ["dtwin/**", "webapp/**", "tools/** (56 sítios mapeados por AST em 2026-08-18)"]
+    affected_modules: [dtwin, webapp, tools]
+    behavior_to_preserve: "escrita atômica: destino preservado sob interrupção; tmp limpo em falha; bytes finais idênticos"
+    behavioral_oracle: "tests/test_property_atomic_and_artifact.py + hash byte a byte do artefato escrito por sítio migrado (fixture sintética antes/depois)"
+    tests: ["property atomic (existentes)", "1 teste por lote confirmando hash idêntico"]
+    scientific_regression: "não aplicável (IO puro); suíte completa por lote"
+    geometric_regression: "não aplicável"
+    artifact_hash_expectations: "idênticos bit a bit para o mesmo payload"
+    numerical_tolerances: "n/a (bytes)"
+    rollback_condition: "qualquer hash divergente => revert do lote + reclassificar"
+    recommended_model: "Fable 5"
+    recommended_effort: MEDIUM
+    reason: "mecânico com oracle forte; risco baixo"
+
+  - refactor_id: REF-02
+    weakness: W-005
+    objective: "Triagem dos ~19 achados mypy restantes: provar inalcançável OU corrigir tipo sem mudar runtime (prioridade stages.py:1096/1109 mesh)"
+    affected_files: [dtwin/stages.py, "viewer typing"]
+    affected_modules: [dtwin]
+    behavior_to_preserve: "malha/volumetria idênticas para entradas válidas"
+    behavioral_oracle: "engine_finalize + volumetry tests; hash de malha em fixture sintética"
+    tests: ["existentes + 1 caso MultiBlock se alcançável"]
+    scientific_regression: "suíte completa"
+    geometric_regression: "hash de malha sintética antes/depois"
+    artifact_hash_expectations: "idênticos"
+    numerical_tolerances: "ratificadas (item 9)"
+    rollback_condition: "hash de malha divergente => STOP, HG-10"
+    recommended_model: "Fable 5"
+    recommended_effort: MEDIUM
+    reason: "triagem com julgamento; correção pequena"
+
+  - refactor_id: REF-03
+    weakness: W-001
+    objective: "Decompor webapp/server.py por seams (jobs/persistência; união de fases; rotas API; XR) — DESIGN primeiro, execução por seam"
+    affected_files: [webapp/server.py]
+    affected_modules: [webapp]
+    behavior_to_preserve: "TODAS as rotas, estados de job, uniões e persistências byte-idênticos"
+    behavioral_oracle: "test_webapp.py + integration boundary + specs de geometria + snapshot de respostas de rotas em fixtures"
+    tests: ["suíte + snapshot tests por seam ANTES do corte"]
+    scientific_regression: "suíte completa por seam"
+    geometric_regression: "specs de comparadores (item 13) intactas"
+    artifact_hash_expectations: "webapp_job_state.json e união idênticos para fixtures"
+    numerical_tolerances: "ratificadas"
+    rollback_condition: "qualquer rota/artefato divergente => revert do seam"
+    recommended_model: "Fable 5"
+    recommended_effort: "UltraCode para o design do corte; MEDIUM por seam"
+    reason: "arquitetura com downstream científico (união de fases)"
+
+  - refactor_id: REF-04
+    weakness: [W-006, W-007]
+    objective: "Reconciliar docs vivas: naming canônico (ARGOS/OREN/Volyrcs) + README vs profiles/figado.yaml"
+    affected_files: [README.md, "docs/ vivas"]
+    affected_modules: [docs]
+    behavior_to_preserve: "n/a (docs); nenhuma mudança de código"
+    behavioral_oracle: "diff só em .md"
+    tests: [n/a]
+    scientific_regression: n/a
+    geometric_regression: n/a
+    artifact_hash_expectations: n/a
+    numerical_tolerances: n/a
+    rollback_condition: n/a
+    recommended_model: "Fable 5"
+    recommended_effort: LOW
+    reason: "documentação"
+
+  - refactor_id: REF-05
+    weakness: W-019
+    objective: "Smoke tests opcionais para S5 (render_markdown_report) e braços consultivos S6"
+    affected_files: [tests/]
+    affected_modules: [tests]
+    behavior_to_preserve: "produção intocada (só testes novos)"
+    behavioral_oracle: "n/a"
+    tests: ["os novos"]
+    scientific_regression: "suíte"
+    geometric_regression: n/a
+    artifact_hash_expectations: n/a
+    numerical_tolerances: n/a
+    rollback_condition: n/a
+    recommended_model: "Fable 5"
+    recommended_effort: LOW
+    reason: "adição de testes de fumaça"
+
+  - refactor_id: REF-06
+    weakness: W-046
+    objective: "Campo status machine-readable (production/experimental/legacy) nos 121 configs + índice de famílias v11-v27 (metadado apenas, zero mudança de comportamento)"
+    affected_files: ["configs/**", docs/]
+    affected_modules: [configs]
+    behavior_to_preserve: "nenhum consumidor lê o campo novo (aditivo)"
+    behavioral_oracle: "suíte + grep de consumidores antes de adicionar"
+    tests: ["parse de todos os configs pós-edição"]
+    scientific_regression: "suíte completa"
+    geometric_regression: n/a
+    artifact_hash_expectations: "configs consumidos por hash? verificar antes (alguns podem ser pinados) — se pinados, NÃO editar; indexar externamente"
+    numerical_tolerances: n/a
+    rollback_condition: "qualquer config pinado por hash => índice externo em vez de edição"
+    recommended_model: "Fable 5"
+    recommended_effort: MEDIUM
+    reason: "aditivo, mas exige verificação de pinagem por hash"

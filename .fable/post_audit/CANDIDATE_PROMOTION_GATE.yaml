@@ -1,0 +1,28 @@
+schema: argos-post-audit-candidate-promotion-gate-v1
+created: "2026-08-20"
+principle: >
+  Nenhum candidato vira baseline novo sem TODOS os campos abaixo verificados
+  e um evidence package completo. A melhora deve ser REPRODUCIBLE (>=2
+  runs/seeds), não SINGLE-RUN IMPROVEMENT. Um candidato que sobe AUC agregada
+  mas aumenta dependência de domínio, piora uma coorte, aumenta falhas, cria
+  leakage, aumenta variância ou reduz reprodutibilidade pode ser PIOR.
+
+checklist:
+  scientific_contracts_preserved: "obrigatório; qualquer contrato tocado exige HG-01 formal ANTES"
+  patient_leakage_absent: "splits validados (validate_nested_splits) + revisão de fronteiras de preprocessing train-only"
+  population_reconciled: "467 = 220+247; caso a caso idêntico ao lock, salvo decisão HG-06 formal"
+  denominator_reconciled: "451/16; falhas DENTRO do denominador (SCI-004); qualquer mudança exige HG-08"
+  outer_evaluation_valid: "outer lido conforme o regime aprovado (POST_AUDIT_PLAN §2); leitura registrada"
+  outer_inspections_consumed: "contador acumulado do ledger no momento da promoção (número + lista de experiment_ids)"
+  cohort_results_reviewed: "métricas POR COORTE lado a lado com baseline; nenhuma coorte piora além da tolerância declarada a priori"
+  lodo_reviewed: "LODO completo candidato vs baseline"
+  origin_probe_reviewed: "probe de origem antes/depois; aumento de dependência de domínio = flag vermelho"
+  failure_rate_reviewed: "taxa e composição de falhas técnicas; aumento = flag"
+  geometry_regression_passed: "specs de geometria + volumetria (GEO-004) verdes"
+  scientific_regression_passed: "âncoras numéricas do lock re-verificadas (Wilson, contagens, assinaturas)"
+  reproducibility_passed: ">=2 execuções com seeds/configs declarados produzem o MESMO veredito dentro das tolerâncias ratificadas"
+  performance_cost_recorded: "runtime, VRAM, RAM quando medido"
+  human_approval: "decisão formal do aprovador no formato HUMAN_GATES.md, citando o CANDIDATE_COMPARISON"
+  evidence_package_complete: "template CANDIDATE_COMPARISON.yaml preenchido + ledger atualizado"
+
+failure_of_any_item: "candidato NÃO promovido; registrar no EXPERIMENT_LEDGER com decision: REJECTED e reason"

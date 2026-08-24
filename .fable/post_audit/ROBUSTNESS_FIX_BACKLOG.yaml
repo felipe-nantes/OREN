@@ -1,0 +1,129 @@
+schema: argos-post-audit-robustness-fix-backlog-v1
+created: "2026-08-20"
+principle: >
+  Cada item declara CAN_CHANGE_SCIENTIFIC_RESULT (YES/NO/POSSIBLE). POSSIBLE
+  ou YES => NÃO é refactor comum: exige análise de rota, gate aplicável e
+  evidence package próprio.
+
+fixes:
+
+  - fix_id: ROB-01
+    weakness: W-010
+    title: "Triagem dos 65 blind-excepts (BLE001)"
+    scope: "classificar cada sítio: (a) deliberado com racional -> noqa comentado; (b) log-only inofensivo -> estreitar exceção; (c) engole erro em rota científica -> proposta gated"
+    can_change_scientific_result: POSSIBLE
+    gate: "por sítio: none p/ (a)(b); HG da rota p/ (c)"
+    verification: "suíte por lote; para (c), teste negativo do erro antes engolido"
+    recommended_model: "Fable 5"
+    recommended_effort: HIGH
+    reason: "julgamento por sítio; risco de fail-open real"
+
+  - fix_id: ROB-02
+    weakness: W-011
+    title: "Gating ambiental do test_environment_report_accepts_free_gpu"
+    scope: "marker/skipif de pré-condição (GPU livre) com razão explícita; o assert NÃO é enfraquecido quando roda"
+    can_change_scientific_result: "NO"
+    gate: none
+    verification: "suíte com GPU ocupada => skipped com razão; com GPU livre => passa"
+    recommended_model: "Fable 5"
+    recommended_effort: LOW
+    reason: "gating trivial"
+
+  - fix_id: ROB-03
+    weakness: W-012
+    title: "Perfil Hypothesis para suíte completa (deadline/derandomize) + captura de counterexample"
+    scope: "settings profile CI-safe registrado em conftest; sem reduzir examples"
+    can_change_scientific_result: "NO"
+    gate: none
+    verification: "suíte 3x sob carga sem flake; counterexamples logados"
+    recommended_model: "Fable 5"
+    recommended_effort: LOW
+    reason: "config de teste"
+
+  - fix_id: ROB-04
+    weakness: W-013
+    title: "Gates mecânicos na CI"
+    scope: "ruff regras de defeito (F821,F811,B023,PLE,...) + mypy dos módulos zerados + coverage floor do núcleo científico (>=85% branch) + as 4 regras mecânicas zeradas"
+    can_change_scientific_result: "NO"
+    gate: none
+    verification: "CI verde no estado atual; quebra artificial detectada"
+    recommended_model: "Fable 5"
+    recommended_effort: MEDIUM
+    reason: "workflow YAML; protege conquistas da auditoria"
+
+  - fix_id: ROB-05
+    weakness: W-016
+    title: "Sonda de tolerâncias GPU/CUDA (fecha BLK-GPU-TOLERANCES)"
+    scope: "reexecutar as sondas PH06 em GPU (RTX 4060) com seeds/flags determinísticas; medir delta vs CPU; propor tolerância p/ ratificação (estende decisão 9)"
+    can_change_scientific_result: "NO (medição; nenhum número de produção muda)"
+    gate: "ratificação humana da tolerância proposta (formato HUMAN_GATES)"
+    verification: "sonda determinística 2x; evidence com deltas por op"
+    recommended_model: "Fable 5"
+    recommended_effort: HIGH
+    reason: "numérico cuidadoso; fecha blocker formal"
+
+  - fix_id: ROB-06
+    weakness: W-015
+    title: "Lockfiles por backend (host win/py3.13 e container linux/py3.11)"
+    scope: "gerar lock reprodutível por ambiente sem mudar nenhuma versão instalada hoje (freeze do estado auditado)"
+    can_change_scientific_result: "NO (congela o vigente)"
+    gate: "HG-09 apenas se travar revisão de modelo"
+    verification: "install do lock em venv limpa == freeze atual"
+    recommended_model: "Fable 5"
+    recommended_effort: MEDIUM
+    reason: "reprodutibilidade"
+
+  - fix_id: ROB-07
+    weakness: W-014
+    title: "git na imagem runtime OU skipif declarado nos 6 testes"
+    scope: "eliminar a divergência imagem-vs-teste do backend canônico"
+    can_change_scientific_result: "NO"
+    gate: none
+    verification: "suíte no container sem os 6 falsos-negativos"
+    recommended_model: "Fable 5"
+    recommended_effort: LOW
+    reason: "infra simples"
+
+  - fix_id: ROB-08
+    weakness: W-039
+    title: "Agregador dos campos de auditoria DICOM + docs do resolver atualizadas"
+    scope: "relatório agregado de ambiguous_text_roles/unselected_eligible_dynamic_series no benchmark arm; SR-009 docs sincronizadas"
+    can_change_scientific_result: "NO (leitura/relato)"
+    gate: none
+    verification: "agregador sobre fixtures characterization; docs revisadas"
+    recommended_model: "Fable 5"
+    recommended_effort: LOW
+    reason: "consumo de auditoria já existente"
+
+  - fix_id: ROB-09
+    weakness: W-020
+    title: "Política de storage/retention/de-ID de artefatos de trabalho (SR-010)"
+    scope: "propor política formal (TTL, escopo de retenção do DICOM original, revisão) SEM inserir PHI no pack; decisão humana"
+    can_change_scientific_result: POSSIBLE
+    gate: "HG-11 OBRIGATÓRIO"
+    verification: "política aprovada + teste de que nada fora da política persiste"
+    recommended_model: "Fable 5"
+    recommended_effort: HIGH
+    reason: "privacidade; rota DOM-002"
+
+  - fix_id: ROB-10
+    weakness: W-018
+    title: "Reproduzir e medir o fallback lento/CPU do TODO server.py:2554"
+    scope: "reprodução primeiro; fix só com evidência"
+    can_change_scientific_result: POSSIBLE
+    gate: "maybe HG-05 (backend de segmentação)"
+    verification: "medição antes/depois; sem mudança de máscara"
+    recommended_model: "Fable 5"
+    recommended_effort: MEDIUM
+    reason: "performance com fronteira científica próxima"
+
+  - fix_id: ROB-11
+    weakness: W-017
+    title: "Política de retenção de diretórios locais (.tmp*, envs, artefatos)"
+    scope: "inventário + política documentada; NENHUMA deleção sem aprovação (HG-11 se dados)"
+    can_change_scientific_result: "NO"
+    gate: "HG-11 se dados de paciente"
+    verification: "inventário revisado pelo humano antes de qualquer limpeza"
+    recommended_model: "Fable 5"
+    recommended_effort: LOW
+    reason: "higiene operacional"

@@ -1,0 +1,223 @@
+schema: argos-post-audit-oof-improvement-register-v1
+created: "2026-08-20"
+base_commit: "9288785"
+policy: >
+  Somente hipóteses com evidência derivada de auditoria/código/testes/
+  manuscrito/regressões/domain analysis/achados adversariais/limitações
+  conhecidas/experimentos anteriores. "Melhorar OOF" NÃO é licença para busca
+  irrestrita; nenhum experimento otimiza contra o outer OOF (POST_AUDIT_PLAN
+  §2). Hipóteses de MEDIÇÃO (H-01, H-02, H-03, H-04) não mudam nada e não
+  consomem o outer; qualquer intervenção decorrente vira CONTROLLED_EXPERIMENT
+  gated com o template MICROEXPERIMENT.
+
+hypotheses:
+
+  - experiment_id: H-01
+    title: "Localização do sinal de domínio na cadeia de representação (medição)"
+    evidence: >
+      SR-007: probes de origem globais já medidas em 100% (embeddings) e
+      98,75% (medidas físicas) — docs/131:21,85, docs/134:53; transferência
+      LLD→OpenSwiss cai; variantes de embedding congeladas EXISTEM localmente
+      (casos/qualification/hybrid_v1/: crop_embeddings_v1,
+      fixed_crop_embeddings_v1, enhancement_embeddings_v1,
+      enhancement_embeddings_edgeonly_v1, crop_embeddings_t2dwi_v1).
+    problem_being_targeted: "W-031 — não sabemos ONDE o sinal de origem entra/persiste (crop? realce? modalidade? fundo?)"
+    hypothesis: >
+      A separabilidade de origem difere mensuravelmente entre variantes de
+      representação já congeladas (ex.: edgeonly < crop cru; fixed_crop ≠
+      crop adaptativo), e parte dela persiste CONDICIONADA ao label —
+      permitindo localizar o estágio dominante de entrada do sinal.
+    mechanism: "probes lineares determinísticas (logistic/linear, seed fixa) por variante, globais e within-label, com CV agrupado por paciente"
+    why_it_could_affect_oof: >
+      NÃO afeta OOF diretamente (medição). Informa QUAL intervenção futura
+      (se alguma) teria chance de reduzir shortcut sem destruir sinal
+      legítimo — evita experimentos cegos de "remoção de domínio".
+    files_likely_involved: ["casos/qualification/hybrid_v1/*embeddings*", "script novo de análise em tools/ ou .fable/post_audit/analysis/"]
+    modules_likely_involved: [dtwin.learning (leitura), análise standalone]
+    frozen_variables: [modelo, folds, seeds do protocolo, labels, thresholds, embeddings (só leitura), denominadores]
+    variables_allowed_to_change: ["nenhuma variável do sistema; apenas o estimador da probe (declarado, seed fixa)"]
+    primary_endpoint: "AUC da probe de origem por variante de representação"
+    secondary_endpoints: ["AUC within-label (positivos e negativos separados)", "por par de coortes", "gap entre variantes"]
+    domain_shift_endpoints: ["ranking de variantes por separabilidade", "correlação com deltas LODO existentes"]
+    failure_endpoints: ["cobertura de casos por variante (nem toda variante cobre 467)"]
+    computational_endpoints: ["tempo de probe (CPU-only esperado)"]
+    required_tests_before: ["inventário de artefatos (existência/shape/case_ids por variante)"]
+    required_tests_after: ["determinismo: 2 execuções com mesma seed = mesmos números"]
+    required_nested_cv: "não (probe usa CV agrupado próprio, não o protocolo)"
+    required_lodo: "comparação com LODO existente (leitura, não recomputação)"
+    required_origin_probe: "é a própria medição"
+    required_cohort_stratification: sim
+    risk: "NENHUM para o sistema (só leitura); risco de interpretação: separabilidade ≠ uso pelo classificador"
+    human_gate: "none (medição sobre artefatos congelados; dataset_id não é label clínico protegido)"
+    estimated_cost: "LOW-MEDIUM (CPU, horas)"
+    estimated_duration: "1 sessão"
+    expected_information_gain: HIGH
+    promotion_criteria: "n/a (medição). Saída = mapa de entrada do sinal + recomendação de próxima hipótese interventiva gated"
+    rejection_criteria: "artefatos insuficientes/incompatíveis (registrar no ledger e parar)"
+    rollback: "n/a (nada muda)"
+    recommended_fable_effort: UltraCode
+    priority: 1
+
+  - experiment_id: H-02
+    title: "Composição e recuperabilidade das 16 falhas técnicas (medição)"
+    evidence: >
+      SCI-004 + reconciliação PH06 (467=451+16; falhas contam como erro);
+      campos de auditoria do resolver criados no item 14 (colisões, descartes);
+      geometry_incompatible_series criado na PH03; W-040.
+    problem_being_targeted: "W-040 — causas das 16 falhas nunca decompostas; upper bound de ganho desconhecido"
+    hypothesis: >
+      As 16 falhas se concentram em poucas causas raiz classificáveis
+      (resolução de fase / segmentação / timeout / gateway), e o upper bound
+      de ganho de sensibilidade/especificidade com recuperação total é
+      computável em fechado a partir do ledger congelado.
+    mechanism: "classificação forense dos artefatos/logs congelados de cada falha + recomputação analítica dos limites (sem tocar o pipeline)"
+    why_it_could_affect_oof: >
+      Falha recuperada vira caso computado; com denominador FIXO (SCI-004),
+      cada recuperação move FN→TP ou FP→TN. Upper bound honesto orienta se
+      vale investir em robustez de ingest vs modelo.
+    files_likely_involved: ["casos/qualification/ ledger/OOF congelados", dtwin/learning/raw_dicom_phase_resolver.py (leitura)]
+    modules_likely_involved: [dtwin.learning (leitura)]
+    frozen_variables: [denominador 467, folds, labels, thresholds, predições congeladas]
+    variables_allowed_to_change: [nenhuma]
+    primary_endpoint: "taxonomia de causas das 16 falhas (contagem por causa)"
+    secondary_endpoints: ["upper bound de sens/spec com recuperação por classe de causa", "quais causas o item 14 tornaria visíveis hoje"]
+    domain_shift_endpoints: ["distribuição de falhas por coorte (failure patterns são fonte candidata de domínio)"]
+    failure_endpoints: ["é o objeto do estudo"]
+    computational_endpoints: [negligible]
+    required_tests_before: ["inventário: quais das 16 têm artefato/log local (BLK-PROTECTED-SOURCES pode limitar)"]
+    required_tests_after: ["números fecham com o lock (tp+fn=220, tn+fp=247)"]
+    required_nested_cv: não
+    required_lodo: não
+    required_origin_probe: não
+    required_cohort_stratification: sim
+    risk: "nenhum ao sistema; risco de viabilidade (artefatos ausentes)"
+    human_gate: "none para medir; HG-02/HG-05 para qualquer recuperação futura"
+    estimated_cost: LOW
+    estimated_duration: "1 sessão"
+    expected_information_gain: HIGH
+    promotion_criteria: "n/a; saída = ranking de causas + proposta gated se houver causa dominante corrigível"
+    rejection_criteria: "artefatos de falha indisponíveis localmente (registrar e propor execução na máquina detentora)"
+    rollback: n/a
+    recommended_fable_effort: UltraCode
+    priority: 2
+
+  - experiment_id: H-03
+    title: "Estabilidade do mecanismo de threshold/seleção nos inner folds (medição)"
+    evidence: >
+      SR-006: seleção do bundle usa folds externos; métrica de seleção ~79/80
+      vs 75,91/76,11 honesto; scores OOF congelados disponíveis localmente.
+    problem_being_targeted: "W-030 — sensibilidade do resultado ao protocolo de seleção nunca quantificada"
+    hypothesis: >
+      A variância do par sens/spec sob regras de seleção alternativas
+      computadas SOMENTE nos inner folds (sem re-treino, sobre scores
+      congelados) é mensurável e quantifica quanto do resultado é mecanismo
+      de seleção vs sinal do modelo.
+    mechanism: "re-análise dos scores OOF congelados variando apenas a regra de seleção em análise offline; outer intocado como estimativa"
+    why_it_could_affect_oof: >
+      Se o resultado for instável ao protocolo, ganhos futuros de 'modelo'
+      podem ser artefatos de seleção — protege o ciclo inteiro de falsas
+      promoções.
+    files_likely_involved: ["casos/qualification/hybrid_v1/ scores OOF", dtwin/learning/robustness.py (leitura)]
+    modules_likely_involved: [dtwin.learning (leitura)]
+    frozen_variables: [scores, folds, labels, denominador, threshold OFICIAL (nada adotado)]
+    variables_allowed_to_change: ["apenas a regra de seleção DENTRO da análise (nenhuma adoção)"]
+    primary_endpoint: "dispersão de sens/spec sob regras de seleção inner-only"
+    secondary_endpoints: ["gap seleção-vs-outer por regra", "estabilidade por coorte"]
+    domain_shift_endpoints: ["interação regra×coorte"]
+    failure_endpoints: ["denominador constante verificado em cada recomputação"]
+    computational_endpoints: [negligible]
+    required_tests_before: ["verificar assinaturas dos artefatos (load_frozen_oof_predictions já faz)"]
+    required_tests_after: ["reprodutibilidade com seed"]
+    required_nested_cv: "usa o aninhamento EXISTENTE (leitura)"
+    required_lodo: opcional
+    required_origin_probe: não
+    required_cohort_stratification: sim
+    risk: "consumo do outer: ZERO se a análise reporta apenas dispersão inner; leitura do outer APENAS 1x no fechamento, registrada no ledger"
+    human_gate: "HG-07/HG-08 para QUALQUER mudança de regra decorrente; a medição em si: none"
+    estimated_cost: LOW
+    estimated_duration: "1 sessão"
+    expected_information_gain: HIGH
+    promotion_criteria: "n/a (medição); informa GOV-01"
+    rejection_criteria: "scores insuficientes p/ recomputar seleção"
+    rollback: n/a
+    recommended_fable_effort: UltraCode
+    priority: 3
+
+  - experiment_id: H-04
+    title: "Decomposição do agregado por coorte e sensibilidade à reponderação (medição)"
+    evidence: >
+      SR-007 (performance varia por coorte; agregado não elimina dependência);
+      LODO já computado no robustness report; predições congeladas locais.
+    problem_being_targeted: "W-031/W-032 — quanto do agregado depende da mistura de coortes"
+    hypothesis: >
+      O par 75,91/76,11 tem sensibilidade quantificável à reponderação de
+      coortes (ex.: igual peso por coorte vs peso por caso), e o intervalo
+      resultante delimita o que é sinal robusto vs composição.
+    mechanism: "recomputação analítica das métricas sob esquemas de peso sobre predições congeladas (bootstrap agrupado já existente como base)"
+    why_it_could_affect_oof: "não muda OOF; muda a LEITURA honesta dele e o endpoint de promoção (cohort_results_reviewed)"
+    files_likely_involved: ["predições OOF congeladas", dtwin/learning/robustness.py (leitura)]
+    modules_likely_involved: [dtwin.learning (leitura)]
+    frozen_variables: [tudo do sistema]
+    variables_allowed_to_change: ["apenas o esquema de peso na análise"]
+    primary_endpoint: "sens/spec sob 2-3 esquemas de peso declarados a priori"
+    secondary_endpoints: ["IC bootstrap agrupado por esquema"]
+    domain_shift_endpoints: ["delta agregado-vs-igual-peso como índice de dependência de composição"]
+    failure_endpoints: ["falhas mantidas no denominador em todos os esquemas"]
+    computational_endpoints: [negligible]
+    required_tests_before: ["assinaturas verificadas"]
+    required_tests_after: ["determinismo (seed bootstrap fixa)"]
+    required_nested_cv: "leitura do existente"
+    required_lodo: "comparação com LODO existente"
+    required_origin_probe: não
+    required_cohort_stratification: "é o objeto"
+    risk: "interpretativo apenas; esquemas declarados a priori para evitar cherry-picking"
+    human_gate: none
+    estimated_cost: LOW
+    estimated_duration: "meia sessão"
+    expected_information_gain: MEDIUM
+    promotion_criteria: "n/a; alimenta o promotion gate (endpoint por coorte)"
+    rejection_criteria: ""
+    rollback: n/a
+    recommended_fable_effort: HIGH
+    priority: 4
+
+  - experiment_id: H-05
+    title: "Dependência do vocabulário de classes específico de coorte (*_unspecified)"
+    evidence: >
+      SR-007: Etapa C usa classes positive_unspecified/negative_unspecified
+      específicas de OpenSwiss — canal potencial de shortcut de coorte via
+      estrutura de labels; ablações de vocabulário parcialmente existentes
+      (ablation_lld_binary vs clinical_subtype em hybrid_v1).
+    problem_being_targeted: "W-031 — cohort-specific label structure como fonte de domínio"
+    hypothesis: >
+      Parte da separação entre coortes é mediada pela estrutura de classes
+      específica de coorte; medível primeiro sobre artefatos congelados
+      (contribuição das classes *_unspecified aos scores), e só depois — se
+      indicado — por reagrupamento de vocabulário como CONTROLLED_EXPERIMENT.
+    mechanism: "fase A (medição): análise da participação das classes por coorte nos scores congelados; fase B (gated): re-scoring com vocabulário unificado — MICROEXPERIMENT completo, HG-06/07"
+    why_it_could_affect_oof: "se o shortcut for mediado por vocabulário, unificação muda a fronteira de decisão — pode subir OU descer OOF; por isso fase B é gated e single-change"
+    files_likely_involved: ["ablations congeladas em hybrid_v1/", dtwin/learning/medsiglip_multiclass_classifier.py (leitura na fase A)]
+    modules_likely_involved: [dtwin.learning]
+    frozen_variables: ["fase A: tudo; fase B: tudo exceto o vocabulário de classes (single_change)"]
+    variables_allowed_to_change: ["fase B apenas: mapeamento de classes (1 mudança)"]
+    primary_endpoint: "fase A: contribuição por classe×coorte; fase B: sens/spec inner-CV"
+    secondary_endpoints: [LODO, origin probe pós-mudança, por coorte]
+    domain_shift_endpoints: ["origin probe antes/depois (fase B)"]
+    failure_endpoints: ["failure rate inalterada (fase B não toca ingest)"]
+    computational_endpoints: ["fase B exige re-treino de cabeça — GPU local avaliar"]
+    required_tests_before: ["fase B: suíte verde + protocolo de folds intacto (SCI-003)"]
+    required_tests_after: ["fase B: splits idênticos bit a bit; denominador idêntico"]
+    required_nested_cv: "fase B: sim (inner p/ seleção; outer só no fechamento locked)"
+    required_lodo: "fase B: sim"
+    required_origin_probe: "fase B: sim"
+    required_cohort_stratification: sim
+    risk: "fase B toca semântica de labels/classes → HG-06/HG-07 OBRIGATÓRIOS antes de qualquer execução"
+    human_gate: "fase A: none; fase B: HG-06 + HG-07 (proposta formal via SCIENTIFIC_CHANGE_PROPOSAL)"
+    estimated_cost: "fase A: LOW; fase B: HIGH (GPU)"
+    estimated_duration: "fase A: 1 sessão; fase B: múltiplas"
+    expected_information_gain: HIGH
+    promotion_criteria: "fase B: CANDIDATE_PROMOTION_GATE integral (piora em qualquer coorte ou aumento de origin-probe = não promove)"
+    rejection_criteria: "fase A mostra contribuição desprezível das classes específicas → arquivar B sem executar"
+    rollback: "fase B: git revert do patch único; artefatos candidatos nunca sobrescrevem baseline"
+    recommended_fable_effort: UltraCode
+    priority: 5

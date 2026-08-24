@@ -1,0 +1,80 @@
+schema: argos-post-audit-experiment-ledger-v1
+created: "2026-08-20"
+policy: >
+  TODO experimento entra aqui, inclusive (especialmente) os que falham.
+  Entradas LEDGER-SEED-* registram experimentos ANTERIORES ao ciclo, para que
+  não sejam repetidos sem evidência nova. OPT_00 deve completar os campos
+  marcados TO_ENUMERATE lendo docs/ e casos/qualification/hybrid_v1/.
+outer_inspection_counter: 0
+
+entries:
+
+  - experiment_id: LEDGER-SEED-001
+    baseline_commit: "pré-auditoria (ver docs/131)"
+    candidate_commit: n/a
+    hypothesis: "embeddings/medidas físicas separam coorte de origem"
+    change: "nenhuma (probe diagnóstica)"
+    result: "probe de origem: 100% (embeddings), 98,75% (medidas físicas)"
+    metrics: {origin_probe_embeddings: 1.00, origin_probe_physical: 0.9875}
+    decision: "limitação documentada (SR-007)"
+    reason: "separabilidade quase perfeita"
+    evidence: "docs/131_FRENTE1_RESULTADO.md:21,85; docs/134_PLANO_META_75_75.md:53"
+    reverted: n/a
+    lessons: "probes GLOBAIS estão saturadas; próxima informação útil é LOCALIZAÇÃO por estágio/variante (H-01), não repetição"
+    do_not_repeat_without_new_evidence: true
+
+  - experiment_id: LEDGER-SEED-002
+    baseline_commit: TO_ENUMERATE
+    candidate_commit: n/a
+    hypothesis: "vocabulário clínico fino (subtipos) melhora sobre binário"
+    change: "ablação lld binary vs clinical_subtype"
+    result: "artefatos congelados em hybrid_v1/ablation_lld_*; conclusão TO_ENUMERATE dos evaluation jsons"
+    metrics: TO_ENUMERATE
+    decision: TO_ENUMERATE
+    reason: TO_ENUMERATE
+    evidence: "casos/qualification/hybrid_v1/ablation_lld_binary_oof_* e ablation_lld_clinical_subtype_oof_*"
+    reverted: n/a
+    lessons: "existe comparação congelada de vocabulários — insumo direto para H-05 fase A"
+    do_not_repeat_without_new_evidence: true
+
+  - experiment_id: LEDGER-SEED-003
+    baseline_commit: TO_ENUMERATE
+    candidate_commit: n/a
+    hypothesis: "fusão tardia de sinais melhora o estimador"
+    change: "late fusion v1; fusão estimador oficial v1→v2"
+    result: "artefatos em hybrid_v1/late_fusion_oof_*, fusao_estimador_oficial_v1/v2; conclusão TO_ENUMERATE"
+    metrics: TO_ENUMERATE
+    decision: "v2 tornou-se o oficial (TO_CONFIRM em docs)"
+    reason: TO_ENUMERATE
+    evidence: "casos/qualification/hybrid_v1/"
+    reverted: n/a
+    lessons: "manuscrito: novas fontes de complexidade nem sempre produziram ganho — checar estes números antes de propor nova fusão"
+    do_not_repeat_without_new_evidence: true
+
+  - experiment_id: LEDGER-SEED-004
+    baseline_commit: TO_ENUMERATE
+    candidate_commit: n/a
+    hypothesis: "variantes de representação (enhancement, edgeonly, t2dwi, fixed crop) mudam o desempenho"
+    change: "famílias de embeddings alternativas"
+    result: "embeddings congelados por variante em hybrid_v1/; comparações TO_ENUMERATE"
+    metrics: TO_ENUMERATE
+    decision: TO_ENUMERATE
+    reason: TO_ENUMERATE
+    evidence: "casos/qualification/hybrid_v1/*embeddings*"
+    reverted: n/a
+    lessons: "estas variantes congeladas são exatamente o insumo de H-01 (probes comparativas) — reuso, não recomputação"
+    do_not_repeat_without_new_evidence: true
+
+  - experiment_id: LEDGER-SEED-005
+    baseline_commit: "lock atual"
+    candidate_commit: n/a
+    hypothesis: "ROI correta (manual) tem teto superior ao da seleção automática"
+    change: "avaliação com ROI de referência"
+    result: "teto distinto demonstrado (manuscrito; SR-013 nota que métricas históricas ≠ localizador atual)"
+    metrics: TO_ENUMERATE
+    decision: "localização e classificação tratadas como problemas distintos"
+    reason: "gap de localização identificado"
+    evidence: "manuscrito; SR-013"
+    reverted: n/a
+    lessons: "melhorar classificação não fecha o gap de localização; qualquer hipótese de localizador é experimento separado"
+    do_not_repeat_without_new_evidence: true

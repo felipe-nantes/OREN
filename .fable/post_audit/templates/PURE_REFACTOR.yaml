@@ -1,0 +1,30 @@
+# Template: refactor com preservação de comportamento (OPT_01)
+
+refactor_id: ""
+
+objective: ""
+affected_files: []
+affected_modules: []
+
+behavior_to_preserve: ""             # descrição observável e testável
+
+scientific_behavior_change_expected: false
+geometric_behavior_change_expected: false
+prediction_change_expected: false
+oof_change_expected: false
+
+behavioral_oracle: ""                # o que prova a equivalência (testes/hashes/snapshots)
+required_tests: []
+required_regressions: []             # suíte, âncoras, specs de geometria
+artifact_hash_expectations: ""       # artefatos que devem sair bit-idênticos
+numerical_tolerances: "LOGIC exato; escalar CPU rel<=1e-12; array CPU zero voxels divergentes (HUMAN_DECISIONS item 9)"
+
+rollback_condition: ""
+
+on_unexpected_change: STOP_AND_RECLASSIFY_AS_SCIENTIFIC_CHANGE
+# Se previsões, OOF ou saídas científicas mudarem além das tolerâncias:
+# parar, reverter, reclassificar e levar ao gate aplicável.
+
+model: "Fable 5"
+effort: ""                           # LOW/MEDIUM/HIGH conforme POST_AUDIT_PLAN §5
+reason: ""

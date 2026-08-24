@@ -1,0 +1,35 @@
+# Template: proposta de mudança científica (qualquer alteração que toque
+# OOF, previsões, scores, embeddings, folds, preprocessing, threshold,
+# labels, representação, população, denominador, geometria ou comportamento
+# do modelo). Segue o processo da PHASE_09: reproduzir -> evidenciar ->
+# propor -> PARAR no gate -> aplicar só com decisão formal.
+
+proposal_id: ""
+date: ""
+proposer: ""
+
+targeted_weakness: ""                # W-### / SR-### / H-###
+current_behavior: ""                 # OBSERVED, com evidência citada
+proposed_behavior: ""
+why: ""                              # evidência, nunca "para subir AUC" isolado
+
+scientific_contracts_affected: []    # IDs; mudança de contrato exige HG-01
+human_gates_required: []             # HG-XX aplicáveis
+blast_radius: ""                     # rotas/consumidores afetados (verificados por grep)
+
+options:                             # SEMPRE oferecer manter-como-está
+  - id: A
+    description: ""
+    pros: ""
+    cons: ""
+  - id: KEEP
+    description: "manter como risco documentado"
+    pros: "zero risco"
+    cons: ""
+
+test_plan: ""                        # specs atualizadas JUNTO com a mudança aprovada, nunca antes
+verification_plan: ""                # sondas de mutação + suíte + regressões científicas
+rollback: ""
+
+decision: ""                         # preenchido pelo aprovador (formato HUMAN_GATES.md)
+decision_date: ""
