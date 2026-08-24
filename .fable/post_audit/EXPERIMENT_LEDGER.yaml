@@ -166,3 +166,30 @@ entries:
       antes de propor qualquer coisa; (3) failure patterns por coorte (D12):
       falhas raras em OSW (2/132) vs LLD (14/335) — sem assimetria dramática.
     do_not_repeat_without_new_evidence: true
+
+  - experiment_id: MEAS-01
+    baseline_commit: "6084dd6 (medição; nada alterado)"
+    candidate_commit: n/a
+    hypothesis: "H-03: o resultado é sensível ao mecanismo de seleção; H-04: o agregado depende da composição de coortes"
+    change: "nenhuma (medição label-free determinística; script em post_audit/analysis/meas_01_stability_cohorts.py)"
+    result: >
+      H-03: seleção instável no nível de hiperparâmetro (4/5 folds numa banda
+      estreita thr 0,41-0,51; fold 2 é outlier qualitativo: C=1,0/max/0,848)
+      mas com impacto decisório LIMITADO (transplantes de threshold flipam
+      2,2-3,6% das predições fora do outlier; fragilidade <0,05 = 4,7% dos
+      casos). Triangulação: inner 0,706-0,753 (pessimista, são) < outer
+      honesto 0,760 < seleção 0,796 (otimista). H-04: bal varia só 0,62 pp
+      entre 3 esquemas de peso; mix sens/spec é sensível (igual-peso: sens
+      0,795/spec 0,732); ICs por coorte largos (n=44) impedem conclusão por
+      coorte — sustenta a contenção de claims.
+    metrics: {threshold_amplitude: 0.434, flips_transplante_normal: "0.022-0.036", flips_outlier_fold2: 0.228, indice_composicao_pp: 0.62, inner_bal: "0.706-0.753"}
+    decision: "AMBAS concluídas; nenhum microexperimento proposto; gatilho de revisita = promoção futura que dependa de escolha de threshold"
+    reason: "instabilidade real porém de impacto limitado; mudança na regra de seleção seria SCIENTIFIC_CHANGE com ganho esperado pequeno"
+    evidence: "post_audit/evidence/MEAS-01/meas01_results_2026-08-24.json; TASK-2026-08-24-MEAS-01_EVIDENCE.md"
+    reverted: n/a
+    lessons: >
+      (1) fold_selection.json congelado carrega as métricas INNER — dev
+      signal completo sem labels; (2) o inner NÃO é otimista neste protocolo
+      (treinos menores) — otimismo mora na seleção-sobre-outer; (3) em n=44,
+      deltas por coorte <15 pp são ruído — calibrar o promotion gate.
+    do_not_repeat_without_new_evidence: true

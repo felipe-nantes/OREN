@@ -1,0 +1,189 @@
+{
+  "h03_estabilidade": {
+    "selecao_por_fold": [
+      {
+        "outer_fold": 0,
+        "c": 0.01,
+        "aggregation": "top2_mean",
+        "threshold": 0.5019,
+        "inner_sens": 0.7557,
+        "inner_spec": 0.7513,
+        "inner_bal": 0.7535,
+        "inner_failures": 10
+      },
+      {
+        "outer_fold": 1,
+        "c": 0.01,
+        "aggregation": "top2_mean",
+        "threshold": 0.5081,
+        "inner_sens": 0.7159,
+        "inner_spec": 0.7259,
+        "inner_bal": 0.7209,
+        "inner_failures": 16
+      },
+      {
+        "outer_fold": 2,
+        "c": 1.0,
+        "aggregation": "max",
+        "threshold": 0.8478,
+        "inner_sens": 0.7102,
+        "inner_spec": 0.702,
+        "inner_bal": 0.7061,
+        "inner_failures": 11
+      },
+      {
+        "outer_fold": 3,
+        "c": 0.1,
+        "aggregation": "mean",
+        "threshold": 0.4805,
+        "inner_sens": 0.7216,
+        "inner_spec": 0.7222,
+        "inner_bal": 0.7219,
+        "inner_failures": 14
+      },
+      {
+        "outer_fold": 4,
+        "c": 0.01,
+        "aggregation": "mean",
+        "threshold": 0.4137,
+        "inner_sens": 0.733,
+        "inner_spec": 0.7475,
+        "inner_bal": 0.7402,
+        "inner_failures": 13
+      }
+    ],
+    "dispersao": {
+      "c_distintos": [
+        0.01,
+        0.1,
+        1.0
+      ],
+      "aggregations_distintas": [
+        "max",
+        "mean",
+        "top2_mean"
+      ],
+      "threshold_min_max": [
+        0.4137,
+        0.8478
+      ],
+      "threshold_amplitude": 0.4341,
+      "inner_bal_min_max": [
+        0.7061,
+        0.7535
+      ]
+    },
+    "fragilidade_score_vs_threshold_do_fold": {
+      "0.02": {
+        "casos": 4,
+        "fracao": 0.0089
+      },
+      "0.05": {
+        "casos": 21,
+        "fracao": 0.0466
+      },
+      "0.1": {
+        "casos": 43,
+        "fracao": 0.0953
+      }
+    },
+    "transplante_de_threshold": {
+      "fold_0_thr_0.502": {
+        "flips": 11,
+        "fracao": 0.0244
+      },
+      "fold_1_thr_0.508": {
+        "flips": 10,
+        "fracao": 0.0222
+      },
+      "fold_2_thr_0.848": {
+        "flips": 103,
+        "fracao": 0.2284
+      },
+      "fold_3_thr_0.480": {
+        "flips": 10,
+        "fracao": 0.0222
+      },
+      "fold_4_thr_0.414": {
+        "flips": 16,
+        "fracao": 0.0355
+      }
+    },
+    "contrafactual_threshold_global_mediano": {
+      "threshold": 0.5019,
+      "flips": 11,
+      "fracao": 0.0244
+    },
+    "n_computaveis": 451
+  },
+  "h04_coortes": {
+    "por_coorte": {
+      "lld_mmri": {
+        "n": 335,
+        "pos": 157,
+        "neg": 178,
+        "falhas": 14,
+        "sens": 0.7325,
+        "spec": 0.7697,
+        "sens_ic95": [
+          0.6583,
+          0.7956
+        ],
+        "spec_ic95": [
+          0.7025,
+          0.8254
+        ]
+      },
+      "openswisshcc_consumed_holdout": {
+        "n": 44,
+        "pos": 24,
+        "neg": 20,
+        "falhas": 1,
+        "sens": 0.8333,
+        "spec": 0.65,
+        "sens_ic95": [
+          0.6415,
+          0.9332
+        ],
+        "spec_ic95": [
+          0.4329,
+          0.8188
+        ]
+      },
+      "openswisshcc_development": {
+        "n": 88,
+        "pos": 39,
+        "neg": 49,
+        "falhas": 1,
+        "sens": 0.8205,
+        "spec": 0.7755,
+        "sens_ic95": [
+          0.6733,
+          0.9102
+        ],
+        "spec_ic95": [
+          0.6412,
+          0.8698
+        ]
+      }
+    },
+    "agregado_por_esquema": {
+      "oficial_peso_por_caso": {
+        "sens": 0.7586,
+        "spec": 0.7595,
+        "bal": 0.759
+      },
+      "igual_peso_3_coortes": {
+        "sens": 0.7954,
+        "spec": 0.7317,
+        "bal": 0.7636
+      },
+      "igual_peso_lld_vs_osw_agrupada": {
+        "sens": 0.7786,
+        "spec": 0.7517,
+        "bal": 0.7652
+      }
+    },
+    "indice_dependencia_composicao_pp": 0.62
+  }
+}
