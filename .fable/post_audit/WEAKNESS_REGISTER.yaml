@@ -98,7 +98,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "test_property_atomic_and_artifact.py + TD-007 fix tests"
     current_protection: "property tests dos 4 canônicos"
-    missing_protection: "helper único canônico importado por todos"
+    missing_protection: "FECHADO em 2026-08-24 (REF-01): 11 vazamentos tmp-em-falha corrigidos (censo achou 65 helpers, nao 56), duplicata de producao migrada ao canonico, e GUARDA ESTRUTURAL por AST na suite (test_atomic_writers_structural_guard) — divergencia futura quebra a CI"
     possible_root_causes: ["copy-paste entre scripts experimentais"]
     unknowns: ["quantos dos 56 estão em código morto/one-shot"]
     candidate_action_type: PURE_REFACTOR
@@ -108,7 +108,7 @@ weaknesses:
     expected_information_gain: LOW
     human_gate: none
     recommended_fable_effort: MEDIUM
-    status: OPEN
+    status: RESOLVED
 
   - id: W-004
     title: "3 comparadores de geometria com 2 regimes de tolerância (1e-6 exato vs 1e-5)"

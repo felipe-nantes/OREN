@@ -360,11 +360,14 @@ def verify_v24_liver_enriched_inference_protocol(
 
 def _write_jsonl_atomic(path: Path, rows: list[dict[str, Any]]) -> None:
     temporary = path.with_name(f".{path.name}.tmp")
-    with temporary.open("w", encoding="utf-8", newline="\n") as stream:
-        for row in rows:
-            stream.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
-        stream.flush()
-    temporary.replace(path)
+    try:
+        with temporary.open("w", encoding="utf-8", newline="\n") as stream:
+            for row in rows:
+                stream.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+            stream.flush()
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _set_remaining_timeout(client: Any, original: int, remaining: float) -> None:

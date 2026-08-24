@@ -286,9 +286,12 @@ def _front_matter(article: dict[str, Any]) -> str:
 def _write_text_atomic(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=path.parent, suffix=".tmp") as tmp:
-        tmp.write(text)
         tmp_path = Path(tmp.name)
-    tmp_path.replace(path)
+        tmp.write(text)
+    try:
+        tmp_path.replace(path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _write_json_atomic(path: Path, data: Any) -> None:

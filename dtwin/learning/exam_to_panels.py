@@ -22,14 +22,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from dtwin.core import PipelineError
+from dtwin.learning.protocol import atomic_write_json
 from dtwin.medgemma_client import load_screening_config, model_trace
 from dtwin.medgemma_panel_liver_enriched import (
     LIVER_ENRICHED_POLICY,
@@ -111,19 +110,9 @@ class ExamPanelResult:
 
 
 def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
-            json.dump(payload, stream, ensure_ascii=False, indent=2, sort_keys=True)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-    finally:
-        temporary.unlink(missing_ok=True)
+    # REF-01 (2026-08-24): duplicata byte-identica consolidada no canonico
+    # (SW-ATOMIC-01); mantido o nome local para nao mudar chamadores.
+    atomic_write_json(Path(path), payload)
 
 
 def build_exam_panels(

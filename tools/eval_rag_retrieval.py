@@ -32,18 +32,24 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 def _write_json_atomic(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=path.parent, suffix=".tmp") as tmp:
+        tmp_path = Path(tmp.name)
         json.dump(data, tmp, indent=2, ensure_ascii=False, sort_keys=True)
         tmp.write("\n")
-        tmp_path = Path(tmp.name)
-    tmp_path.replace(path)
+    try:
+        tmp_path.replace(path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _write_text_atomic(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=path.parent, suffix=".tmp") as tmp:
-        tmp.write(text)
         tmp_path = Path(tmp.name)
-    tmp_path.replace(path)
+        tmp.write(text)
+    try:
+        tmp_path.replace(path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _load_chunk_texts(index: dict[str, Any]) -> dict[str, str]:

@@ -206,8 +206,11 @@ def _jsonl_bytes(rows: list[dict[str, Any]]) -> bytes:
 def _write_bytes_atomic(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.tmp")
-    temporary.write_bytes(payload)
-    temporary.replace(path)
+    try:
+        temporary.write_bytes(payload)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def build_public_independent_cohort(

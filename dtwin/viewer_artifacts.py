@@ -245,8 +245,11 @@ def _render_reference_slice(
 
 def _save_png_atomic(image: Image.Image, path: Path) -> None:
     temp = path.with_name(f".{path.name}.tmp")
-    image.save(temp, format="PNG", optimize=True)
-    temp.replace(path)
+    try:
+        image.save(temp, format="PNG", optimize=True)
+        temp.replace(path)
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 def generate_reference_images(

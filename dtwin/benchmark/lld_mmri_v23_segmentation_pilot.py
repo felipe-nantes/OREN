@@ -68,28 +68,31 @@ def _write_checkpoint_rows_atomic(path: Path, rows: list[dict[str, Any]]) -> Non
 
     payload = _checkpoint_payload(rows)
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex[:8]}.tmp")
-    with temporary.open("w", encoding="utf-8", newline="\n") as handle:
-        handle.write(payload)
-        handle.flush()
-        os.fsync(handle.fileno())
-    # Refuse to publish a sparse/NUL or otherwise invalid generation.
-    if not _valid_checkpoint_file(temporary) or temporary.stat().st_size != len(
-        payload.encode("utf-8")
-    ):
-        temporary.unlink(missing_ok=True)
-        raise PipelineError("Nova geracao do checkpoint LLD-MMRI e invalida.")
-    backup = path.with_name("checkpoint_rows.backup.jsonl")
-    if _valid_checkpoint_file(path):
-        backup_tmp = backup.with_name(f".{backup.name}.{uuid.uuid4().hex[:8]}.tmp")
-        shutil.copyfile(path, backup_tmp)
-        with backup_tmp.open("r+b") as handle:
+    backup_tmp = None
+    try:
+        with temporary.open("w", encoding="utf-8", newline="\n") as handle:
+            handle.write(payload)
+            handle.flush()
             os.fsync(handle.fileno())
-        if not _valid_checkpoint_file(backup_tmp):
+        # Refuse to publish a sparse/NUL or otherwise invalid generation.
+        if not _valid_checkpoint_file(temporary) or temporary.stat().st_size != len(
+            payload.encode("utf-8")
+        ):
+            raise PipelineError("Nova geracao do checkpoint LLD-MMRI e invalida.")
+        backup = path.with_name("checkpoint_rows.backup.jsonl")
+        if _valid_checkpoint_file(path):
+            backup_tmp = backup.with_name(f".{backup.name}.{uuid.uuid4().hex[:8]}.tmp")
+            shutil.copyfile(path, backup_tmp)
+            with backup_tmp.open("r+b") as handle:
+                os.fsync(handle.fileno())
+            if not _valid_checkpoint_file(backup_tmp):
+                raise PipelineError("Backup do checkpoint LLD-MMRI e invalido.")
+            backup_tmp.replace(backup)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+        if backup_tmp is not None:
             backup_tmp.unlink(missing_ok=True)
-            temporary.unlink(missing_ok=True)
-            raise PipelineError("Backup do checkpoint LLD-MMRI e invalido.")
-        backup_tmp.replace(backup)
-    temporary.replace(path)
 
 
 def _mask_gate(mask_path: Path, reference: sitk.Image) -> tuple[bool, int, bool]:
