@@ -960,7 +960,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "SCI-004 protegido por property tests"
     current_protection: "falhas ficam no denominador (imutável sem HG-08)"
-    missing_protection: "taxonomia de causas + upper bound (medição H-02)"
+    missing_protection: "FECHADO em 2026-08-24 (FAIL-01): taxonomia 9 ambientais + 5 reais + 2 OSW; teto computado; decisão de 31/07 (docs/158) validada"
     possible_root_causes: ["resolução de fase, segmentação, timeout, gateway — a medir"]
     unknowns: ["se artefatos de falha suficientes existem localmente (passo 1 = inventário)"]
     candidate_action_type: EXPERIMENTAL_OPPORTUNITY
@@ -970,7 +970,7 @@ weaknesses:
     expected_information_gain: HIGH
     human_gate: "none para medir; HG-02/05 para qualquer recuperação"
     recommended_fable_effort: UltraCode
-    status: OPEN
+    status: RESOLVED
 
   - id: W-041
     title: "Resultados centrais não reproduzíveis a partir deste checkout (ambiental)"

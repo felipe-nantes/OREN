@@ -117,3 +117,52 @@ entries:
       primário; (3) p>>n exige apoiar conclusões em resultados imunes
       (top-1 PC, curva de deflação, invariância entre variantes).
     do_not_repeat_without_new_evidence: true
+
+  - experiment_id: LEDGER-SEED-006
+    baseline_commit: "auditoria de retry de 2026-07-31 (docs/158)"
+    candidate_commit: n/a
+    hypothesis: "parte das 14 falhas LLD era ambiental (máquina), não algorítmica"
+    change: "reexecução das 2 tentativas originais de segmentação com MESMO timeout/gate, máquina saudável; previsão pré-registrada"
+    result: >
+      Separação perfeita: 9/9 'infraestrutura' recuperadas (8 timeout 75s + 1
+      RAM; passaram em 35-84s) e 0/5 'reais' recuperadas (segmentação termina e
+      acha 0/8/216 voxels de fígado). Labels das falhas (da auditoria): 9
+      recuperadas = 2 HCC+7 neg; 5 restantes = 3 HCC+1 FNH+1 hemangioma.
+      Melhor caso LLD com os 9: sens 74,52% (<75) — gate continua reprovado.
+      Números oficiais SUBESTIMAM o sistema em ~+1pp sens/+3pp spec no LLD por
+      limitação de execução.
+    metrics: {recuperadas_infra: 9, reais: 5, lld_melhor_caso_sens: 0.7452, lld_oficial_sens: 0.7325}
+    decision: "documentar (docs/158) e NÃO regenerar a cadeia agora; regeneração incremental quando houver outro motivo (ex.: segunda coorte)"
+    reason: "custo de horas + risco de vínculo de assinatura vs ganho que não muda gate; denominador nunca foi alterado (SCI-004 respeitado)"
+    evidence: "docs/158_FALHAS_TECNICAS_AMBIENTAIS.md; casos/qualification/lld_mmri_v23/prepared/external_segmentation_retry_v1/ (na máquina de origem)"
+    reverted: n/a
+    lessons: "falhas 'técnicas' têm duas naturezas com labels desbalanceados (reais são desproporcionalmente positivas: 3/5); previsão pré-registrada é o padrão a seguir"
+    do_not_repeat_without_new_evidence: true
+
+  - experiment_id: FAIL-01
+    baseline_commit: "17e7857 (medição; nada alterado)"
+    candidate_commit: n/a
+    hypothesis: "as 16 falhas se concentram em poucas causas classificáveis e o teto de recuperação é computável (H-02)"
+    change: "nenhuma (medição sobre artefatos congelados)"
+    result: >
+      CONFIRMADA por duas rotas independentes. Rota A (esta task, agregados
+      congelados): 16 = 14 LLD + 2 OSW, todas 'no_verified_liver_enriched_panel_collection'
+      (panel_count=0); composição por label das LLD via by_clinical_subtype:
+      5 positivas (hcc) + 9 negativas — bate EXATAMENTE com a rota B (docs/158,
+      retry real de 31/07): 9 ambientais recuperáveis + 5 reais. Banda de teto
+      desta task (x=5): sens 78,2/spec 80,6 no 467; realista 77,7/79,7. A doc
+      já decidiu: documentado, regeneração adiada. Residual aberto: as 2
+      falhas OSW não classificadas (infra vs real) e a inspeção visual dos 5
+      casos reais — ambos exigem artefatos da máquina de origem (BLK).
+    metrics: {falhas: 16, lld: 14, osw: 2, causa_unica: "no_verified_liver_enriched_panel_collection", teto_sens_x5: 0.7818, teto_spec_x5: 0.8057}
+    decision: "H-02 CONCLUÍDA; nenhum experimento novo proposto — a decisão de 31/07 permanece válida; ganho conhecido e documentado, não incorporado por design"
+    reason: "recuperação já demonstrada e quantificada; incorporação exige regenerar cadeia assinada — gatilho definido (outro motivo de regeneração)"
+    evidence: "post_audit/tasks/TASK-2026-08-24-FAIL-01_EVIDENCE.md; candidate_dataset_stage_a_v1/technical_failures.jsonl; evaluation by_dataset/by_clinical_subtype"
+    reverted: n/a
+    lessons: >
+      (1) o registro congelado de falhas + agregados por subtipo permitem
+      reconstruir composição por label SEM ler labels protegidos; (2) docs/158
+      faltava no ledger — experimentos pré-ciclo devem ser garimpados de docs/
+      antes de propor qualquer coisa; (3) failure patterns por coorte (D12):
+      falhas raras em OSW (2/132) vs LLD (14/335) — sem assimetria dramática.
+    do_not_repeat_without_new_evidence: true
