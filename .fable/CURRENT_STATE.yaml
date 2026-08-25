@@ -44,7 +44,7 @@ tooling:
 commits_main:
   pushed: [7efa2dc, 0ba6f01, bd278b5, 8c31c76, "5087041", 42a8514, e4dd3cc, b66002a, dfb36b5, 515b7b3, 637d9e1, 3f06f48, 3d146d5, c986e17, "072c3e6", 73ccb3e, daa878c, 29be45b, 77727b3, 0d0ccc2, b3cd61d, b634f71, 5fa342e, b5e739e, e0d311b, a8ceeb8]
   push_status: "origin/main = 58f3e3d (verificado 2026-08-25); ciclo POST_AUDIT: +0d56547..58f3e3d (TOP_10 COMPLETO: ...REF-01, PROV-01, TEST-01, DOC-01); backlog em curso"
-  nao_commitado: "REF-03 seam3 (webapp/jobs.py 4 workers; server ~1790 linhas; inventario multiline 30 alvos; suite 1804/4/0) — commit quando solicitado"
+  nao_commitado: "REF-03 seam4 FINAL (phase_union.py cientifico; server 3635->1548 em 6 modulos; W-001 RESOLVED; suite 1804/4/0) — commit quando solicitado"
 
 migracao_docker_nativo:
   task: TASK-2026-08-18-MIGR-01

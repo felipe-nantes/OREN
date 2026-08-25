@@ -32,7 +32,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "test_webapp.py + integration boundary (PH05) + specs de geometria"
     current_protection: "suíte 1769; characterization/specs dos comparadores"
-    missing_protection: "testes por seam após decomposição"
+    missing_protection: "FECHADO em 2026-08-25 (REF-03): server.py 3.635 -> 1.548 linhas em 6 modulos coesos (payloads, job_persistence, xr_sessions, benchmarks, jobs, phase_union), API publica intacta (facade + late binding; 30 patch-targets eficazes), guard permanente de rotas+simbolos na suite; 4 seams, cada um com portao completo verde"
     possible_root_causes: ["crescimento orgânico do produto"]
     unknowns: ["seams naturais exatos — mapear antes de cortar"]
     candidate_action_type: PURE_REFACTOR
@@ -42,7 +42,7 @@ weaknesses:
     expected_information_gain: LOW
     human_gate: "none para reorganização pura; HG-03/05 se tocar semântica de união/persistência"
     recommended_fable_effort: "UltraCode (arquitetura com downstream científico) para o DESIGN; MEDIUM por seam na execução"
-    status: OPEN
+    status: RESOLVED
 
   - id: W-002
     title: "dtwin/stages.py acoplado (7 estágios: DICOM, masks, mesh/export)"
