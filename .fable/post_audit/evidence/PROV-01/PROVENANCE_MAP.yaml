@@ -1,0 +1,375 @@
+provenance_map:
+  task: TASK-2026-08-24-PROV-01
+  fonte_da_numeracao: 'DESCOBERTA CENTRAL (OBSERVED): os IDs E### do manuscrito (Manuscrito_Integrado_v1_ARGOS_OREN.pdf,
+    v1 2026-08-09, tabela ''Rastreabilidade das alegacoes centrais'', pp. 32-33) sao a numeracao dos documentos
+    internos docs/<n>_*.md SEM zero a esquerda (E016 -> docs/16_*.md). Verificado: 28/28 IDs resolvem
+    para um doc unico existente. TD-012 dizia ''E016...E154 nao mapeados'' — a faixa e da numeracao; os
+    IDs realmente citados sao 28 distintos.'
+  escopo: 'Somente E-IDs citados pelo manuscrito. Nenhum label protegido lido; artefatos verificados apenas
+    por existencia de caminho, no checkout local (existe_local) e no espelho do SSD D:/OREN/argos-main
+    (existe_ssd). Artefatos ausentes dos dois lados pertencem a maquina de origem (blocker ambiental ja
+    documentado); ex.: toda a arvore casos/qualification/openswisshcc_v1/ nao existe neste checkout nem
+    no SSD.'
+  claims:
+    C1:
+      titulo: execucao local pragmatica
+      eids:
+      - E059
+      nota: 'tambem cita: lote label-blind 98/100, registros de cache/latencia e ambiente'
+    C2:
+      titulo: limite do classificador generativo
+      eids:
+      - E016
+      - E020
+      - E024
+      - E055
+      - E057
+    C3:
+      titulo: encoder congelado e adaptacao
+      eids:
+      - E059
+      - E063
+      - E064
+      - E065
+    C4:
+      titulo: complexidade adicional
+      eids:
+      - E094
+      - E095
+      - E096
+      - E097
+      - E098
+      - E145
+      - E146
+      - E147
+    C5:
+      titulo: mudanca de dominio
+      eids: []
+      nota: 'sem E-IDs: cita Etapa C, estratos por coorte, LODO, transferencia tardia e sondas de origem'
+    C6:
+      titulo: localizacao != discriminacao
+      eids:
+      - E145
+      - E146
+      - E096
+      nota: E096 citado como teto ROI
+    C7:
+      titulo: subtipos dependem do regime
+      eids:
+      - E082
+      - E110
+      - E118
+      - E117
+    C8:
+      titulo: camada 3D de auditoria
+      eids:
+      - E148
+      - E149
+      - E150
+      - E151
+      - E152
+      - E153
+      - E154
+    C9:
+      titulo: auditabilidade e integridade
+      eids: []
+      nota: 'sem E-IDs: cita pre-especificacao, congelamento, label-blind, denominador de falhas, proveniencia,
+        cache e agrupamento por paciente'
+  cobertura:
+    eids_citados: 28
+    com_doc: 28
+    com_commit: 28
+    com_comando_extraido: 5
+    com_artefato_citado: 22
+    com_artefato_presente_local: 13
+  entradas:
+  - eid: E016
+    doc: docs/16_HARD_NEGATIVE_CURATION.md
+    commit_primeiro: 6ee41c5 2026-07-09
+    titulo: Curadoria operacional de negativos difíceis
+    comandos:
+    - python -m dtwin.datasets.curation \
+    artefatos:
+    - caminho: data/curation/negative_hard_cases_review.jsonl
+      existe_local: false
+      existe_ssd: false
+    - caminho: configs/curation/negative_hard_cases_review.template.jsonl
+      existe_local: true
+      existe_ssd: false
+    - caminho: data/curation/protected_labels.jsonl
+      existe_local: false
+      existe_ssd: false
+  - eid: E020
+    doc: docs/20_MEDSIGLIP_ZERO_SHOT_FOUNDATION.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: Fundação MedSigLIP zero-shot — sem decisão clínica
+    comandos:
+    - 'tools/score_medsiglip_panel.py`: CLI que persiste apenas hash e scores;'
+    artefatos:
+    - caminho: configs/medsiglip_liver_zero_shot.yaml
+      existe_local: true
+      existe_ssd: false
+  - eid: E024
+    doc: docs/24_MEDSIGLIP_E_OPEN_SWISS_QUALIFICATION.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: Qualificação MedGemma 4B — MedSigLIP e OpenSwissHCC
+    artefatos:
+    - caminho: casos/qualification/models/medsiglip-448
+      existe_local: true
+      existe_ssd: true
+  - eid: E055
+    doc: docs/55_OPENSWISSHCC_V15_PILOTO_32_CORTES.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v15 — piloto crítico com 32 cortes
+  - eid: E057
+    doc: docs/57_OPENSWISSHCC_V15_PROTOCOLO_DE_AVALIACAO_CONGELADO.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v15 — protocolo de avaliação congelado
+    comandos:
+    - tools/build_openswisshcc_v15_blind_fusion.py`
+    - tools/freeze_openswisshcc_v15_fusion.py`
+    - tools/evaluate_openswisshcc_v15_fusion.py`
+    - python.exe -B tools/evaluate_openswisshcc_v15_fusion.py `
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/runs/dev_v15_blind_fusion87/
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_freezes_v15/fusion_evaluation_protocol.json
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/runs/dev_v15_blind_fusion87
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_v1/protected_ground_truth/development_labels.jsonl
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/evaluations/dev_v15_fusion87
+      existe_local: false
+      existe_ssd: false
+  - eid: E059
+    doc: docs/59_OPENSWISSHCC_V16_LEITOR_FOCAL_PLANO.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v16 — plano do leitor focal volumétrico multissequência
+  - eid: E063
+    doc: docs/63_OPENSWISSHCC_V16_FALLBACK_ORIGINAL_E_TIMING.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v16 — fallback de fases originais e plano temporal
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_reviews_v16/candidate_volume_pilot10_review.json
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/protocols/v16_candidate_volume_timing_selection.json
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_review_gallery_v16_candidate_volume_unregistered_fallback3_v2
+      existe_local: false
+      existe_ssd: false
+  - eid: E064
+    doc: docs/64_OPENSWISSHCC_V16_PILOTO_TEMPORAL_GATE_HUMANO.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v16 — piloto temporal e gate humano
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_reviews_v16/candidate_volume_unregistered_fallback3_v2_review.json
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_review_gallery_v16_timing4_v1
+      existe_local: false
+      existe_ssd: false
+  - eid: E065
+    doc: docs/65_OPENSWISSHCC_V16_RESULTADO_PILOTO_TEMPORAL.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v16 — resultado do piloto temporal 4B
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/timing/dev_v16_candidate_volume_timing4_preflight_v1/preflight.json
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/timing/dev_v16_candidate_volume_timing4_run_v1/timing_report.json
+      existe_local: false
+      existe_ssd: false
+  - eid: E082
+    doc: docs/82_V21_CALIBRADOR_E_GATE_VISUAL_LIVERHCCSEG.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: V21 — calibrador externo e gate visual LiverHccSeg
+    comandos:
+    - tools/review_liverhccseg_v21_panels.py
+    - python.exe tools/review_liverhccseg_v21_panels.py `
+    - tools/run_liverhccseg_v21_signals.py
+    - tools/evaluate_liverhccseg_v21_positive.py
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/prepared/
+      existe_local: false
+      existe_ssd: false
+    - caminho: data/qualification/liverhccseg_v21_uniform9_panels/
+      existe_local: true
+      existe_ssd: false
+    - caminho: data/qualification/liverhccseg_v21_uniform9_gallery/index.html
+      existe_local: true
+      existe_ssd: false
+    - caminho: data/qualification/liverhccseg_v21_uniform9_panels
+      existe_local: true
+      existe_ssd: false
+    - caminho: data/qualification/liverhccseg_v21_uniform9_gallery
+      existe_local: true
+      existe_ssd: false
+    - caminho: data/qualification/liverhccseg_v21_uniform9_review.json
+      existe_local: true
+      existe_ssd: false
+  - eid: E094
+    doc: docs/94_OPENSWISSHCC_V22_PROPOSTAS_DE_REALCE.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v22 — propostas determinísticas de realce
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/audits/dev_v22_enhancement_localizer_full87_v1
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_preflights_v22/enhancement_t3_exact_top5_pilot10_v2.json
+      existe_local: false
+      existe_ssd: false
+  - eid: E095
+    doc: docs/95_OPENSWISSHCC_V22_ORCAMENTO_TEMPORAL_TOP5.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v22 — orçamento temporal exact-top5
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/timing/dev_v22_enhancement_t3_exact_top5_projection_v1.json
+      existe_local: false
+      existe_ssd: false
+  - eid: E096
+    doc: docs/96_OPENSWISSHCC_V22_PROTOCOLO_PILOTO_TOP5.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v22 — protocolo congelado do piloto exact-top5
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_protocols_v22/enhancement_t3_exact_top5_pilot10_evaluation_v1.json
+      existe_local: false
+      existe_ssd: false
+  - eid: E097
+    doc: docs/97_OPENSWISSHCC_V22_PILOTO_EXACT_TOP5_RESULTADO.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v22 — resultado do piloto exact-top5
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_reviews_v22/enhancement_t3_exact_top5_pilot10_review_jm.json
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_protocols_v22/enhancement_t3_exact_top5_pilot10_score_4b_v1.json
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/scores/dev_v22_enhancement_t3_exact_top5_pilot10_4b_v1/
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/evaluations/dev_v22_enhancement_t3_exact_top5_pilot10_4b_v1/evaluation.json
+      existe_local: false
+      existe_ssd: false
+  - eid: E098
+    doc: docs/98_OPENSWISSHCC_V23_GEOMETRIA_VASCULAR.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: OpenSwissHCC v23 — geometria vascular dos candidatos
+    artefatos:
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_v23_candidate_shape_full87_v1
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/evaluations/dev_v23_shape_fusion87_v1
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/prepared/development_freezes_v23/shape_fusion_calibrator_v1.json
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/timing/dev_v23_candidate_shape_full87_v1.json
+      existe_local: false
+      existe_ssd: false
+  - eid: E110
+    doc: docs/110_V23_RETROSPECTIVA_MULTICOHORT_FASE1.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: V23 retrospectiva multicohort — Fase 1
+    comandos:
+    - python.exe tools\prepare_v23_retrospective_multicohort.py freeze
+    - python.exe tools\prepare_v23_retrospective_multicohort.py verify
+    - python.exe tools\prepare_v23_retrospective_multicohort.py readiness
+  - eid: E117
+    doc: docs/117_V26_PATHOLOGY_TARGET_RAG_RESULTADO.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: V26 — resultado do candidato pathology-target + RAG textual
+  - eid: E118
+    doc: docs/118_V27_RECALIBRACAO_ANINHADA_RESULTADO.md
+    commit_primeiro: 3557021 2026-07-27
+    titulo: V27 — recalibração aninhada dos sinais congelados
+    artefatos:
+    - caminho: configs/benchmark/openswisshcc_v27_nested_recalibration_protocol_v1.json
+      existe_local: true
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/prepared/v27_nested_recalibration_predictions_v1
+      existe_local: false
+      existe_ssd: false
+    - caminho: casos/qualification/openswisshcc_v1/evaluation/v27_nested_recalibration_v1/evaluation.json
+      existe_local: false
+      existe_ssd: false
+  - eid: E145
+    doc: docs/145_FASE_TARDIA_LOCALIZADOR.md
+    commit_primeiro: a13e0fd 2026-07-30
+    titulo: Fase tardia no localizador — gate reprovado por 2,1 pontos, incluída mesmo assim
+    artefatos:
+    - caminho: casos/qualification/hybrid_v1/localizer_delayed_v1/
+      existe_local: true
+      existe_ssd: true
+  - eid: E146
+    doc: docs/146_PASSO2_MEDICAO_HONESTA.md
+    commit_primeiro: 8d8a982 2026-07-30
+    titulo: 'Passo 2 — Medição honesta: 61,46% de ponta a ponta'
+    artefatos:
+    - caminho: casos/qualification/hybrid_v1/passo2_medicao_honesta_v1/
+      existe_local: true
+      existe_ssd: true
+  - eid: E147
+    doc: docs/147_PASSO3A_RECORTE_FISICO.md
+    commit_primeiro: 55afafb 2026-07-30
+    titulo: 'Passo 3a — Recorte físico fixo: hipótese refutada, gargalo identificado'
+    artefatos:
+    - caminho: casos/qualification/hybrid_v1/passo3a_recorte_fisico_v1/
+      existe_local: true
+      existe_ssd: true
+  - eid: E148
+    doc: docs/148_PASSO3C_SELECAO_COMPONENTE.md
+    commit_primeiro: bccba17 2026-07-30
+    titulo: 'Passo 3c — Seleção de componente: nenhuma heurística supera "o maior"'
+    artefatos:
+    - caminho: casos/qualification/hybrid_v1/passo3c_selecao_v1/
+      existe_local: true
+      existe_ssd: true
+  - eid: E149
+    doc: docs/149_PLANO_SELECAO_APRENDIDA.md
+    commit_primeiro: 8a34a06 2026-07-30
+    titulo: Plano — Seleção aprendida de componente
+  - eid: E150
+    doc: docs/150_PLANO_FINAL_METAS_75.md
+    commit_primeiro: e251c1e 2026-07-31
+    titulo: Plano para as metas de 75% — o que resta com os dados atuais
+  - eid: E151
+    doc: docs/151_PASSO1_FUSAO_RESULTADO.md
+    commit_primeiro: aa39160 2026-07-31
+    titulo: 'Passo 1 — Fusão de representações: ganho real, mas o gate não vale'
+    artefatos:
+    - caminho: casos/qualification/hybrid_v1/passo1_fusao_v1/
+      existe_local: true
+      existe_ssd: true
+  - eid: E152
+    doc: docs/152_PASSO2_AJUSTE_RESULTADO.md
+    commit_primeiro: 7b7f971 2026-07-31
+    titulo: 'Passo 2 — Seleção de C e agregação de recortes: o gate passa, o efeito não se estabelece'
+    artefatos:
+    - caminho: casos/qualification/hybrid_v1/passo2_ajuste_v1/
+      existe_local: true
+      existe_ssd: true
+  - eid: E153
+    doc: docs/153_PASSO3_MIL_RESULTADO.md
+    commit_primeiro: ff6386e 2026-07-31
+    titulo: 'Passo 3 — Múltiplas instâncias: REPROVADO, e o oráculo é inacessível'
+    artefatos:
+    - caminho: casos/qualification/hybrid_v1/passo3_mil_v1/
+      existe_local: true
+      existe_ssd: true
+  - eid: E154
+    doc: docs/154_OPENSWISS_FUSAO_BINARIO_COMPLETO.md
+    commit_primeiro: 3c91d2f 2026-07-31
+    titulo: Fusão no endpoint binário completo — e a correção de uma premissa que eu inventei
+    artefatos:
+    - caminho: casos/qualification/hybrid_v1/fusao_estimador_oficial_v2/
+      existe_local: true
+      existe_ssd: true
