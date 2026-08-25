@@ -562,7 +562,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "núcleo 89,5% branch; esses braços fora"
     current_protection: "justificativa formal no exit review"
-    missing_protection: "smoke tests opcionais"
+    missing_protection: "FECHADO em 2026-08-25 (REF-05): 21 smokes deterministicos — S5 (render_markdown_report; robustness 87->99%) e S6 (graduacao consultiva; volumetry 86->97%). G8/G9 permanecem justificados (characterization + BLK-PROTECTED-SOURCES)"
     possible_root_causes: []
     unknowns: []
     candidate_action_type: PURE_REFACTOR
@@ -572,7 +572,7 @@ weaknesses:
     expected_information_gain: LOW
     human_gate: none
     recommended_fable_effort: LOW
-    status: OPEN
+    status: RESOLVED
 
   - id: W-020
     title: "PHI pode persistir em artefatos de trabalho (DICOM originais retidos)"
