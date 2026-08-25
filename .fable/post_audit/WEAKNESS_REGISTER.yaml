@@ -397,7 +397,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "os 6 testes (host-only de fato)"
     current_protection: documentado
-    missing_protection: "git na imagem OU skipif declarado"
+    missing_protection: "FECHADO em 2026-08-25 (ROB-07): marker requer_git em tests/conftest aplicado aos 8 testes reais (medidos rodando a suite sem git no PATH; a auditoria contava 6). Runtime oficial e nativo; suite honesta no container em vez de vermelha; nenhum assert enfraquecido"
     possible_root_causes: ["imagem enxuta"]
     unknowns: []
     candidate_action_type: ROBUSTNESS_FIX
@@ -407,7 +407,7 @@ weaknesses:
     expected_information_gain: LOW
     human_gate: none
     recommended_fable_effort: LOW
-    status: OPEN
+    status: RESOLVED
 
   - id: W-015
     title: "Sem lockfile integral por hardware (ranges amplos)"
@@ -430,7 +430,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "sondas PH06 fixam o escopo de versões testado"
     current_protection: "freeze do container + tolerâncias com cláusula de re-sonda em major"
-    missing_protection: "lock por backend (host win/py3.13; container linux/py3.11)"
+    missing_protection: "FECHADO em 2026-08-25 (ROB-06): locks/host_win_py313.lock.txt + locks/container_linux_py311.lock.txt (freeze PH00) + README com uso e limites declarados (validacao em venv limpa ~10GB documentada como passo futuro obrigatorio)"
     possible_root_causes: ["extras opcionais e hardware heterogêneo"]
     unknowns: ["ferramenta preferida (pip-compile/uv) — decidir na task"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -440,7 +440,7 @@ weaknesses:
     expected_information_gain: MEDIUM
     human_gate: "HG-09 somente se travar versão de modelo"
     recommended_fable_effort: MEDIUM
-    status: OPEN
+    status: RESOLVED
 
   - id: W-016
     title: "Tolerâncias GPU/CUDA nunca sondadas (blocker fechável nesta máquina)"
@@ -496,7 +496,7 @@ weaknesses:
     confidence: HIGH
     current_tests: n/a
     current_protection: gitignore
-    missing_protection: "política de retenção documentada (HG-11 se tocar dados)"
+    missing_protection: "INVENTARIO ENTREGUE em 2026-08-25 (ROB-11): evidence/ROB-11/RETENTION_INVENTORY.md — 19 diretorios, classes A(~17,9GB regeneravel)/B/C/D; NENHUMA delecao; politica aguarda ratificacao"
     possible_root_causes: ["experimentos longos locais"]
     unknowns: ["o que é lixo vs artefato citado"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -506,7 +506,7 @@ weaknesses:
     expected_information_gain: LOW
     human_gate: "HG-11 se qualquer dado de paciente estiver envolvido"
     recommended_fable_effort: LOW
-    status: OPEN
+    status: AWAITING_HUMAN
 
   - id: W-018
     title: "TODO server.py:2554 — fallback lento/CPU e detecção problemática"
@@ -529,7 +529,7 @@ weaknesses:
     confidence: LOW
     current_tests: nenhum
     current_protection: nenhuma
-    missing_protection: "reprodução + medição antes de qualquer fix"
+    missing_protection: "FECHADO em 2026-08-25 (ROB-10): FALSO POSITIVO — o 'TODO' de server.py:2554 era o portugues 'todo (=every) exame' no comentario; o cenario descrito (case_dir relativo) e prevenido por .resolve() nos 4 sitios (benchmarks 367; jobs 57/218/615). Nenhum fix necessario"
     possible_root_causes: ["detecção de device frágil"]
     unknowns: ["se ainda ocorre no runtime nativo"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -539,7 +539,7 @@ weaknesses:
     expected_information_gain: MEDIUM
     human_gate: "maybe HG-05 (se tocar seleção de backend de segmentação)"
     recommended_fable_effort: MEDIUM
-    status: OPEN
+    status: RESOLVED
 
   - id: W-019
     title: "Coberturas restantes justificadas (S5 render report, S6 volumetry advisory, G8 fallbacks)"
@@ -595,7 +595,7 @@ weaknesses:
     confidence: MEDIUM
     current_tests: "test_property_failclosed_http_xr_phi.py (gitignore de casos/)"
     current_protection: "DOM-002 + POL-PHI-01 + revisão humana obrigatória"
-    missing_protection: "política de storage/retention aprovada (decisão humana pendente do SR-010)"
+    missing_protection: "PROPOSTA ENTREGUE em 2026-08-25 (ROB-09): evidence/ROB-09/PHI_RETENTION_POLICY_PROPOSAL.md — P1..P5 aguardando as 4 decisoes do HG-11"
     possible_root_causes: ["retenção necessária ao resolver, sem TTL"]
     unknowns: ["inventário real de PHI em artefatos de trabalho — revisar SEM inserir PHI no pack"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -927,7 +927,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "characterization estendida cobre os campos"
     current_protection: "campos testados"
-    missing_protection: "METADE DOCUMENTAL FECHADA em 2026-08-25 (DOC-01): docs/123 par.3 com atualizacao datada + docstring de multiphase_ingest reescrita (resolver fallback fail-closed, pastas nomeadas soberanas). PENDENTE: agregador de series_with_ambiguous_text_roles/unselected_eligible_dynamic_series no benchmark arm (codigo)"
+    missing_protection: "FECHADO em 2026-08-25 (DOC-01 docs + ROB-08 agregador): aggregate_phase_resolution_audit no resolver (leitura pura, 3 testes) + phase_resolution_audit_summary.json ADITIVO no benchmark arm (report congelado intocado)"
     possible_root_causes: ["campos recém-criados (2026-08-20)"]
     unknowns: ["frequência real de colisões/descartes em campo"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -937,7 +937,7 @@ weaknesses:
     expected_information_gain: MEDIUM
     human_gate: none
     recommended_fable_effort: LOW
-    status: OPEN
+    status: RESOLVED
 
   - id: W-040
     title: "Composição das 16 falhas técnicas do denominador nunca decomposta"

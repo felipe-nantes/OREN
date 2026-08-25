@@ -20,6 +20,7 @@ from dtwin.learning.exam_to_panels import build_exam_panels
 from dtwin.learning.multiphase_ingest import build_multiphase_case
 from dtwin.learning.raw_dicom_phase_resolver import (
     REQUIRED_PHASES,
+    aggregate_phase_resolution_audit,
     resolve_raw_dicom_phases,
 )
 from dtwin.learning.raw_phase_equivalence import (
@@ -57,6 +58,7 @@ def _discover_sources(source_roots: list[Path], work: Path) -> dict[str, tuple[P
     """Match public folders to approved series hashes without reading labels."""
     candidates = sorted({child.resolve() for root in source_roots for child in Path(root).iterdir() if child.is_dir()})
     matches: dict[str, tuple[Path, dict[str, Path]]] = {}
+    manifests_matched: list[dict[str, Any]] = []
     approved = json.loads((work.parent / "review.json").read_text("utf-8"))["entries"]
     by_key = {selection_key(list(entry["series_hashes"])): str(entry["case_id"]) for entry in approved}
     index_root = work / "source_index"
@@ -70,8 +72,15 @@ def _discover_sources(source_roots: list[Path], work: Path) -> dict[str, tuple[P
                 if case_id in matches:
                     raise PipelineError(f"Mais de uma fonte corresponde a {case_id}.")
                 matches[case_id] = (source, resolution.phase_dirs)
+                manifests_matched.append(manifest)
         except PipelineError:
             continue
+    # ROB-08/W-039: sumario ADITIVO dos campos de auditoria do item 14 —
+    # arquivo separado; o benchmark_report.json congelado nao muda.
+    _atomic_json(
+        work / "phase_resolution_audit_summary.json",
+        aggregate_phase_resolution_audit(manifests_matched),
+    )
     return matches
 
 

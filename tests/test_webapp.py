@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from dtwin.core import PipelineError
+from tests.conftest import requer_git
 from webapp import server
 
 
@@ -1343,6 +1344,7 @@ def test_authorized_visual_phase_resolution_uses_only_server_config(
     assert resolved.safe_manifest()["private_paths_persisted"] is False
 
 
+@requer_git
 def test_visual_benchmark_finalization_does_not_require_medgemma_config(
     monkeypatch, tmp_path
 ):
@@ -1608,6 +1610,7 @@ def test_benchmark_report_downloads_json_and_csv(monkeypatch, tmp_path):
     assert "true" in first_row  # ha_lesao_focal_suspeita booleano serializado
 
 
+@requer_git
 def test_web_benchmark_persists_auditable_run_outputs(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "WORKSPACE", tmp_path)
     def fake_inference(*args, **kwargs):
@@ -1640,6 +1643,7 @@ def test_web_benchmark_persists_auditable_run_outputs(monkeypatch, tmp_path):
     assert server._benchmarks[benchmark_id]["state"] == "done"
 
 
+@requer_git
 def test_web_benchmark_builds_dual_report_without_leaking_subtype_to_inference(
     monkeypatch, tmp_path
 ):

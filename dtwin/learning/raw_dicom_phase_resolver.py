@@ -404,8 +404,54 @@ def resolve_raw_dicom_phases(root: Path, destination: Path) -> RawPhaseResolutio
     )
 
 
+def aggregate_phase_resolution_audit(
+    manifests: "list[dict[str, Any]]",
+) -> dict[str, Any]:
+    """Agrega os campos de auditoria dos manifestos de resolução de fase.
+
+    ROB-08/W-039 (SR-009): os campos aditivos do item 14
+    (``series_with_ambiguous_text_roles``, ``unselected_eligible_dynamic_series``)
+    eram gravados por caso e nunca agregados. Esta função é LEITURA PURA de
+    manifestos já existentes — nenhuma heurística de seleção muda.
+    """
+    metodos: dict[str, int] = {}
+    confiancas: list[float] = []
+    ambiguas_total = 0
+    casos_com_ambiguidade = 0
+    nao_selecionadas_total = 0
+    casos_com_dinamica_nao_selecionada = 0
+    for manifest in manifests:
+        metodo = str(manifest.get("method", "unknown"))
+        metodos[metodo] = metodos.get(metodo, 0) + 1
+        confianca = manifest.get("confidence")
+        if isinstance(confianca, (int, float)):
+            confiancas.append(float(confianca))
+        ambiguas = int(manifest.get("series_with_ambiguous_text_roles", 0) or 0)
+        ambiguas_total += ambiguas
+        if ambiguas:
+            casos_com_ambiguidade += 1
+        nao_sel = int(manifest.get("unselected_eligible_dynamic_series", 0) or 0)
+        nao_selecionadas_total += nao_sel
+        if nao_sel:
+            casos_com_dinamica_nao_selecionada += 1
+    return {
+        "schema": "argos-phase-resolution-audit-summary-v1",
+        "research_only": True,
+        "clinical_use_allowed": False,
+        "cases_total": len(manifests),
+        "methods": dict(sorted(metodos.items())),
+        "confidence_min": min(confiancas) if confiancas else None,
+        "confidence_mean": (sum(confiancas) / len(confiancas)) if confiancas else None,
+        "series_with_ambiguous_text_roles_total": ambiguas_total,
+        "cases_with_ambiguous_text_roles": casos_com_ambiguidade,
+        "unselected_eligible_dynamic_series_total": nao_selecionadas_total,
+        "cases_with_unselected_eligible_dynamic_series": casos_com_dinamica_nao_selecionada,
+    }
+
+
 __all__ = [
     "RawPhaseResolution",
     "RawPhaseResolutionError",
+    "aggregate_phase_resolution_audit",
     "resolve_raw_dicom_phases",
 ]

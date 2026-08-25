@@ -10,6 +10,7 @@ from dtwin.benchmark.reporting import write_run_outputs
 from dtwin.benchmark.runner import ExperimentConfig, recalculate_existing_run
 from dtwin.medgemma_benchmark import main
 from dtwin.medgemma_client import effective_config_sha256, load_screening_config
+from tests.conftest import requer_git
 
 # Config real e válida (o runner agora valida a config como o subprocesso real faria).
 BASELINE_CONFIG = Path("configs/medgemma_local_4b.yaml")
@@ -37,6 +38,7 @@ def _fixture(tmp_path):
     return tmp_path / "datasets.yaml", BASELINE_CONFIG
 
 
+@requer_git
 def test_cli_dry_run_validates_and_never_calls_inference(tmp_path, capsys):
     datasets, med = _fixture(tmp_path)
     code = main([
@@ -49,6 +51,7 @@ def test_cli_dry_run_validates_and_never_calls_inference(tmp_path, capsys):
     assert output["cases"][0]["volume_hash"]
 
 
+@requer_git
 def test_recalculate_existing_run_checks_hashes_without_inference(tmp_path):
     datasets, med = _fixture(tmp_path)
     case = load_dataset_manifest(datasets)[0]

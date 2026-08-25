@@ -26,6 +26,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from dtwin.core import PipelineError
+from tests.conftest import requer_git
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -289,6 +290,7 @@ def test_sessao_de_outro_job_e_recusada(tmp_path, monkeypatch):
 # --------------------------------------------------------------------------- #
 # POL-PHI-01
 # --------------------------------------------------------------------------- #
+@requer_git
 def test_diretorios_de_paciente_estao_ignorados_pelo_git():
     """POL-PHI-01: casos/, flywheel/ e as exportações locais ficam fora do
     Git. Usa o próprio git check-ignore como oráculo — é o mecanismo real."""
@@ -308,6 +310,7 @@ def test_diretorios_de_paciente_estao_ignorados_pelo_git():
     assert not faltando, f"caminhos sensíveis NÃO ignorados pelo git: {faltando}"
 
 
+@requer_git
 def test_nenhum_arquivo_de_paciente_esta_versionado():
     """POL-PHI-01: além de ignorar o futuro, o índice atual não pode conter
     nada sob casos/ ou flywheel/."""

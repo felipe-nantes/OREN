@@ -1,4 +1,6 @@
 # tests/conftest.py
+import shutil as _shutil
+
 import numpy as np
 import pytest
 import SimpleITK as sitk
@@ -16,6 +18,14 @@ settings.register_profile(
     suppress_health_check=[HealthCheck.too_slow],
 )
 settings.load_profile("argos_suite")
+
+# ROB-07/W-014: a imagem runtime nao tem o binario git; estes skips tornam a
+# suite honesta no container em vez de vermelha. No host (git presente) os
+# testes rodam normalmente — nenhum assert foi enfraquecido.
+requer_git = pytest.mark.skipif(
+    _shutil.which("git") is None,
+    reason="requer o binario git (W-014/ROB-07: imagem runtime sem git)",
+)
 
 
 def make_sphere_mask(shape, center, radius):

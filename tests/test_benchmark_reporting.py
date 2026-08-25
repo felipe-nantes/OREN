@@ -6,6 +6,7 @@ import pytest
 from dtwin.benchmark.hashing import git_state, input_hashes
 from dtwin.benchmark.metrics import compute_benchmark_metrics
 from dtwin.benchmark.reporting import _atomic_text, write_run_outputs
+from tests.conftest import requer_git
 
 
 def test_atomic_text_nao_vaza_temporario_em_falha(monkeypatch, tmp_path):
@@ -22,6 +23,7 @@ def test_atomic_text_nao_vaza_temporario_em_falha(monkeypatch, tmp_path):
     assert not destino.exists()
 
 
+@requer_git
 def test_hashes_and_git_state_are_recordable(tmp_path):
     volume = tmp_path / "volume.nii.gz"
     mask = tmp_path / "mask_organ.nii.gz"
