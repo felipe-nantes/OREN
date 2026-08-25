@@ -18,9 +18,7 @@ o uso clínico exige a revisão humana real do painel.
 """
 from __future__ import annotations
 
-import base64
 import csv
-import hashlib
 import io
 import json
 import logging
@@ -29,7 +27,6 @@ import os
 import platform
 import secrets
 import shutil
-import socket
 import subprocess
 import sys
 import threading
@@ -37,7 +34,7 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 from urllib.request import urlopen
 
 import numpy as np
@@ -47,7 +44,6 @@ import yaml
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
 from starlette.datastructures import FormData
 
 from dtwin.benchmark.dataset_audit import (
@@ -1558,355 +1554,36 @@ def process_visual_job(job_id: str, raw_dir: Path) -> None:
             f"Falha inesperada: {type(exc).__name__}"))
 
 
-def _case_dir_for_job(job_id: str) -> Path:
-    if not job_id or any(ch not in "0123456789abcdef" for ch in job_id.lower()):
-        raise HTTPException(status_code=404, detail="Job nao encontrado.")
-    return (WORKSPACE / job_id / "case").resolve()
-
-
-def _completed_job_state_path(job_id: str) -> Path:
-    return _case_dir_for_job(job_id) / "outputs" / "webapp_job_state.json"
-
-
-def _persist_completed_job_state(job_id: str, job: dict[str, Any]) -> Path:
-    """Persist a completed webapp state atomically beside its artifacts."""
-    if job.get("state") != "done":
-        raise ValueError("only completed jobs may be persisted")
-    allowed = {
-        "state", "step", "progress", "analysis_scenario", "enhanced_3d",
-        "result", "approval", "operational_timing", "operational_timing_artifact",
-        "viewer_error",
-    }
-    payload = {key: job.get(key) for key in allowed if key in job}
-    payload.update(
-        schema="oren-webapp-completed-job-v1",
-        job_id=job_id,
-        persisted_at=datetime.now(timezone.utc).isoformat(),
-    )
-    path = _completed_job_state_path(job_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
-    try:
-        temporary.write_text(
-            json.dumps(payload, indent=2, ensure_ascii=False, default=str) + "\n",
-            encoding="utf-8",
-        )
-        for attempt in range(5):
-            try:
-                temporary.replace(path)
-                break
-            except PermissionError:
-                # TD-015: replaces concorrentes do mesmo destino falham com
-                # WinError 5 no Windows mesmo com o destino integro.
-                if attempt == 4:
-                    raise
-                time.sleep(0.05 * (attempt + 1))
-    finally:
-        temporary.unlink(missing_ok=True)
-    return path
-
-
-def _legacy_completed_job_from_artifacts(job_id: str) -> dict[str, Any] | None:
-    """Migrate a pre-persistence completed job without fabricating analysis data."""
-    case_dir = _case_dir_for_job(job_id)
-    if not _model_done(case_dir):
-        return None
-    manifest_path = case_dir / "outputs" / "viewer_manifest.json"
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    candidate = manifest.get("candidate_region") or {}
-    request = candidate.get("request") or {}
-    raw_prediction = str(request.get("prediction") or "INCONCLUSIVE").upper()
-    prediction = {
-        "POSITIVE": "POSITIVA",
-        "NEGATIVE": "NEGATIVA",
-        "INCONCLUSIVE": "INCONCLUSIVA",
-    }.get(raw_prediction, raw_prediction)
-    approval_path = case_dir / "outputs" / "approval.json"
-    approval: dict[str, Any] = {"status": "pending"}
-    if approval_path.is_file():
-        try:
-            loaded = json.loads(approval_path.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
-                approval = loaded
-        except (OSError, json.JSONDecodeError):
-            pass
-    result = {
-        "status": "concluido",
-        "analysis_scenario": "recovered_legacy_completed_job",
-        "prediction": prediction,
-        "visual_score": request.get("visual_score"),
-        "visual_threshold": request.get("visual_threshold"),
-        "panel_count": len(_rgb_panel_files(job_id)),
-        "candidate_localization": candidate or None,
-        "viewer_ready": True,
-        "viewer_url": f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}",
-        "approval": approval,
-        "requires_human_review": True,
-        "research_only": True,
-        "clinical_use_allowed": False,
-        "disclaimer": DISCLAIMER,
-        "restored_from_artifacts": True,
-    }
-    return {
-        "state": "done",
-        "step": "concluido",
-        "progress": 100,
-        "analysis_scenario": result["analysis_scenario"],
-        "enhanced_3d": False,
-        "result": result,
-        "approval": approval,
-    }
-
-
-def _restore_completed_job(job_id: str) -> dict[str, Any] | None:
-    path = _completed_job_state_path(job_id)
-    restored: dict[str, Any] | None = None
-    if path.is_file():
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            if (
-                isinstance(payload, dict)
-                and payload.get("schema") == "oren-webapp-completed-job-v1"
-                and payload.get("job_id") == job_id
-                and payload.get("state") == "done"
-                and isinstance(payload.get("result"), dict)
-            ):
-                result = payload["result"]
-                if not result.get("viewer_ready") or _model_done(_case_dir_for_job(job_id)):
-                    restored = payload
-        except (OSError, json.JSONDecodeError):
-            restored = None
-    if restored is None:
-        restored = _legacy_completed_job_from_artifacts(job_id)
-        if restored is not None:
-            _persist_completed_job_state(job_id, restored)
-    if restored is None:
-        return None
-    with _lock:
-        existing = _jobs.get(job_id)
-        if existing is None:
-            _jobs[job_id] = restored
-            existing = _jobs[job_id]
-    return existing
-
-
-def _xr_session_path(case_dir: Path, token: str) -> Path:
-    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
-    return case_dir / "outputs" / "xr_sessions" / f"{digest}.json"
-
-
-def _read_xr_session(job_id: str, token: str) -> dict[str, Any]:
-    if not token or len(token) > 256:
-        raise HTTPException(status_code=401, detail="Sessao XR invalida.")
-    case_dir = _case_dir_for_job(job_id)
-    path = _xr_session_path(case_dir, token)
-    try:
-        session = json.loads(path.read_text("utf-8"))
-        expires_at = datetime.fromisoformat(str(session["expires_at"]))
-    except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
-        raise HTTPException(status_code=401, detail="Sessao XR invalida.") from exc
-    if session.get("job_id") != job_id or expires_at <= datetime.now(timezone.utc):
-        path.unlink(missing_ok=True)
-        raise HTTPException(status_code=401, detail="Sessao XR expirada.")
-    return session
-
-
-def _quest_base_url(request: Request) -> str:
-    configured = os.environ.get("OREN_QUEST_BASE_URL", "").strip().rstrip("/")
-    if configured:
-        return configured
-    hostname = request.url.hostname or "127.0.0.1"
-    request_port = request.url.port
-    # Quando a sessão nasce no próprio atalho aberto pelo Quest, preservar a
-    # origem que já provou estar acessível. Forçar HTTPS:8443 aqui fazia o
-    # navegador abandonar o servidor HTTP:8082 funcional após a tela de loading.
-    if hostname not in {"127.0.0.1", "localhost", "::1"}:
-        default_port = 443 if request.url.scheme == "https" else 80
-        port_suffix = f":{request_port}" if request_port and request_port != default_port else ""
-        return f"{request.url.scheme}://{hostname}{port_suffix}"
-    if hostname in {"127.0.0.1", "localhost", "::1"}:
-        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            probe.connect(("10.255.255.255", 1))
-            hostname = str(probe.getsockname()[0])
-        except OSError:
-            hostname = "127.0.0.1"
-        finally:
-            probe.close()
-    return f"https://{hostname}:{int(os.environ.get('OREN_QUEST_PORT', '8443'))}"
-
-
-def _quest_qr_data_url(value: str) -> str | None:
-    """Render a self-contained QR code without exposing the XR token in logs."""
-    try:
-        import qrcode
-        from qrcode.image.svg import SvgPathImage
-    except ImportError:
-        log.warning("QR Code indisponivel: instale o extra webapp atualizado.")
-        return None
-    image = qrcode.make(
-        value,
-        image_factory=SvgPathImage,
-        box_size=8,
-        border=2,
-    )
-    buffer = io.BytesIO()
-    image.save(buffer)
-    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
-    return f"data:image/svg+xml;base64,{encoded}"
-
-
-def _recent_quest_jobs(*, limit: int = 8) -> list[dict[str, str]]:
-    """Return recent viewer-ready jobs without exposing clinical metadata."""
-    if not WORKSPACE.is_dir():
-        return []
-    candidates: list[tuple[float, str]] = []
-    for job_root in WORKSPACE.iterdir():
-        job_id = job_root.name
-        if (
-            not job_root.is_dir()
-            or not job_id
-            or any(ch not in "0123456789abcdef" for ch in job_id.lower())
-        ):
-            continue
-        case_dir = job_root / "case"
-        manifest = case_dir / "outputs" / "viewer_manifest.json"
-        if not manifest.is_file():
-            continue
-        try:
-            updated_at = manifest.stat().st_mtime
-        except OSError:
-            continue
-        candidates.append((updated_at, job_id))
-    candidates.sort(reverse=True)
-    ready: list[dict[str, str]] = []
-    # Hash validation may read several meshes. Validate newest-first and stop as
-    # soon as the small headset list is full instead of hashing the whole archive.
-    for updated_at, job_id in candidates:
-        if not _model_done(WORKSPACE / job_id / "case"):
-            continue
-        ready.append({
-            "job_id": job_id,
-            "updated_at": datetime.fromtimestamp(updated_at, timezone.utc).isoformat(),
-        })
-        if len(ready) >= limit:
-            break
-    return ready
-
-
-class ReviewChecklistPayload(BaseModel):
-    inspected_3d_contour: bool = False
-    compared_2d_reference: bool = False
-    reviewed_candidate_against_mr: bool = False
-    acknowledged_research_only: bool = False
-
-
-class ClippingStatePayload(BaseModel):
-    enabled: bool = False
-    axis: Literal["x", "y", "z"] = "z"
-    position_percent: float = 50.0
-    inverted: bool = False
-
-
-class ViewerSavedViewPayload(BaseModel):
-    bookmark_id: str = Field(max_length=24, pattern=r"^view-[0-9]{3}$")
-    label: str = Field(min_length=1, max_length=96)
-    active_view: Literal[
-        "padrao", "anterior", "superior", "direita", "focus", "anatomical", "saved"
-    ] = "saved"
-    active_preset: Literal[
-        "custom", "default", "surface", "realistic", "anatomy", "triage", "segments"
-    ] = "custom"
-    active_anatomical_view: Literal[
-        "none", "liver", "segments", "vascular", "candidate"
-    ] = "none"
-    material_profile: Literal["default", "anatomy", "triage", "segments"] = "default"
-    rendering_profile: Literal[
-        "scientific_current_v1", "anatomic_realistic_v1"
-    ] = "scientific_current_v1"
-    selected_role: str | None = Field(default=None, max_length=64, pattern=r"^[a-z0-9_]+$")
-    selection_isolated: bool = False
-    camera_position_mm: list[float] = Field(min_length=3, max_length=3)
-    camera_target_mm: list[float] = Field(min_length=3, max_length=3)
-    reference_sync_enabled: bool = True
-    reference_view: Literal["axial", "coronal", "sagittal"] = "axial"
-    reference_frame_index: int = Field(default=0, ge=0)
-    clipping: ClippingStatePayload = Field(default_factory=ClippingStatePayload)
-    visible_roles: list[str] = Field(default_factory=list, max_length=64)
-    opacity_by_role: dict[str, float] = Field(default_factory=dict)
-
-
-class StructureDimensions3DPayload(BaseModel):
-    role: str = Field(max_length=64, pattern=r"^[a-z0-9_]+$")
-    label: str = Field(min_length=1, max_length=96)
-    left_right_mm: float = Field(gt=0, le=5000)
-    anterior_posterior_mm: float = Field(gt=0, le=5000)
-    superior_inferior_mm: float = Field(gt=0, le=5000)
-    method: Literal["axis_aligned_lps_bounding_box"] = "axis_aligned_lps_bounding_box"
-    coordinate_system: Literal["LPS"] = "LPS"
-    source: Literal["selected_segmentation_mesh"] = "selected_segmentation_mesh"
-    approximate: Literal[True] = True
-
-
-class ViewerStatePayload(BaseModel):
-    active_view: Literal[
-        "padrao", "anterior", "superior", "direita", "focus", "anatomical", "saved"
-    ] = "padrao"
-    active_preset: Literal[
-        "custom", "default", "surface", "realistic", "anatomy", "triage", "segments"
-    ] = "custom"
-    active_anatomical_view: Literal[
-        "none", "liver", "segments", "vascular", "candidate"
-    ] = "none"
-    rendering_profile: Literal[
-        "scientific_current_v1", "anatomic_realistic_v1"
-    ] = "scientific_current_v1"
-    rendering_quality_tier: Literal["quality", "stability"] = "quality"
-    material_pack_id: Literal["oren-liver-realistic-v1"] | None = None
-    material_pack_variant: Literal["desktop_1k", "quest512"] | None = None
-    rendering_fallback_reason: Literal[
-        "asset_load_error", "performance_budget_exceeded"
-    ] | None = None
-    wireframe_enabled: bool = False
-    reference_sync_enabled: bool = True
-    reference_view: Literal["axial", "coronal", "sagittal"] = "axial"
-    reference_frame_index: int = Field(default=0, ge=0)
-    selected_role: str | None = Field(default=None, max_length=64, pattern=r"^[a-z0-9_]+$")
-    selection_isolated: bool = False
-    saved_views: list[ViewerSavedViewPayload] = Field(default_factory=list, max_length=8)
-    compared_saved_view_ids: list[str] = Field(default_factory=list, max_length=2)
-    clipping: ClippingStatePayload | None = None
-    measurements_mm: list[float] = Field(default_factory=list)
-    structure_dimensions_3d: list[StructureDimensions3DPayload] = Field(
-        default_factory=list, max_length=16
-    )
-    visible_roles: list[str] = Field(default_factory=list)
-
-
-class ApprovalPayload(BaseModel):
-    status: Literal["approved", "revision_requested"]
-    checklist: ReviewChecklistPayload | None = None
-    viewer_state: ViewerStatePayload | None = None
-    candidate_review_decision: Literal[
-        "accepted_as_region_of_interest", "rejected", "needs_correction"
-    ] | None = None
-
-
-class XRSessionRequest(BaseModel):
-    role: Literal["patient", "clinician"] = "clinician"
-    ttl_minutes: int = Field(default=30, ge=5, le=120)
-
-
-class XRClientEventPayload(BaseModel):
-    event: Literal[
-        "viewer_ready", "entry_click", "session_requested", "session_started", "session_failed"
-    ]
-    mode: Literal["immersive-ar", "immersive-vr", "unknown"] = "unknown"
-    error_name: str | None = Field(default=None, max_length=80)
-    message: str | None = Field(default=None, max_length=300)
+# --- REF-03 seam 1: persistencia de job, sessoes XR e payloads extraidos ---
+# Facade: os simbolos continuam publicos em webapp.server (testes e tools
+# monkeypatcham/importam por aqui). Os modulos novos resolvem config/estado
+# via server.<nome> em tempo de chamada (regra R2 do design), entao
+# monkeypatch.setattr(server, ...) segue valendo.
+# (re-exports intencionais: noqa F401 — remover quebraria patch-points/tools)
+from webapp.job_persistence import (
+    _case_dir_for_job,
+    _completed_job_state_path,  # noqa: F401 (re-export da facade REF-03)
+    _legacy_completed_job_from_artifacts,  # noqa: F401 (re-export da facade REF-03)
+    _persist_completed_job_state,
+    _restore_completed_job,
+)
+from webapp.payloads import (
+    ApprovalPayload,
+    ClippingStatePayload,
+    ReviewChecklistPayload,
+    StructureDimensions3DPayload,  # noqa: F401 (re-export da facade REF-03)
+    ViewerSavedViewPayload,  # noqa: F401 (re-export da facade REF-03)
+    ViewerStatePayload,
+    XRClientEventPayload,
+    XRSessionRequest,
+)
+from webapp.xr_sessions import (
+    _quest_base_url,
+    _quest_qr_data_url,
+    _read_xr_session,
+    _recent_quest_jobs,
+    _xr_session_path,
+)
 
 
 def _run_delayed_medsiglip_advisory(
