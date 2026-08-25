@@ -29,7 +29,7 @@ def _case_dir_for_job(job_id: str) -> Path:
 
 
 def _completed_job_state_path(job_id: str) -> Path:
-    return _case_dir_for_job(job_id) / "outputs" / "webapp_job_state.json"
+    return server._case_dir_for_job(job_id) / "outputs" / "webapp_job_state.json"
 
 
 def _persist_completed_job_state(job_id: str, job: dict[str, Any]) -> Path:
@@ -72,7 +72,7 @@ def _persist_completed_job_state(job_id: str, job: dict[str, Any]) -> Path:
 
 def _legacy_completed_job_from_artifacts(job_id: str) -> dict[str, Any] | None:
     """Migrate a pre-persistence completed job without fabricating analysis data."""
-    case_dir = _case_dir_for_job(job_id)
+    case_dir = server._case_dir_for_job(job_id)
     if not server._model_done(case_dir):
         return None
     manifest_path = case_dir / "outputs" / "viewer_manifest.json"
@@ -139,7 +139,7 @@ def _restore_completed_job(job_id: str) -> dict[str, Any] | None:
                 and isinstance(payload.get("result"), dict)
             ):
                 result = payload["result"]
-                if not result.get("viewer_ready") or server._model_done(_case_dir_for_job(job_id)):
+                if not result.get("viewer_ready") or server._model_done(server._case_dir_for_job(job_id)):
                     restored = payload
         except (OSError, json.JSONDecodeError):
             restored = None

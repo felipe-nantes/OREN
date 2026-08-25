@@ -48,11 +48,12 @@ PATCH_POINTS = (
     "_is_visual_scenario", "_graceful", "_friendly",
     "_build_union_liver_mask", "_run_delayed_medsiglip_advisory",
     "_subtype_fields", "_aviso_volume_figado", "_MOTIVOS_MASCARA",
-    # varredura completa de setattr(server, ...) em tests/ e tools/ (seam 2
-    # revelou alvos fora dos 5 arquivos originais — ex.: o guard da GOV-01
-    # patcha _visual_bundle_root):
+    # varredura completa (multiline-aware) de setattr(server, ...) em tests/
+    # e tools/ — seams 2 e 3 revelaram alvos fora do grep de uma linha
+    # (select_best_mr_series era patchado em chamada multilinha):
     "_build_model", "_case_dir_for_job", "_persist_series_selection",
-    "_visual_bundle_root", "load_screening_config",
+    "_visual_bundle_root", "load_screening_config", "select_best_mr_series",
+    "VISUAL_AUTHORIZED_PHASE_AUDIT", "VISUAL_BENCHMARK_SCENARIOS",
 )
 
 

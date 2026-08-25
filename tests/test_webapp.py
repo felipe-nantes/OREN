@@ -1982,7 +1982,10 @@ def test_shadow_3d_roda_depois_da_classificacao_e_antes_da_malha():
     pos_shadow = fonte.index("_build_enhanced_visualization_shadow(")
     pos_modelo = fonte.index("_build_model(")
     assert pos_classificacao < pos_shadow < pos_modelo
-    assert "if UNION_MASK_ENABLED and not shadow_approved" in fonte
+    # REF-03 seam 3: o worker vive em webapp.jobs e le config via server.<nome>
+    # (late binding); o invariante — shadow gated pela uniao E pela nao-aprovacao
+    # — e o mesmo, so o texto-fonte carrega o prefixo da facade.
+    assert "if server.UNION_MASK_ENABLED and not shadow_approved" in fonte
 
 
 def test_uniao_de_fases_usa_as_chaves_reais_do_multiphase_ingest(tmp_path, monkeypatch):
