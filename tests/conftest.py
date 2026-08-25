@@ -2,8 +2,20 @@
 import numpy as np
 import pytest
 import SimpleITK as sitk
+from hypothesis import HealthCheck, settings
 
 from dtwin.core import Case, array_to_image, now_utc, save_image
+
+# TEST-01/W-012: sob carga da suíte completa, a GERAÇÃO de exemplos do
+# Hypothesis pode estourar o health check too_slow (falso-vermelho ambiental —
+# observado 1x na PH09, nunca reproduzido isolado). O perfil suprime apenas
+# esse guard de tempo; nenhuma asserção ou número de exemplos muda.
+settings.register_profile(
+    "argos_suite",
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+settings.load_profile("argos_suite")
 
 
 def make_sphere_mask(shape, center, radius):

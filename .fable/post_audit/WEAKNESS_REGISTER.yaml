@@ -298,8 +298,8 @@ weaknesses:
     confidence: HIGH
     current_tests: "é o próprio teste"
     current_protection: "falha documentada como ambiental"
-    missing_protection: "marker/skipif de pré-condição ambiental SEM enfraquecer o assert quando roda"
-    possible_root_causes: ["pré-condição de ambiente embutida como assert"]
+    missing_protection: "FECHADO em 2026-08-25 (TEST-01): o vazamento real era shutil.disk_usage nao mockado (o teste JA mockava query_gpu; com C: em ~20 GiB o gatilho era insufficient_disk_space). Disco mockado nos 3 testes + novo teste deterministico do blocker de disco; producao intacta"
+    possible_root_causes: ["pré-condição de ambiente embutida como assert (na verdade: disk_usage real vazando no teste unitário)"]
     unknowns: []
     candidate_action_type: ROBUSTNESS_FIX
     priority: MEDIUM
@@ -308,7 +308,7 @@ weaknesses:
     expected_information_gain: LOW
     human_gate: "none (gating de pré-condição; teste não é enfraquecido)"
     recommended_fable_effort: LOW
-    status: OPEN
+    status: RESOLVED
 
   - id: W-012
     title: "Flake único do Hypothesis em splits isolation sob carga da suíte"
@@ -331,9 +331,9 @@ weaknesses:
     confidence: LOW
     current_tests: "o próprio property test"
     current_protection: "registrado; monitorar"
-    missing_protection: "profile Hypothesis p/ CI (deadline=None, derandomize) + captura de counterexample"
-    possible_root_causes: ["DeadlineExceeded sob carga", "exemplo raro real"]
-    unknowns: ["causa exata (saída perdida)"]
+    missing_protection: "FECHADO em 2026-08-25 (TEST-01): perfil Hypothesis argos_suite em tests/conftest.py (deadline=None + suppress too_slow). deadline=None ja estava em TODOS os @given, o que aponta para HealthCheck.too_slow sob carga (INFERRED); derandomize descartado para nao congelar a exploracao"
+    possible_root_causes: ["HealthCheck.too_slow na geração de exemplos sob carga (deadline já era None em todos os @given)", "exemplo raro real"]
+    unknowns: ["causa exata (saída perdida) — se reaparecer com o perfil ativo, é exemplo real e deve ser investigado"]
     candidate_action_type: ROBUSTNESS_FIX
     priority: LOW
     estimated_cost: LOW
@@ -341,7 +341,7 @@ weaknesses:
     expected_information_gain: MEDIUM
     human_gate: none
     recommended_fable_effort: LOW
-    status: OPEN
+    status: RESOLVED
 
   - id: W-013
     title: "CI sem gates de lint/typing/coverage; estado real da CI não verificado"
@@ -762,9 +762,9 @@ weaknesses:
     confidence: HIGH
     current_tests: n/a
     current_protection: "docs numeradas existem"
-    missing_protection: "PROVENANCE_MAP.yaml E### → {doc, comando, artefato, commit}"
-    possible_root_causes: ["numeração editorial posterior aos experimentos"]
-    unknowns: ["cobertura alcançável com artefatos locais"]
+    missing_protection: "FECHADO em 2026-08-24 (PROV-01): E### = numeracao de docs/ sem zero a esquerda; PROVENANCE_MAP.yaml em evidence/PROV-01/ com 28/28 docs+commits, 5/28 comandos literais, 13/28 com artefato alcancavel (local ou SSD) — residuo de ledger pertence ao W-033"
+    possible_root_causes: ["numeração editorial posterior aos experimentos (confirmada: secao 'remover antes da submissao')"]
+    unknowns: []
     candidate_action_type: SCIENTIFIC_WEAKNESS
     priority: MEDIUM
     estimated_cost: HIGH
@@ -772,7 +772,7 @@ weaknesses:
     expected_information_gain: MEDIUM
     human_gate: HG-01
     recommended_fable_effort: MEDIUM
-    status: OPEN
+    status: RESOLVED
 
   - id: W-035
     title: "Métricas do localizador histórico não pertencem ao localizador atual; ROI correta demonstra teto distinto"

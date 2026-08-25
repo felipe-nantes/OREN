@@ -43,8 +43,8 @@ tooling:
 
 commits_main:
   pushed: [7efa2dc, 0ba6f01, bd278b5, 8c31c76, "5087041", 42a8514, e4dd3cc, b66002a, dfb36b5, 515b7b3, 637d9e1, 3f06f48, 3d146d5, c986e17, "072c3e6", 73ccb3e, daa878c, 29be45b, 77727b3, 0d0ccc2, b3cd61d, b634f71, 5fa342e, b5e739e, e0d311b, a8ceeb8]
-  push_status: "origin/main = c17f365 (verificado 2026-08-24); ciclo POST_AUDIT: +0d56547..c17f365 (plano, OPT_00, DS-PROBE-01, GOV-01, FAIL-01, MEAS-01, CI-01, ROB-01)"
-  nao_commitado: "REP-01 (sonda GPU + decisão 20 + este estado) — commit quando solicitado"
+  push_status: "origin/main = 46303e0 (verificado 2026-08-24); ciclo POST_AUDIT: +0d56547..46303e0 (plano, OPT_00, DS-PROBE-01, GOV-01, FAIL-01, MEAS-01, CI-01, ROB-01, REP-01, REF-01)"
+  nao_commitado: "PROV-01 (PROVENANCE_MAP 28/28; W-034 RESOLVED) + TEST-01 (suite deterministica: disco mockado + perfil Hypothesis; W-011/W-012 RESOLVED; 1778/4/0) — commit quando solicitado"
 
 migracao_docker_nativo:
   task: TASK-2026-08-18-MIGR-01
