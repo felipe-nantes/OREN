@@ -230,7 +230,7 @@ weaknesses:
     confidence: HIGH
     current_tests: n/a
     current_protection: n/a
-    missing_protection: "doc alinhada ao profile vigente"
+    missing_protection: "FECHADO em 2026-08-25 (DOC-01): README atualizado — Couinaud/vasculatura descritos como camadas opcionais de visualizacao 3D fail-closed, sem validacao anatomica externa (nuance de docs/191-193 preservada)"
     possible_root_causes: ["escopo evoluiu; README ficou"]
     unknowns: []
     candidate_action_type: PURE_REFACTOR
@@ -240,7 +240,7 @@ weaknesses:
     expected_information_gain: LOW
     human_gate: none
     recommended_fable_effort: LOW
-    status: OPEN
+    status: RESOLVED
 
   # ================= ROBUSTNESS =================
 
@@ -927,7 +927,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "characterization estendida cobre os campos"
     current_protection: "campos testados"
-    missing_protection: "doc atualizada + agregador dos campos no benchmark arm"
+    missing_protection: "METADE DOCUMENTAL FECHADA em 2026-08-25 (DOC-01): docs/123 par.3 com atualizacao datada + docstring de multiphase_ingest reescrita (resolver fallback fail-closed, pastas nomeadas soberanas). PENDENTE: agregador de series_with_ambiguous_text_roles/unselected_eligible_dynamic_series no benchmark arm (codigo)"
     possible_root_causes: ["campos recém-criados (2026-08-20)"]
     unknowns: ["frequência real de colisões/descartes em campo"]
     candidate_action_type: ROBUSTNESS_FIX

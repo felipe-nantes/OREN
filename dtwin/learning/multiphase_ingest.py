@@ -5,13 +5,18 @@ chosen by `select_best_mr_series`. The Etapa C classifier instead needs the
 three dynamic phases (arterial / venous / delayed) rendered into liver-enriched
 multiphase panels, so a case must supply all three.
 
-Since automatic identification of which DICOM series is which dynamic phase is
-an unsolved, vendor/protocol-dependent problem (out of scope — see docs/123),
-the phase is taken from the FOLDER the files were uploaded under:
+Phase identity comes from the FOLDER the files were uploaded under, which is
+always authoritative and never overridden by an automatic guess:
 
     caso-001/arterial/*.dcm
     caso-001/venous/*.dcm
     caso-001/delayed/*.dcm
+
+When no named phase folders exist, `build_multiphase_case` falls back to the
+fail-closed heuristic resolver (`raw_dicom_phase_resolver.py`): DICOM text
+semantics or post-contrast acquisition order, aborting on known ambiguity and
+recording an auditable manifest. Contrast timing still has no clinical
+confirmation — the resolver is heuristic and research-only (docs/123, SR-009).
 
 Two things this module gets right that a naive implementation would miss:
 

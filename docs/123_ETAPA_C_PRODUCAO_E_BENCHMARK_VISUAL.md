@@ -68,6 +68,19 @@ já produz). Isso é como toda coorte dinâmica de fígado é curada.
 SeriesDescription/timing de contraste) com confirmação humana, para aceitar
 estudos DICOM brutos arbitrários.
 
+> **Atualização (2026-08-25, DOC-01/SR-009):** o "passo futuro" acima foi
+> implementado e os dois parágrafos anteriores descrevem um estado que não é
+> mais o atual. `dtwin/learning/raw_dicom_phase_resolver.py` resolve fases por
+> semântica DICOM ou ordem pós-contraste, e `build_multiphase_case` o usa como
+> **fallback fail-closed** quando o upload não traz pastas nomeadas — pastas
+> `arterial/venous/delayed` explícitas continuam soberanas e nunca são
+> sobrepostas por palpite automático. Ambiguidade conhecida aborta em vez de
+> escolher; cada resolução grava manifesto auditável (método, confiança,
+> `series_with_ambiguous_text_roles`, `unselected_eligible_dynamic_series`).
+> A validação de equivalência está em
+> `tools/run_raw_phase_equivalence_benchmark.py`. Timing de contraste segue
+> sem confirmação clínica — o resolver é heurístico e research-only.
+
 ---
 
 ## 4. Pipeline de inferência (peças novas)

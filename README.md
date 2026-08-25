@@ -225,10 +225,18 @@ aleatória quando a IA não carregava. O ARGOS reescreveu essa parte:
 ## Fora do escopo por enquanto
 
 Interface clínica integrada, integração com PACS, pseudonimização ativa, FEA e
-tetraedralização (Nível 2), segmentos de Couinaud e vasculatura hepática. Estão
-mapeados e datados em `contexto/08_ROADMAP.md` e
-`contexto/10_MATURIDADE_DIGITAL_TWIN.md`. O que está listado acima funciona hoje;
-o resto está no roadmap.
+tetraedralização (Nível 2). Estão mapeados e datados em `contexto/08_ROADMAP.md`
+e `contexto/10_MATURIDADE_DIGITAL_TWIN.md`. O que está listado acima funciona
+hoje; o resto está no roadmap.
+
+Segmentos de Couinaud e vasculatura hepática (veia porta/esplênica, cava
+inferior, vesícula) saíram desta lista: `profiles/figado.yaml` os habilita como
+**camadas opcionais de visualização 3D** (`segmentacao_anatomia`), derivadas
+exclusivamente do exame do caso e fail-closed — Couinaud só é publicado com os
+oito segmentos válidos, e a ausência de qualquer estrutura não invalida a
+máscara hepática nem a triagem. São visualização auxiliar, sem validação
+anatômica externa; não sustentam alegação de anatomia verdadeira nem uso
+cirúrgico (docs/191–193 registram os limites do modelo dedicado).
 
 ---
 
