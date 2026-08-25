@@ -282,12 +282,13 @@ def generate_reference_images(
     spacing_x, spacing_y, spacing_z = (float(value) for value in mask_image.GetSpacing())
     centroid_z, centroid_y, centroid_x = np.rint(locations.mean(axis=0)).astype(int)
     axial_indices = np.flatnonzero(mask.any(axis=(1, 2))).astype(int).tolist()
-    candidate_present = candidate is not None and bool(candidate.any())
-    if candidate_present:
+    if candidate is not None and bool(candidate.any()):
+        candidate_present = True
         candidate_z = int(np.argmax(candidate.sum(axis=(1, 2))))
         candidate_y = int(np.argmax(candidate.sum(axis=(0, 2))))
         candidate_x = int(np.argmax(candidate.sum(axis=(0, 1))))
     else:
+        candidate_present = False
         candidate_z, candidate_y, candidate_x = centroid_z, centroid_y, centroid_x
 
     expected_files: set[str] = set()
@@ -316,7 +317,9 @@ def generate_reference_images(
                 "position_lps_mm": round(float(position[2]), 4),
                 "relative_liver_position_percent": round(float(relative), 2),
                 "candidate_visible_in_plane": bool(
-                    candidate_present and candidate[z_index].any()
+                    candidate is not None
+                    and candidate_present
+                    and candidate[z_index].any()
                 ),
             }
         )

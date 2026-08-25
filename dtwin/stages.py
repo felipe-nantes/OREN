@@ -20,6 +20,7 @@ import shutil
 import textwrap
 import uuid
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pydicom
@@ -238,7 +239,9 @@ def _campo_continuo(img, isotropic_mm: float, sigma_mm: float):
     reamostra.SetDefaultPixelValue(float(sitk.GetArrayViewFromImage(dist).max()))
     campo = reamostra.Execute(dist)
     if sigma_mm and float(sigma_mm) > 0:
-        campo = sitk.SmoothingRecursiveGaussian(campo, sigma=float(sigma_mm))
+        # Posicional: o stub swig não declara o kwarg 'sigma' (REF-02); sonda
+        # confirmou saída bitwise idêntica entre as duas formas de chamada.
+        campo = sitk.SmoothingRecursiveGaussian(campo, float(sigma_mm))
     return campo
 
 
@@ -916,9 +919,11 @@ def stage6_mesh(case: Case, profile: dict) -> None:
     iso = float(mesh_cfg.get("reamostragem_isotropica_mm", 0.0) or 0.0)
     sigma = float(mesh_cfg.get("suavizacao_campo_sigma_mm", 1.0))
     maxtri = int(mesh_cfg.get("max_triangulos", 0) or 0)
-    extra = {"isotropic_mm": iso, "gaussian_sigma_mm": sigma, "max_triangles": maxtri}
 
-    organ_mesh = _mesh_from_mask(case.mask_organ_clean, level, sm, fa, pass_band=pb, **extra)
+    organ_mesh = _mesh_from_mask(
+        case.mask_organ_clean, level, sm, fa, pass_band=pb,
+        isotropic_mm=iso, gaussian_sigma_mm=sigma, max_triangles=maxtri,
+    )
     if organ_mesh is None:
         raise PipelineError(
             "Malha do órgão vazia — máscara do órgão sem conteúdo após refino."
@@ -929,7 +934,10 @@ def stage6_mesh(case: Case, profile: dict) -> None:
         organ_mesh.n_points, organ_mesh.n_cells,
     )
 
-    lesion_mesh = _mesh_from_mask(case.mask_lesion_clean, level, sm, fa, pass_band=pb, **extra)
+    lesion_mesh = _mesh_from_mask(
+        case.mask_lesion_clean, level, sm, fa, pass_band=pb,
+        isotropic_mm=iso, gaussian_sigma_mm=sigma, max_triangles=maxtri,
+    )
     if lesion_mesh is not None:
         lesion_mesh.save(str(case.mesh_lesion))
         log.info(
@@ -945,7 +953,10 @@ def stage6_mesh(case: Case, profile: dict) -> None:
         log.info("Estágio 6: sem malha de lesão (máscara vazia).")
 
     candidate_mesh = (
-        _mesh_from_mask(case.mask_candidate_clean, level, sm, fa, pass_band=pb, **extra)
+        _mesh_from_mask(
+            case.mask_candidate_clean, level, sm, fa, pass_band=pb,
+            isotropic_mm=iso, gaussian_sigma_mm=sigma, max_triangles=maxtri,
+        )
         if case.mask_candidate_clean.is_file()
         else None
     )
@@ -959,7 +970,10 @@ def stage6_mesh(case: Case, profile: dict) -> None:
         case.mesh_candidate.unlink(missing_ok=True)
 
     classified_region_mesh = (
-        _mesh_from_mask(case.mask_organ_classified_region_clean, level, sm, fa, pass_band=pb, **extra)
+        _mesh_from_mask(
+            case.mask_organ_classified_region_clean, level, sm, fa, pass_band=pb,
+            isotropic_mm=iso, gaussian_sigma_mm=sigma, max_triangles=maxtri,
+        )
         if case.mask_organ_classified_region_clean.is_file()
         else None
     )
@@ -980,7 +994,10 @@ def stage6_mesh(case: Case, profile: dict) -> None:
             if mesh_path.exists():
                 mesh_path.unlink()
             continue
-        anatomy_mesh = _mesh_from_mask(clean_path, level, sm, fa, pass_band=pb, **extra)
+        anatomy_mesh = _mesh_from_mask(
+            clean_path, level, sm, fa, pass_band=pb,
+            isotropic_mm=iso, gaussian_sigma_mm=sigma, max_triangles=maxtri,
+        )
         if anatomy_mesh is None:
             if mesh_path.exists():
                 mesh_path.unlink()
@@ -1081,7 +1098,10 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
                 stl.unlink()
                 log.info("Estágio 7: STL obsoleto removido -> %s", stl)
             continue
-        mesh = pv.read(str(vtp))
+        # pv.read é tipado como DataSet | MultiBlock, mas .vtp mapeia sempre
+        # para vtkXMLPolyDataReader (PolyData) — e este vtp é escrito pelo
+        # próprio estágio 6 a partir de PolyData (REF-02/W-005).
+        mesh = cast(pv.PolyData, pv.read(str(vtp)))
         try:
             mesh.save(str(stl))  # API correta (corrige o pv.save_mesh_as inexistente)
         except Exception as e:

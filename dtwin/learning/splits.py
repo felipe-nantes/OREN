@@ -58,7 +58,7 @@ def _assign_groups(
         )
 
     assignments: list[list[str]] = [[] for _ in range(folds)]
-    fold_label_counts = [Counter() for _ in range(folds)]
+    fold_label_counts: list[Counter[str]] = [Counter() for _ in range(folds)]
     fold_case_counts = [0 for _ in range(folds)]
 
     ordered: list[tuple[str, str, int, float]] = []

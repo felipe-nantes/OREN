@@ -164,7 +164,7 @@ weaknesses:
     confidence: MEDIUM
     current_tests: "engine_finalize cobre malha feliz; caminho MultiBlock incerto"
     current_protection: parcial
-    missing_protection: "triagem: reproduzir ou provar inalcançável"
+    missing_protection: "FECHADO em 2026-08-25 (REF-02): 19 achados mypy triados a ZERO nos 4 arquivos + splits.py transitivo. Candidato a CORRECTNESS_BUG (stages 1091+) provado INALCANCAVEL (.vtp -> sempre PolyData, escrito pelo proprio estagio 6). Oraculo: hash de malha sintetica bitwise identico antes/depois (2 caminhos); sonda sigma bitwise; suite 1778/4/0"
     possible_root_causes: ["extract_surface pode devolver tipos compostos"]
     unknowns: ["se MultiBlock ocorre em dados reais"]
     candidate_action_type: ROBUSTNESS_FIX
@@ -174,7 +174,7 @@ weaknesses:
     expected_information_gain: MEDIUM
     human_gate: "none para triagem; HG-10 se corrigir alterar malha"
     recommended_fable_effort: MEDIUM
-    status: OPEN
+    status: RESOLVED
 
   - id: W-006
     title: "Drift de naming ARGOS/OREN/Volyrcs em docs e caminhos"

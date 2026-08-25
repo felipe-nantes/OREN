@@ -422,6 +422,12 @@ def build_volumetry_manifest(
         liver_record, segmentation_receipt
     )
     technical_range = _technical_volume_range(liver_volume, segmentation_receipt)
+    # Dict local tipado para o mypy verificar o csv_sha256 adicionado depois da
+    # escrita do CSV (REF-02/W-005); é o MESMO objeto referenciado no manifest.
+    artifacts: dict[str, str] = {
+        "json": VOLUMETRY_JSON_NAME,
+        "csv": VOLUMETRY_CSV_NAME,
+    }
     manifest = {
         "schema": VOLUMETRY_SCHEMA,
         "schema_version": 1,
@@ -468,15 +474,12 @@ def build_volumetry_manifest(
         },
         "structures": records,
         "couinaud_partition": partition,
-        "artifacts": {
-            "json": VOLUMETRY_JSON_NAME,
-            "csv": VOLUMETRY_CSV_NAME,
-        },
+        "artifacts": artifacts,
     }
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     _write_csv_atomic(output / VOLUMETRY_CSV_NAME, records)
-    manifest["artifacts"]["csv_sha256"] = sha256_of(output / VOLUMETRY_CSV_NAME)
+    artifacts["csv_sha256"] = sha256_of(output / VOLUMETRY_CSV_NAME)
     # O JSON é o marcador autoritativo de conclusão e por isso é publicado por
     # último: uma interrupção nunca deixa um manifesto novo apontando para CSV
     # ausente ou ainda incompleto.

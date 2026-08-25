@@ -37,6 +37,10 @@ dev = [
     "coverage>=7.6",
     "ruff>=0.14",
     "mypy>=2.0",
+    # REF-02 (2026-08-25): stubs reais do PyYAML — checagem genuina em vez de
+    # silenciar o import (scipy/SimpleITK/totalsegmentator ficam no override
+    # do [tool.mypy] por nao publicarem stubs utilizaveis).
+    "types-PyYAML>=6",
 ]
 graphrag = [
     "neo4j>=5.20",
@@ -77,3 +81,12 @@ packages = ["dtwin", "dtwin.benchmark", "dtwin.datasets", "dtwin.graphrag", "dtw
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.mypy]
+# REF-02/W-005 (2026-08-25): configuracao minima para triagem de tipos.
+# Silencia SOMENTE stubs ausentes de libs de terceiros (swig/sem py.typed);
+# nenhum codigo proprio e excluido da checagem.
+
+[[tool.mypy.overrides]]
+module = ["scipy.*", "totalsegmentator.*", "SimpleITK.*"]
+ignore_missing_imports = true
