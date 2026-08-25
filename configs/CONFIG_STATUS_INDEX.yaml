@@ -1,0 +1,1057 @@
+schema: argos-config-status-index-v1
+task: TASK-2026-08-25-REF-06 (W-046/TD-009)
+generated: '2026-08-25'
+regra_de_derivacao: 'Mecanica e reproduzivel: frozen_scientific = sha256 do arquivo presente no protocol
+  lock (pinagem PROVADA: config_sha256 ad0417... == sha de hybrid_v1_protocol.yaml), caminho citado no
+  lock, o proprio lock, ou naming *contract* (contratos congelados da auditoria) — mudar estes exige gate
+  formal, nunca refactor. production = referenciado por runtime (dtwin/ exceto benchmark, webapp/, digital_twin.py,
+  scripts de arranque, CI) via git grep do basename; experimental = referenciado apenas por bracos one-shot
+  (dtwin/benchmark/, tools/), testes ou outros configs; legacy = orfao de codigo (citacoes em docs/.fable/contexto
+  nao contam como consumo). NENHUM config foi editado: ha pinagem por sha256 e assinaturas embutidas em
+  artefatos congelados — indice externo por decisao do backlog (rollback_condition do REF-06).'
+aviso: Status e METADADO CONSULTIVO de navegacao; nao confere autoridade cientifica nem substitui os contratos
+  congelados.
+resumo:
+  total: 119
+  frozen_scientific: 6
+  production: 15
+  experimental: 96
+  legacy: 2
+  familias_presentes:
+  - v1
+  - v2
+  - v3
+  - v4
+  - v9
+  - v10
+  - v19
+  - v21
+  - v23
+  - v24
+  - v25
+  - v26
+  - v27
+configs:
+- path: configs/baselines/segmentation_visualization_v1.json
+  status: legacy
+  family: v1
+- path: configs/benchmark/gd_eob_hcc_image_case.schema.json
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/graph.json
+    - graphify-out/manifest.json
+- path: configs/benchmark/gd_eob_zenodo_record_v3.json
+  status: legacy
+  family: v3
+- path: configs/benchmark/openswisshcc_v23_baseline_lock_v1.json
+  status: experimental
+  family: v23
+  referenced_by:
+    oneshot:
+    - tools/audit_openswisshcc_v23_errors.py
+    - tools/evaluate_openswisshcc_v24_planarity_contrast.py
+    - tools/evaluate_openswisshcc_v25_sphericity.py
+    - tools/evaluate_openswisshcc_v26_bbox_fill.py
+    - tools/evaluate_v24_liver_enriched.py
+    - tools/prepare_gd_eob_hcc_external.py
+- path: configs/benchmark/openswisshcc_v27_nested_recalibration_protocol_v1.json
+  status: experimental
+  family: v27
+  referenced_by:
+    oneshot:
+    - tools/evaluate_openswisshcc_v27_nested_recalibration.py
+- path: configs/benchmark/public_independent_v21.yaml
+  status: experimental
+  family: v21
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/benchmark/v23_external_candidate_manifest.schema.json
+  status: experimental
+  family: v23
+  referenced_by:
+    outros:
+    - graphify-out/GRAPH_REPORT.md
+    - graphify-out/graph.html
+    - graphify-out/graph.json
+    - graphify-out/manifest.json
+- path: configs/benchmark/v23_external_hcc_hbp_contract_v1.json
+  status: frozen_scientific
+  family: v23
+  referenced_by:
+    oneshot:
+    - tools/run_gd_eob_hbp_pilot.py
+- path: configs/benchmark/v23_external_protected_label.schema.json
+  status: experimental
+  family: v23
+  referenced_by:
+    outros:
+    - graphify-out/graph.json
+    - graphify-out/manifest.json
+- path: configs/benchmark/v23_external_validation_contract_v1.json
+  status: frozen_scientific
+  family: v23
+- path: configs/benchmark/v23_retrospective_multicohort_contract_v1.json
+  status: frozen_scientific
+  family: v23
+  referenced_by:
+    oneshot:
+    - tools/evaluate_v24_liver_enriched.py
+    - tools/prepare_v23_retrospective_multicohort.py
+    - tools/prepare_v23_retrospective_multicohort_phase2.py
+    - tools/prepare_v23_retrospective_multicohort_phase3.py
+    - tools/prepare_v24_liver_enriched_openswisshcc.py
+    - tools/run_v23_retrospective_multicohort_phase4.py
+- path: configs/datasets/chaos_mri.yaml
+  status: experimental
+  referenced_by:
+    tests:
+    - tests/test_dataset_registry.py
+- path: configs/datasets/liverhccseg.yaml
+  status: experimental
+  referenced_by:
+    tests:
+    - tests/test_dataset_registry.py
+- path: configs/datasets/lld_mmri.yaml
+  status: experimental
+  referenced_by:
+    tests:
+    - tests/test_dataset_registry.py
+- path: configs/datasets/tcga_lihc_mr.yaml
+  status: experimental
+  referenced_by:
+    tests:
+    - tests/test_dataset_registry.py
+- path: configs/graphrag_neo4j.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_graphify_integration.py
+    - tests/test_graphrag_metadata.py
+    - tests/test_native_runtime.py
+- path: configs/medgemma_27b.yaml
+  status: experimental
+  referenced_by:
+    config:
+    - configs/medgemma_27b_volumetric.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_medgemma_client.py
+- path: configs/medgemma_27b_volumetric.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_4b.yaml
+  status: production
+  referenced_by:
+    runtime:
+    - dtwin/medgemma_screening.py
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_medgemma_client.py
+    - tests/test_medgemma_panel.py
+    - tests/test_medgemma_panel_multiphase.py
+    - tests/test_medgemma_screening.py
+- path: configs/medgemma_local_27b_mps.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_local_4b.yaml
+  status: production
+  referenced_by:
+    outros:
+    - README.md
+    - benchmarks/README.md
+    - compose.yaml
+    - graphify-out/manifest.json
+    - run_quest_http_win.ps1
+    - run_quest_win.ps1
+    config:
+    - configs/medgemma_local_4b_fast_pathology.yaml
+    - configs/medgemma_local_4b_localizer_roi_v10_ab.yaml
+    - configs/medgemma_local_4b_multiphase.yaml
+    - configs/medgemma_local_4b_multisequence_v9_pairwise.yaml
+    - configs/medgemma_local_4b_rag.yaml
+    - configs/medgemma_local_4b_volumetric.yaml
+    runtime:
+    - run_win.ps1
+    - webapp/server.py
+    tests:
+    - tests/test_benchmark_cli.py
+    - tests/test_benchmark_runner.py
+    - tests/test_medgemma_server.py
+    - tests/test_medgemma_volume_score_server.py
+    - tests/test_medgemma_volume_server.py
+    - tests/test_native_runtime.py
+    oneshot:
+    - tools/medgemma_server_base.py
+    - tools/medgemma_server_v14.py
+    - tools/setup_medgemma.py
+    - tools/start_medgemma.ps1
+    - tools/start_medgemma_gateway_win.ps1
+    - tools/start_oren_webapp_only.ps1
+- path: configs/medgemma_local_4b_axial_atlas_rag_v19.yaml
+  status: experimental
+  family: v19
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_local_4b_chaos.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_local_4b_chaos_uniform9_choice_v21.yaml
+  status: experimental
+  family: v21
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_local_4b_fast_pathology.yaml
+  status: production
+  referenced_by:
+    outros:
+    - compose.yaml
+    - graphify-out/manifest.json
+    config:
+    - configs/medgemma_local_4b_venous_fallback_pathology.yaml
+    - configs/medgemma_local_4b_venous_review_fallback_pathology.yaml
+    tests:
+    - tests/test_medgemma_client.py
+    - tests/test_medgemma_panel.py
+    - tests/test_operational_timing.py
+    runtime:
+    - webapp/server.py
+- path: configs/medgemma_local_4b_gd_eob_hbp_liver_enriched_pilot.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_medgemma_panel_liver_enriched.py
+    oneshot:
+    - tools/run_gd_eob_hbp_pilot.py
+- path: configs/medgemma_local_4b_liver_enriched_hcc_benign_discriminator_development.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_local_4b_lld_v23_full_fov_no_mask_3x9_pilot.yaml
+  status: experimental
+  family: v23
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_lld_mmri_v23_full_fov_timing.py
+    - tests/test_medgemma_panel_full_fov.py
+- path: configs/medgemma_local_4b_lld_v23_full_fov_no_mask_pilot.yaml
+  status: experimental
+  family: v23
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_lld_v23_full_fov_no_mask_3x9_pilot.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_medgemma_panel_full_fov.py
+- path: configs/medgemma_local_4b_lld_v23_liver_enriched_pilot.yaml
+  status: production
+  family: v23
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_gd_eob_hbp_liver_enriched_pilot.yaml
+    - configs/medgemma_local_4b_liver_enriched_hcc_benign_discriminator_development.yaml
+    - configs/medgemma_local_4b_openswiss_v24_liver_enriched_choice.yaml
+    - configs/medsiglip_monophase_liver_enriched_v1.yaml
+    runtime:
+    - dtwin/learning/exam_to_panels.py
+    - webapp/server.py
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_lld_mmri_v23_liver_enriched_timing.py
+    - tests/test_medgemma_panel_liver_enriched.py
+    oneshot:
+    - tools/run_raw_phase_equivalence_benchmark.py
+- path: configs/medgemma_local_4b_lld_v23_uniform9_choice.yaml
+  status: experimental
+  family: v23
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_lld_v23_full_fov_no_mask_pilot.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_lld_mmri_v23_preparation.py
+    - tests/test_lld_mmri_v23_technical_amendment.py
+    - tests/test_medgemma_panel_multiphase.py
+- path: configs/medgemma_local_4b_localizer_roi_v10_ab.yaml
+  status: experimental
+  family: v10
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_localizer_roi_gate_freeze.py
+- path: configs/medgemma_local_4b_monophase_rag.yaml
+  status: production
+  referenced_by:
+    outros:
+    - compose.yaml
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/pilot_monophase_subtype_adjudication.py
+    runtime:
+    - webapp/server.py
+- path: configs/medgemma_local_4b_mps.yaml
+  status: production
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    runtime:
+    - run_mac.sh
+    tests:
+    - tests/test_webapp.py
+- path: configs/medgemma_local_4b_multiphase.yaml
+  status: experimental
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_multiphase_fast_pathology.yaml
+    - configs/medgemma_local_4b_multiphase_volumetric.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_medgemma_panel_multiphase.py
+- path: configs/medgemma_local_4b_multiphase_fast_pathology.yaml
+  status: experimental
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_multiphase_uniform9_choice_v21.yaml
+    - configs/medgemma_local_4b_multiphase_volumetric_choice_pathology.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_candidate.py
+    - tests/test_openswisshcc_config_variants.py
+    - tests/test_openswisshcc_configs.py
+    - tests/test_openswisshcc_evaluation.py
+    - tests/test_openswisshcc_freeze.py
+    - tests/test_openswisshcc_freeze_version.py
+    oneshot:
+    - tools/build_openswisshcc_review_gallery.py
+    - tools/evaluate_openswisshcc_run.py
+    - tools/freeze_openswisshcc_experiment.py
+    - tools/infer_openswisshcc_case.py
+    - tools/remediate_openswisshcc_candidates.py
+    - tools/render_openswisshcc_candidate.py
+- path: configs/medgemma_local_4b_multiphase_uniform9_choice_v21.yaml
+  status: experimental
+  family: v21
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_chaos_uniform9_choice_v21.yaml
+    - configs/medgemma_local_4b_lld_v23_uniform9_choice.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_holdout_panels.py
+    oneshot:
+    - tools/run_openswisshcc_holdout_v21_localizer_win.ps1
+    - tools/run_openswisshcc_holdout_v21_medsiglip_win.ps1
+- path: configs/medgemma_local_4b_multiphase_volumetric.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_local_4b_multiphase_volumetric_choice_pathology.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_volumetric.py
+    - tests/test_openswisshcc_volumetric_gate.py
+    - tests/test_openswisshcc_volumetric_inference.py
+- path: configs/medgemma_local_4b_multisequence_v9_pairwise.yaml
+  status: experimental
+  family: v9
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_multisequence_freeze.py
+- path: configs/medgemma_local_4b_openswiss_v24_liver_enriched_choice.yaml
+  status: experimental
+  family: v24
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_openswiss_v25_liver_enriched_pathology_target.yaml
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/evaluate_v24_liver_enriched.py
+    - tools/prepare_v24_liver_enriched_openswisshcc.py
+    - tools/run_v24_liver_enriched_inference.py
+- path: configs/medgemma_local_4b_openswiss_v25_liver_enriched_pathology_target.yaml
+  status: experimental
+  family: v25
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_openswiss_v26_liver_enriched_pathology_target_rag.yaml
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_local_4b_openswiss_v26_liver_enriched_pathology_target_rag.yaml
+  status: experimental
+  family: v26
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/medgemma_local_4b_rag.yaml
+  status: production
+  referenced_by:
+    outros:
+    - compose.yaml
+    - graphify-out/manifest.json
+    config:
+    - configs/medgemma_local_4b_axial_atlas_rag_v19.yaml
+    tests:
+    - tests/test_medgemma_client.py
+    runtime:
+    - webapp/server.py
+- path: configs/medgemma_local_4b_venous_fallback_pathology.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_evaluation.py
+    - tests/test_openswisshcc_fallback.py
+    - tests/test_openswisshcc_freeze.py
+    - tests/test_openswisshcc_gallery.py
+    - tests/test_openswisshcc_inference.py
+    - tests/test_openswisshcc_inference_batch.py
+    oneshot:
+    - tools/build_openswisshcc_review_gallery.py
+    - tools/evaluate_openswisshcc_run.py
+    - tools/freeze_openswisshcc_experiment.py
+    - tools/infer_openswisshcc_case.py
+    - tools/remediate_openswisshcc_candidates.py
+    - tools/render_openswisshcc_fallback.py
+- path: configs/medgemma_local_4b_venous_review_fallback_high_contrast_pathology.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_config_variants.py
+    - tests/test_openswisshcc_configs.py
+    - tests/test_openswisshcc_volumetric.py
+- path: configs/medgemma_local_4b_venous_review_fallback_pathology.yaml
+  status: experimental
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_venous_review_fallback_high_contrast_pathology.yaml
+    - configs/medgemma_local_4b_venous_uniform9_choice_v21.yaml
+    - configs/medgemma_local_4b_venous_volumetric_choice_pathology.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_config_variants.py
+    - tests/test_openswisshcc_configs.py
+    - tests/test_openswisshcc_freeze_version.py
+    - tests/test_openswisshcc_holdout_panels.py
+    - tests/test_openswisshcc_volumetric.py
+    oneshot:
+    - tools/remediate_openswisshcc_candidates.py
+- path: configs/medgemma_local_4b_venous_uniform9_choice_v21.yaml
+  status: experimental
+  family: v21
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_holdout_panels.py
+    oneshot:
+    - tools/run_openswisshcc_holdout_v21_localizer_win.ps1
+    - tools/run_openswisshcc_holdout_v21_medsiglip_win.ps1
+- path: configs/medgemma_local_4b_venous_volumetric_choice_pathology.yaml
+  status: experimental
+  referenced_by:
+    config:
+    - configs/medgemma_local_4b_venous_volumetric_high_contrast_choice_pathology.yaml
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_volumetric.py
+    - tests/test_openswisshcc_volumetric_gate.py
+    - tests/test_openswisshcc_volumetric_inference.py
+- path: configs/medgemma_local_4b_venous_volumetric_high_contrast_choice_pathology.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_volumetric.py
+    - tests/test_openswisshcc_volumetric_gate.py
+    - tests/test_openswisshcc_volumetric_inference.py
+- path: configs/medgemma_local_4b_volumetric.yaml
+  status: production
+  referenced_by:
+    outros:
+    - compose.yaml
+    - graphify-out/manifest.json
+    config:
+    - configs/medgemma_local_4b_volumetric_pathology_target.yaml
+    - configs/medgemma_local_4b_volumetric_rag.yaml
+    tests:
+    - tests/test_medgemma_screening.py
+    runtime:
+    - webapp/server.py
+- path: configs/medgemma_local_4b_volumetric_pathology_target.yaml
+  status: production
+  referenced_by:
+    outros:
+    - compose.yaml
+    - graphify-out/manifest.json
+    config:
+    - configs/medgemma_local_4b_monophase_rag.yaml
+    - configs/training/medgemma_27b_transfer_protocol_v1.yaml
+    tests:
+    - tests/test_medgemma_client.py
+    runtime:
+    - webapp/server.py
+- path: configs/medgemma_local_4b_volumetric_rag.yaml
+  status: production
+  referenced_by:
+    outros:
+    - compose.yaml
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_medgemma_client.py
+    runtime:
+    - webapp/server.py
+- path: configs/medgemma_ollama_27b.yaml
+  status: production
+  referenced_by:
+    outros:
+    - RUNBOOK_MAC.md
+    - SYNC.md
+    - compose.portable.yaml
+    - graphify-out/manifest.json
+    config:
+    - configs/medgemma_ollama_27b_rag.yaml
+    - configs/medgemma_ollama_27b_volumetric.yaml
+    runtime:
+    - run_mac.sh
+    tests:
+    - tests/test_portable_distribution.py
+    - tests/test_webapp.py
+    oneshot:
+    - tools/start_argos_docker_mac.sh
+- path: configs/medgemma_ollama_27b_rag.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - compose.portable.yaml
+    - graphify-out/manifest.json
+    config:
+    - configs/medgemma_ollama_27b_volumetric_rag.yaml
+- path: configs/medgemma_ollama_27b_volumetric.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - compose.portable.yaml
+    - graphify-out/manifest.json
+    config:
+    - configs/medgemma_ollama_27b_volumetric_pathology_target.yaml
+- path: configs/medgemma_ollama_27b_volumetric_pathology_target.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - compose.portable.yaml
+    - graphify-out/manifest.json
+    config:
+    - configs/training/medgemma_27b_transfer_protocol_v1.yaml
+    tests:
+    - tests/test_medgemma_client.py
+- path: configs/medgemma_ollama_27b_volumetric_rag.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - compose.portable.yaml
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_portable_distribution.py
+- path: configs/medsiglip_liver_volumetric_mimic_aware.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_openswisshcc_volumetric_medsiglip.py
+- path: configs/medsiglip_liver_zero_shot.yaml
+  status: experimental
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_medsiglip_zero_shot.py
+    oneshot:
+    - tools/run_openswisshcc_holdout_v21_localizer_win.ps1
+    - tools/run_openswisshcc_holdout_v21_medsiglip_win.ps1
+    - tools/score_medsiglip_panel.py
+- path: configs/medsiglip_monophase_liver_enriched_v1.yaml
+  status: production
+  family: v1
+  referenced_by:
+    runtime:
+    - dtwin/learning/exam_to_panels.py
+    - webapp/server.py
+    outros:
+    - graphify-out/manifest.json
+- path: configs/segmentation_benchmark_chaos_v2.yaml
+  status: experimental
+  family: v2
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/benchmark_liver_segmentation_v2.py
+- path: configs/segmentation_benchmark_liverhccseg_phase_fusion_v2.yaml
+  status: experimental
+  family: v2
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/segmentation_benchmark_liverhccseg_postprocess_v2.yaml
+  status: experimental
+  family: v2
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/segmentation_benchmark_liverhccseg_single_phases_v2.yaml
+  status: experimental
+  family: v2
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/segmentation_benchmark_liverhccseg_venous_v2.yaml
+  status: experimental
+  family: v2
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/segmentation_visualization_v2.yaml
+  status: production
+  family: v2
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_segmentation_contract.py
+    runtime:
+    - webapp/server.py
+- path: configs/training/hybrid_v1_candidate_dataset.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/build_liver_candidate_dataset.py
+- path: configs/training/hybrid_v1_nested_splits.json
+  status: frozen_scientific
+  family: v1
+  pinned_in_protocol_lock: true
+  referenced_by:
+    config:
+    - configs/training/hybrid_v1_protocol.lock.json
+    - configs/training/medgemma_27b_transfer_protocol_v1.yaml
+    runtime:
+    - dtwin/learning/multi_signal_fusion.py
+    oneshot:
+    - tools/build_liver_candidate_dataset.py
+    - tools/build_lld_mmri_v23_roi_ceiling_t2dwi_embedding_pilot.py
+    - tools/build_medsiglip_monophase_dataset.py
+    - tools/build_monophase_slice_candidates.py
+    - tools/evaluate_medsiglip_external_bundle.py
+    - tools/evaluate_multi_signal_fusion.py
+- path: configs/training/hybrid_v1_protocol.lock.json
+  status: frozen_scientific
+  family: v1
+  referenced_by:
+    config:
+    - configs/training/medgemma_27b_transfer_protocol_v1.yaml
+    oneshot:
+    - tools/build_liver_candidate_dataset.py
+    - tools/build_medsiglip_monophase_dataset.py
+    - tools/build_monophase_slice_candidates.py
+    - tools/evaluate_medsiglip_external_bundle.py
+    - tools/evaluate_multi_signal_fusion.py
+    - tools/freeze_hybrid_training_protocol.py
+- path: configs/training/hybrid_v1_protocol.yaml
+  status: frozen_scientific
+  family: v1
+  pinned_in_protocol_lock: true
+  referenced_by:
+    config:
+    - configs/training/medgemma_27b_transfer_protocol_v1.yaml
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/build_lld_mmri_v23_roi_ceiling_t2dwi_embedding_pilot.py
+    - tools/diagnose_external_signals.py
+    - tools/evaluate_hybrid_robustness.py
+    - tools/evaluate_medsiglip_external_bundle.py
+    - tools/evaluate_multi_signal_fusion.py
+    - tools/freeze_hybrid_training_protocol.py
+- path: configs/training/late_fusion_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/evaluate_late_fusion.py
+- path: configs/training/localized_candidate_classifier_top8_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/localized_candidate_dynamic_hgb_top8_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/localized_candidate_dynamic_only_top8_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/localized_candidate_fused_classifier_top8_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medgemma_27b_transfer_protocol_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_classifier_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/train_medsiglip_classifier.py
+- path: configs/training/medsiglip_frozen_cpu_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - compose.portable.yaml
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_portable_distribution.py
+- path: configs/training/medsiglip_frozen_mps_v1.yaml
+  status: production
+  family: v1
+  referenced_by:
+    outros:
+    - RUNBOOK_MAC.md
+    - graphify-out/manifest.json
+    runtime:
+    - dtwin/learning/medsiglip_embeddings.py
+    - run_mac.sh
+    tests:
+    - tests/test_webapp.py
+    oneshot:
+    - tools/verify_medsiglip_device_agreement.py
+- path: configs/training/medsiglip_frozen_v1.yaml
+  status: production
+  family: v1
+  referenced_by:
+    config:
+    - configs/training/medsiglip_frozen_mps_v1.yaml
+    runtime:
+    - dtwin/learning/visual_inference.py
+    - webapp/server.py
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_webapp.py
+    oneshot:
+    - tools/build_lld_mmri_v23_roi_ceiling_t2dwi_embedding_pilot.py
+    - tools/extract_medsiglip_embeddings.py
+    - tools/run_raw_phase_equivalence_benchmark.py
+- path: configs/training/medsiglip_head_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/train_medsiglip_head.py
+- path: configs/training/medsiglip_lora_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_learning_medsiglip_partial_finetune.py
+- path: configs/training/medsiglip_monophase_arterial_classifier_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_arterial_representation_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_classifier_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_adc_fusion_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_axial_adc_fusion_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_axial_adc_missing_aware_fusion_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_classifier_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_domain_balanced_v3.yaml
+  status: experimental
+  family: v3
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_multidomain_v2.yaml
+  status: experimental
+  family: v2
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_openswiss_v3.yaml
+  status: experimental
+  family: v3
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_pairwise_subtype_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_representation_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_slice_multiclass_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_slice_pairwise_subtype_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_delayed_subtype_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_five_signal_missing_aware_fusion_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_openswiss_adc_mil_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_openswiss_adc_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_openswiss_all132_delayed_v4.yaml
+  status: experimental
+  family: v4
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_openswiss_axial_mil_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_openswiss_axial_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_openswiss_complementary_combined_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_openswiss_dwi_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_openswiss_t2_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_monophase_representation_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/build_medsiglip_monophase_dataset.py
+- path: configs/training/medsiglip_multiclass_lld_binary_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_multiclass_lld_clinical_subtype_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/medsiglip_multiclass_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/train_medsiglip_multiclass.py
+- path: configs/training/medsiglip_partial_finetune_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_learning_medsiglip_partial_finetune.py
+    oneshot:
+    - tools/train_medsiglip_partial.py
+- path: configs/training/multi_signal_fusion_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/evaluate_multi_signal_fusion.py
+- path: configs/training/multi_signal_fusion_v23_v1.yaml
+  status: experimental
+  family: v23
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+- path: configs/training/patch25d_classifier_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/train_patch25d_classifier.py
+- path: configs/training/patch25d_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/build_patch25d_dataset.py
+- path: configs/training/phase13_verification_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    tests:
+    - tests/test_verify_medsiglip_phase13.py
+    oneshot:
+    - tools/verify_medsiglip_phase13.py
+- path: configs/training/radiomics_classifier_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/train_radiomics_classifier.py
+- path: configs/training/radiomics_v1.yaml
+  status: experimental
+  family: v1
+  referenced_by:
+    outros:
+    - graphify-out/manifest.json
+    oneshot:
+    - tools/extract_candidate_radiomics.py
