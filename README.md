@@ -19,6 +19,21 @@ módulos) e a implementação do pipeline (`dtwin/`, `profiles/`, `webapp/`,
 > passagem para uso clínico é um gate formal, descrito em
 > `contexto/03_REGULATORIO_LGPD.md`.
 
+## Os três nomes (canônico)
+
+Três nomes coexistem neste repositório de propósito — cada um nomeia uma coisa
+diferente, e docs históricas usam o nome da época em que foram escritas:
+
+- **ARGOS** — o projeto de pesquisa e o pipeline deste repositório (código em
+  `dtwin/`, contratos, manuscrito). É o nome científico do trabalho.
+- **OREN** — a aplicação: o webapp que o usuário abre e a marca que ele vê na
+  interface, nos launchers (`INICIAR_OREN*.cmd`) e no visualizador 3D/WebXR.
+  ARGOS é o motor; OREN é o aplicativo construído sobre ele.
+- **Volyrcs** — o produto em desenho para volumetria hepática com aprovação
+  humana obrigatória, que aproveita partes do OREN. Existe apenas como
+  arquitetura (`docs/230_VOLYRCS_ARQUITETURA_DO_PRODUTO.md`); nada no runtime
+  atual se chama Volyrcs.
+
 ## O fluxo
 
 Você arrasta a pasta DICOM de um exame no webapp local e o ARGOS faz o resto, em

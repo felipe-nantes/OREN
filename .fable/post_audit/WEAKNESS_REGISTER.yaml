@@ -197,7 +197,7 @@ weaknesses:
     confidence: HIGH
     current_tests: n/a
     current_protection: n/a
-    missing_protection: "glossário canônico"
+    missing_protection: "FECHADO em 2026-08-25 (REF-04): secao canonica 'Os tres nomes' no README (ARGOS=projeto/pipeline; OREN=aplicacao/marca visivel; Volyrcs=produto em desenho, docs/230, zero runtime) + ponteiro no CLAUDE.md. Nada renomeado — renomear e decisao de produto, nao refactor"
     possible_root_causes: ["renomeações históricas do produto"]
     unknowns: []
     candidate_action_type: PURE_REFACTOR
@@ -207,7 +207,7 @@ weaknesses:
     expected_information_gain: LOW
     human_gate: none
     recommended_fable_effort: LOW
-    status: OPEN
+    status: RESOLVED
 
   - id: W-007
     title: "README declara Couinaud/vasculatura fora de escopo; profiles/figado.yaml os habilita"

@@ -2,6 +2,7 @@
 
 ## PROJECT
 ARGOS/OREN é um sistema experimental de engenharia e pesquisa para RM hepática, triagem visual, auditoria, volumetria e visualização 3D/WebXR.
+Naming canônico (README "Os três nomes"): ARGOS = projeto/pipeline de pesquisa; OREN = a aplicação/marca que o usuário vê; Volyrcs = produto em desenho (docs/230), nada no runtime.
 
 ## ROLE
 Atue como engenheiro de software científico. Preserve contratos, produza evidência e avance em passos pequenos. Não trate comportamento observado como aprovação científica.
