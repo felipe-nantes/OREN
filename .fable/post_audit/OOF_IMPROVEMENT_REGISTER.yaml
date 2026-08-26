@@ -221,3 +221,4 @@ hypotheses:
     rollback: "fase B: git revert do patch único; artefatos candidatos nunca sobrescrevem baseline"
     recommended_fable_effort: UltraCode
     priority: 5
+    fase_a_status: "DONE 2026-08-25 (TASK-2026-08-25-H05-A): mediacao ~100% p/ OpenSwiss medida e validada (451/451, max delta 4e-07); rejection criterion NAO disparou; fase B evidenciada porem GATED (HG-06/07) — decisao do operador"

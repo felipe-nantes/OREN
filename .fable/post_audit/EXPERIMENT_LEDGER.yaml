@@ -211,3 +211,32 @@ entries:
     reverted: n/a
     lessons: "nesta geração de stack, o modo padrão de produção JÁ é bitwise-reprodutível run-to-run — a não-reprodutibilidade GPU clássica não se manifesta nas famílias de ops usadas; o risco residual é mudança de stack (cláusula de re-sonda)"
     do_not_repeat_without_new_evidence: true
+
+  - experiment_id: H-05-FASE-A
+    baseline_commit: "1147ed8 (medicao; nada alterado)"
+    candidate_commit: n/a
+    hypothesis: "parte da separacao entre coortes e mediada pela estrutura de classes especifica de coorte (*_unspecified, OpenSwiss-only)"
+    change: "nenhuma (medicao; script em post_audit/analysis/h05_a_class_vocabulary_participation.py)"
+    result: >
+      Mediacao QUASE TOTAL e bidirecional no artefato oficial: para OpenSwiss
+      (dev 87 + holdout 43), massa media 98,5-98,6% nas classes *_unspecified
+      e share mediano de 100% do score vindo de positive_unspecified; para
+      LLD (321), 0,9% de massa e 0,2% de share. Decomposicao EXATA do score
+      congelado (respeitando a agregacao por fold: top2/max/mean), validada
+      caso a caso: 451/451 com max|delta|=4,1e-07 (ruido float32). Tier 1
+      (dev): bracos monofasicos LLD-only tem vocabulario sem *_unspecified —
+      o canal so existe onde o vocabulario o cria. Nenhum label protegido
+      lido; outer usado como MEDICAO descritiva (precedente H-01..H-04);
+      outer_inspection_counter inalterado.
+    metrics: {massa_unspec_openswiss: 0.985, massa_unspec_lld: 0.009, share_pu_score_openswiss_mediana: 1.0, share_pu_score_lld_mediana: 0.002, validacao_max_delta: 4.1e-07}
+    decision: "rejection criterion NAO disparou (contribuicao e ~maxima, nao desprezivel); fase B (vocabulario unificado) EVIDENCIADA porem GATED — HG-06+HG-07 via SCIENTIFIC_CHANGE_PROPOSAL + GPU + CANDIDATE_PROMOTION_GATE integral; nada executado alem da medicao"
+    reason: "interpretacao honesta: labels OpenSwiss SAO *_unspecified por construcao — mediacao estrutural do desenho de labels, nao prova de inflacao; mas com DS-PROBE-01 (origem satura embeddings) o canal do SR-007 esta confirmado como real e forte"
+    evidence: "post_audit/evidence/H05-A/h05_a_class_participation.json; TASK-2026-08-25-H05-A.md"
+    reverted: n/a
+    lessons: >
+      (1) a decisao binaria de TODO caso OpenSwiss repousa numa classe de
+      suporte coorte-puro — qualquer leitura de generalizacao entre coortes
+      deve citar isso; (2) a decomposicao exata por classe do score oficial
+      e possivel sem retreino (fold models + embeddings congelados) e valida
+      bitwise-quase (4e-07) — ferramenta reutilizavel para futuras fases.
+    do_not_repeat_without_new_evidence: true

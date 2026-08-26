@@ -663,7 +663,7 @@ weaknesses:
     confidence: HIGH
     current_tests: "LODO + subgroup no robustness.py"
     current_protection: "claims restritos no manuscrito; DOCUMENTED_LIMITATION"
-    missing_protection: "localização do PONTO DE ENTRADA do sinal (DS-PROBE-01); coorte independente p/ promoção"
+    missing_protection: "CANAL MEDIDO em 2026-08-25 (H-05 fase A): score de TODO caso OpenSwiss vem ~100% de positive_unspecified (LLD: 0,2%) — mediacao estrutural confirmada; mitigacao (vocabulario unificado) = fase B gated HG-06/07, nao executada"
     possible_root_causes: ["aquisição/intensidade/panel/crop/label structure — ver DOMAIN_SHIFT_INVESTIGATION_PLAN"]
     unknowns: ["ONDE o sinal entra e o quanto o classificador o usa além do label"]
     candidate_action_type: EXPERIMENTAL_OPPORTUNITY

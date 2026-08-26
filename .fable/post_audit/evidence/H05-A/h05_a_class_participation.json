@@ -1,0 +1,123 @@
+{
+  "schema": "argos-h05-fase-a-class-participation-v1",
+  "research_only": true,
+  "clinical_use_allowed": false,
+  "labels_protegidos_lidos": false,
+  "tier2_validacao": {
+    "casos_validados": 451,
+    "max_abs_delta_score_recomputado_vs_congelado": 4.1189895283455513e-07,
+    "recompute_valido": true
+  },
+  "tier2_oficial_por_coorte": {
+    "lld_mmri": {
+      "n_casos": 321,
+      "massa_media_por_classe": {
+        "fnh": 0.13301000193749402,
+        "hcc": 0.4584979841494058,
+        "hemangioma": 0.22495824397700276,
+        "hepatic_cyst": 0.17431259569597002,
+        "negative_unspecified": 0.0027740650044713157,
+        "positive_unspecified": 0.006447109235656023
+      },
+      "massa_unspecified_total": 0.009221174240127339,
+      "share_pu_no_score_mediana": 0.0017049469352778447,
+      "share_pu_no_score_media": 0.05421097368479614,
+      "argmax_em_unspecified_frac": 0.003115264797507788,
+      "argmax_counts": {
+        "fnh": 46,
+        "hcc": 158,
+        "hemangioma": 72,
+        "hepatic_cyst": 44,
+        "negative_unspecified": 0,
+        "positive_unspecified": 1
+      },
+      "share_pu_entre_positivos_media": 0.0016088871856719954
+    },
+    "openswisshcc_consumed_holdout": {
+      "n_casos": 43,
+      "massa_media_por_classe": {
+        "fnh": 0.0036308089408208046,
+        "hcc": 0.0019026664633314287,
+        "hemangioma": 0.0029000625862233413,
+        "hepatic_cyst": 0.006229703811501688,
+        "negative_unspecified": 0.41614025481353883,
+        "positive_unspecified": 0.5691965033845838
+      },
+      "massa_unspecified_total": 0.9853367581981227,
+      "share_pu_no_score_mediana": 0.9996513121602165,
+      "share_pu_no_score_media": 0.9895249891238578,
+      "argmax_em_unspecified_frac": 1.0,
+      "argmax_counts": {
+        "fnh": 0,
+        "hcc": 0,
+        "hemangioma": 0,
+        "hepatic_cyst": 0,
+        "negative_unspecified": 17,
+        "positive_unspecified": 26
+      },
+      "share_pu_entre_positivos_media": 0.9974586694075447
+    },
+    "openswisshcc_development": {
+      "n_casos": 87,
+      "massa_media_por_classe": {
+        "fnh": 0.008261512730051388,
+        "hcc": 0.002021338150716059,
+        "hemangioma": 0.0018531710503277648,
+        "hepatic_cyst": 0.0017485592463277572,
+        "negative_unspecified": 0.5020912215132282,
+        "positive_unspecified": 0.48402419730934887
+      },
+      "massa_unspecified_total": 0.986115418822577,
+      "share_pu_no_score_mediana": 0.9998327800830558,
+      "share_pu_no_score_media": 0.9851717715632371,
+      "argmax_em_unspecified_frac": 0.9885057471264368,
+      "argmax_counts": {
+        "fnh": 1,
+        "hcc": 0,
+        "hemangioma": 0,
+        "hepatic_cyst": 0,
+        "negative_unspecified": 44,
+        "positive_unspecified": 42
+      },
+      "share_pu_entre_positivos_media": 0.9971266559189292
+    }
+  },
+  "tier1_dev_monofasicos": {
+    "medsiglip_monophase_delayed_slice_multiclass_oof_predictions_v1": {
+      "lld_mmri": {
+        "n_casos": 321,
+        "classes": [
+          "fnh",
+          "hcc",
+          "hemangioma",
+          "hepatic_cyst"
+        ],
+        "massa_media_por_classe": {
+          "fnh": 0.1951273381196873,
+          "hcc": 0.31202187401194353,
+          "hemangioma": 0.2565777688797865,
+          "hepatic_cyst": 0.23627301898858263
+        },
+        "massa_unspecified_total": 0.0
+      }
+    },
+    "medsiglip_monophase_delayed_subtype_oof_predictions_v1": {
+      "lld_mmri": {
+        "n_casos": 321,
+        "classes": [
+          "fnh",
+          "hcc",
+          "hemangioma",
+          "hepatic_cyst"
+        ],
+        "massa_media_por_classe": {
+          "fnh": 0.14794128918451774,
+          "hcc": 0.42666359561660594,
+          "hemangioma": 0.2401356987416203,
+          "hepatic_cyst": 0.18525941645725613
+        },
+        "massa_unspecified_total": 0.0
+      }
+    }
+  }
+}
