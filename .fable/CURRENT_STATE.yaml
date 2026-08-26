@@ -1,12 +1,12 @@
 schema: argos-fable-current-state-v2
 migrated_from: CURRENT_STATE.md (2026-08-18, autorização do operador; conteúdo normalizado — inconsistências de header acumuladas corrigidas nesta migração)
-last_updated: "2026-08-24 America/Sao_Paulo"
+last_updated: "2026-08-25 America/Sao_Paulo"
 pack_schema: argos-fable-engineering-pack-v1
 
 base_commit: 9683eaa796d01e946597f3fe1351556aa8fcb141
 branch: main
 worktree_da_sessao: claude/fable-engineering-phase-00-b0172f
-head_main_atual: c17f365 (pushed; ciclo POST_AUDIT em curso)
+head_main_atual: "6a48a1f (pushed; ciclo POST_AUDIT com backlogs executaveis completos)"
 
 phases:
   PHASE_00_FREEZE: {status: DONE, date: "2026-08-17"}
@@ -22,7 +22,7 @@ phases:
   PHASE_10_CONSOLIDATION: {status: DONE, date: "2026-08-20", note: "registros vivos atualizados (SR-011 RESOLVED, legacy, system map); graphify regenerado (12.195 nós/782 comunidades); baseline v1 aposentado como histórico (item 16); SAFETY_KERNEL ratificado (item 17); PHASE_03 fechada (item 18); baseline final 1769/4/1-ambiental. Evidence: TASK-2026-08-20-PH10-CON-01_EVIDENCE.md"}
 
 last_completed_task: TASK-2026-08-20-PH10-CON-01 (PHASE_10 — pack COMPLETO, 10/10 fases DONE)
-post_audit: ".fable/post_audit/ — ciclo EM EXECUÇÃO desde 2026-08-24: OPT_00 DONE; H-01..H-04 concluídas (medições); GOV-01 (item 19: proveniência + regime c+d+b); FAIL-01; CI-01 (Actions verde); ROB-01 (62 BLE001 triados); REP-01 (item 20: tolerância GPU ratificada). TOP_10 COMPLETO em 2026-08-25; backlog PURE_REFACTOR em curso (REF-02 DONE)"
+post_audit: ".fable/post_audit/ — ciclo 2026-08-24/25 com BACKLOGS EXECUTAVEIS COMPLETOS: OPT_00 + H-01..H-04 + TOP_10 (10 tasks) + PURE_REFACTOR REF-01..06+06B (incl. decomposicao do server.py em 6 modulos, W-001) + ROBUSTNESS ROB-01..11. Pendentes de gate humano: ROB-09/HG-11 (politica PHI, proposta em evidence/ROB-09/) e ratificacao da politica de retencao (evidence/ROB-11/). Residuais: maquina de origem (BLK-PROTECTED-SOURCES/BLK-FULL-REEXECUTION) e H-05 fase A"
 next_recommended_task: >
   AUDITORIA COMPLETA (10/10 fases DONE em 2026-08-20). Operação normal sob os
   contratos congelados e gates; re-auditoria ou novas waves somente sob
@@ -43,8 +43,8 @@ tooling:
 
 commits_main:
   pushed: [7efa2dc, 0ba6f01, bd278b5, 8c31c76, "5087041", 42a8514, e4dd3cc, b66002a, dfb36b5, 515b7b3, 637d9e1, 3f06f48, 3d146d5, c986e17, "072c3e6", 73ccb3e, daa878c, 29be45b, 77727b3, 0d0ccc2, b3cd61d, b634f71, 5fa342e, b5e739e, e0d311b, a8ceeb8]
-  push_status: "origin/main = 58f3e3d (verificado 2026-08-25); ciclo POST_AUDIT: +0d56547..58f3e3d (TOP_10 COMPLETO: ...REF-01, PROV-01, TEST-01, DOC-01); backlog em curso"
-  nao_commitado: "ROB-BATCH 06..11 (requer_git 8 testes; agregador auditoria; locks/; TD-011 falso positivo; inventario retencao; proposta PHI p/ HG-11; W-014/015/018/039 RESOLVED) — commit quando solicitado"
+  push_status: "origin/main = 6a48a1f (verificado 2026-08-25); ciclo POST_AUDIT completo ate ROB-BATCH"
+  nao_commitado: "REF-06B (TOOLS_STATUS_INDEX 298 tools + guarda; W-046 RESOLVED inteiro; suite 1809/4/0) — commit quando solicitado"
 
 migracao_docker_nativo:
   task: TASK-2026-08-18-MIGR-01
@@ -54,7 +54,7 @@ migracao_docker_nativo:
 
 snapshot_observado:
   repo: "1.267 paths versionados no snapshot 9683eaa; 147.797 linhas Python em 792 arquivos"
-  hotspots: ["webapp/server.py (3.610)", "dtwin/learning/medsiglip_multiclass_classifier.py (1.395)", "dtwin/stages.py (1.243)"]
+  hotspots: ["webapp/server.py DECOMPOSTO em 2026-08-25 (REF-03: 3.635->1.568 em 6 modulos)", "dtwin/learning/medsiglip_multiclass_classifier.py (1.395)", "dtwin/stages.py (1.243)"]
   suite_atual: "1769 passed / 4 skipped / 1 failed ambiental (test_environment_report_accepts_free_gpu: exige GPU livre) — BASELINE FINAL da auditoria, PHASE_10, 2026-08-20"
   container: "argos-runtime:local sha256:a5e278043304 (py3.11.11, torch 2.6.0+cu124)"
   hardware: "Lenovo Legion 5 83DG, 31.7GiB RAM, RTX 4060 Laptop 8GB, driver 610.62"
@@ -67,7 +67,7 @@ dirty_state:
 
 blockers:
   - id: BLK-DEPS-LOCK
-    text: "Dependências com ranges amplos; sem lockfile integral por hardware (freeze do container em evidence/PH00/container_pip_freeze.txt)"
+    text: "ATENDIDO NO ESSENCIAL em 2026-08-25 (ROB-06): locks/ por backend (host py3.13 + container py3.11); validacao em venv limpa documentada como passo futuro"
   - id: BLK-PROTECTED-SOURCES
     text: "As 3 fontes de labels protegidos do lock NÃO existem nesta máquina; verify_protocol completo só na máquina que as detém (PH06 REG-01)"
   - id: BLK-GPU-TOLERANCES
@@ -81,7 +81,7 @@ awaiting_human_decisions:
 
 open_bugs:
   - "CI ubuntu-latest: RESOLVIDO em 2026-08-24 (CI-01) — coleta estava quebrada desde a PHASE_04 (hypothesis/sklearn ausentes do install); consertada + 4 gates; Actions VERDE confirmado"
-  - "Imagem runtime sem git; 6 testes dependem do binário (divergência imagem-vs-teste)"
+  - "Imagem runtime sem git: RESOLVIDO em 2026-08-25 (ROB-07) — marker requer_git nos 8 testes reais; suite honesta no container"
   - "webapp/seg_worker.py: REMOVIDO na PHASE_09 wave 3 (2026-08-20, HUMAN_DECISIONS item 15) — prova de inalcançabilidade em evidence; worker ativo = dtwin/seg_worker.py. Follow-up PHASE_10: destino do mecanismo de baseline v1 (5/5 pins stale, sem verificador)"
   - "Docker Desktop 4.86.0: sockets órfãos a cada encerramento + configs NUL + perda do UseContainerdSnapshotter; workarounds documentados em KNOWN_FAILURES e na memória do agente; correção definitiva = atualizar Docker/reboot"
   - "TD-015: RESOLVIDO na PHASE_08 wave 1 (2026-08-19) — retry 5x + try/finally; guarda de regressão em test_integration_webapp_boundary.py"

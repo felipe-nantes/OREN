@@ -1172,7 +1172,7 @@ weaknesses:
     confidence: HIGH
     current_tests: n/a
     current_protection: "TOOLS_STATUS.md (censo estático); STATIC_ORPHAN ≠ morto"
-    missing_protection: "METADE DOS CONFIGS FECHADA em 2026-08-25 (REF-06): configs/CONFIG_STATUS_INDEX.yaml — 119 configs com status mecanico (6 frozen_scientific/15 production/96 experimental/2 legacy), NENHUM editado (pinagem sha256 provada no lock), guarda na suite re-verifica a pinagem do protocolo para sempre. PENDENTE: status dos 307 tools (TD-003/157 STATIC_ORPHAN)"
+    missing_protection: "FECHADO POR INTEIRO em 2026-08-25 (REF-06 configs + REF-06B tools): tools/TOOLS_STATUS_INDEX.yaml — 298 tools na escada da PH01 (13 wired / 18 test / 21 toolchain / 87 doc / 159 orphan; consistencia forte com o snapshot), corpus git-tracked menos inventarios (registro nao e consumo), guarda na suite. STATIC_ORPHAN nao e morto: remocao segue LONG_PLAN item 10"
     possible_root_causes: ["sprawl experimental legítimo do desenvolvimento"]
     unknowns: ["prova de alcançabilidade runtime dos 157 (método da PH09 wave 3 é reutilizável)"]
     candidate_action_type: TECHNICAL_DEBT
@@ -1182,4 +1182,4 @@ weaknesses:
     expected_information_gain: MEDIUM
     human_gate: "remoções exigem prova + autorização (precedente item 15)"
     recommended_fable_effort: MEDIUM
-    status: PARTIALLY_RESOLVED
+    status: RESOLVED

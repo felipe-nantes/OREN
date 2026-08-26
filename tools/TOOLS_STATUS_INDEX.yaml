@@ -1,0 +1,1404 @@
+schema: argos-tools-status-index-v1
+task: TASK-2026-08-25-REF-06B (W-046/TD-003)
+generated: '2026-08-25'
+metodo: 'Escada de dominancia da PHASE_01 re-executada sobre o checkout ATUAL (pos-decomposicao REF-03):
+  RUNTIME_OR_LAUNCH_WIRED > TEST_REFERENCED_ONLY > TOOLCHAIN_ONLY > DOC_REFERENCED_ONLY > STATIC_ORPHAN.
+  Referencias estaticas (caminho completo, import tools.<x>, basename com fronteira); NENHUM script executado.
+  Corpus = git-tracked MENOS inventarios (.fable/, graphify-out/, os proprios indices): registro nao e
+  consumo. Gerador: evidence/REF-06B/.'
+aviso: tools/ sao CLIs de operador/pesquisa; STATIC_ORPHAN = sem referencia estatica, NAO 'morto'. Remocao
+  exige prova de reachability runtime + fase propria + autorizacao (LONG_PLAN item 10). Status e metadado
+  consultivo de navegacao.
+resumo:
+  total: 298
+  DOC_REFERENCED_ONLY: 87
+  RUNTIME_OR_LAUNCH_WIRED: 13
+  STATIC_ORPHAN: 159
+  TEST_REFERENCED_ONLY: 18
+  TOOLCHAIN_ONLY: 21
+tools:
+- path: tools/__init__.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 7
+- path: tools/adjudicate_hcc_benign_mimic.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/align_openswisshcc.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+- path: tools/align_openswisshcc_holdout.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/analyze_medsiglip_external_recalibration.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/analyze_openswisshcc_v11_v13_complementarity.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/analyze_openswisshcc_volumetric_fusion.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/assemble_best_worst_case_folders.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/audit_liver_mask_geometry_quality.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/audit_liver_mri_dataset.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/audit_lld_mmri_v23_geometry.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/audit_mesh_topology_quality.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/audit_monophase_external_failures.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/audit_openswisshcc_arterial_union_pilot_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/audit_openswisshcc_axial_atlas_v17.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/audit_openswisshcc_candidate_localization_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/audit_openswisshcc_enhancement_localizer_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/audit_openswisshcc_holdout_blind.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/audit_openswisshcc_multisequence.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/audit_openswisshcc_v23_errors.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/benchmark_liver_segmentation_v2.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/bootstrap_argos_mac.sh
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+    docs: 1
+- path: tools/build_anatomic_material_textures.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    docs: 1
+- path: tools/build_chaos_v21_panels.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_dicom_quality_showcase.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_internal_blind_benchmark_120.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_liver_candidate_dataset.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/build_liverhccseg_v21_panels.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_lld_mmri_v23_enhancement_panels.py
+  status: DOC_REFERENCED_ONLY
+  confidence: WEAK
+  refs:
+    docs: 1
+- path: tools/build_lld_mmri_v23_full_fov_pilot.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_lld_mmri_v23_liver_enriched_pilot.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_lld_mmri_v23_panels.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/build_lld_mmri_v23_roi_ceiling_t2dwi_embedding_pilot.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    docs: 1
+- path: tools/build_lld_mmri_v23_shape.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_localized_candidate_features.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_localized_candidate_supervision.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_medsiglip_monophase_dataset.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_monophase_complementary_candidates.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_monophase_slice_candidates.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswiss_monophase_atlas_candidates.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_axial_atlas_v17.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/build_openswisshcc_candidate_enhancement_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_candidate_shape_v23.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_candidate_volume_fallback_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_candidate_volume_full87_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_candidate_volume_timing_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_candidate_volume_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_candidates.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+- path: tools/build_openswisshcc_enhancement_features_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_enhancement_localizer_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_fusion_v11.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/build_openswisshcc_highdimensional_stack.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_holdout_panels.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_localizer_enhancement_roi_pilot.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_localizer_roi_pilot.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_multisequence_cohort.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_multisequence_gallery.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_multisequence_quality_bundle.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_review_gallery.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/build_openswisshcc_v15_blind_fusion.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/build_openswisshcc_volumetric_candidates.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_openswisshcc_volumetric_gallery.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_patch25d_dataset.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/build_production_liver_masks_for_selection.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+    docs: 2
+- path: tools/build_public_independent_cohort_v21.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/build_rag_corpus.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 2
+    tools: 1
+    docs: 1
+- path: tools/build_rag_index.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 2
+    docs: 2
+- path: tools/build_raw_phase_review_gallery.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/build_relatorio_consolidado_docx.js
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/build_synthetic_external_stress_v1.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/check_hybrid_training_environment.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/combine_final_liver_vessel_score.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/consolidate_public_independent_v21.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/create_quest_access_page.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    tools: 1
+    docs: 1
+- path: tools/create_quest_certificate.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 1
+    tests: 1
+    docs: 1
+- path: tools/diagnose_external_signals.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/diagnose_lld_mmri_v23_liver_fallback.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/download_chaos_v103.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/download_http_ranges.py
+  status: TEST_REFERENCED_ONLY
+  confidence: WEAK
+  refs:
+    tests: 1
+- path: tools/download_lld_mmri_v23_external.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 3
+- path: tools/ensure_quest_firewall.ps1
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    tools: 1
+    docs: 1
+- path: tools/eval_rag_retrieval.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 2
+- path: tools/evaluate_chaos_v21_negative.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_hybrid_robustness.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/evaluate_late_fusion.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/evaluate_liverhccseg_v21_positive.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/evaluate_lld_mmri_v23_external.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_lld_mmri_v23_liver_enriched.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_medsiglip_external_bundle.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_multi_signal_fusion.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_axial_atlas_chunk_v18.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_axial_atlas_rag_v19.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_axial_atlas_v17.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_candidate_volume_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_enhancement_features_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_enhancement_pilot_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_fusion_v11.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/evaluate_openswisshcc_highdimensional_v13.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_holdout_v21.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 3
+- path: tools/evaluate_openswisshcc_lesion_localizer_full87_v10.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_localizer_roi_v10.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_multisequence.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_run.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/evaluate_openswisshcc_slice_pairwise.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_v15_fusion.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/evaluate_openswisshcc_v23_shape_fusion.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 1
+- path: tools/evaluate_openswisshcc_v24_planarity_contrast.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_v25_sphericity.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_v26_bbox_fill.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_v27_nested_recalibration.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_volumetric_pairwise.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_openswisshcc_volumetric_run.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/evaluate_synthetic_external_stress_v1.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/evaluate_v24_liver_enriched.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/export_argos_portable.ps1
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    docs: 3
+- path: tools/extract_candidate_radiomics.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/extract_chaos_mri_v103.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/extract_medsiglip_embeddings.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/extract_openswisshcc_holdout_transforms.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/extract_openswisshcc_transforms.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/filter_liverhccseg_tumor_positive.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/filter_monophase_complementary_embeddings.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/finalize_openswisshcc_candidate_variant.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_chaos_v21_evaluation_protocol.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_hybrid_training_protocol.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/freeze_liverhccseg_v21_evaluation_protocol.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_lld_mmri_v23_external_protocol.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_lld_mmri_v23_predictions.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_lld_mmri_v23_technical_amendment.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/freeze_openswisshcc_candidate_volume_evaluation_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_openswisshcc_candidate_volume_score_v16.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/freeze_openswisshcc_enhancement_pilot_evaluation_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_openswisshcc_experiment.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/freeze_openswisshcc_fusion_v11.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/freeze_openswisshcc_highdimensional_batch.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_openswisshcc_highdimensional_pilot.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_openswisshcc_lesion_localizer_evaluation_v10.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_openswisshcc_localizer_roi_v10.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_openswisshcc_multisequence.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_openswisshcc_v15_fusion.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/freeze_openswisshcc_v23_shape_calibrator.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 1
+- path: tools/freeze_openswisshcc_volume_score_v14.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_openswisshcc_volumetric.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_public_independent_calibrator_v21.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/freeze_segmentation_visualization_baseline.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/fuse_liver_masks_registered_phases_v2.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/graphify_argos.ps1
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 1
+    tests: 3
+    tools: 1
+    docs: 10
+- path: tools/harmonize_lld_mmri_v23_dynamic_t1.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/import_argos_portable.sh
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    docs: 2
+- path: tools/infer_openswisshcc_case.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    runtime: 1
+    docs: 1
+- path: tools/infer_openswisshcc_volumetric_case.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/initialize_argos_docker.sh
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    tools: 2
+    docs: 1
+- path: tools/liver_segments_mr_worker.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 3
+    docs: 2
+- path: tools/lld_mmri_v23_segment_worker.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    runtime: 1
+    tools: 3
+- path: tools/make_synthetic_case.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 6
+    docs: 12
+- path: tools/measure_deployed_subtype_accuracy.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/measure_four_phase_union_gain.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 2
+    docs: 1
+- path: tools/measure_liver_segments_mr_vs_chaos_reference.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+    docs: 1
+- path: tools/measure_liver_segments_mr_vs_total_mr_venous_lld.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/measure_three_phase_union_gain.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/measure_total_mr_vs_chaos_reference.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+    docs: 1
+- path: tools/measure_vessel_continuity_shortlist.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/medgemma_server.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 4
+    tests: 4
+    tools: 8
+    docs: 20
+- path: tools/medgemma_server_base.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 2
+    docs: 1
+- path: tools/medgemma_server_v14.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    tools: 2
+    docs: 4
+- path: tools/merge_openswisshcc_lesion_localizer_chunks.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/merge_openswisshcc_multisequence_chunks.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/pilot_lld_mmri_v23_segmentation.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 3
+- path: tools/pilot_monophase_subtype_adjudication.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/pilot_precontrast_liver_segmentation.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/plan_openswisshcc_candidate_volume_timing_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/plan_openswisshcc_multisequence_chunks.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/preflight_openswisshcc_enhancement_top5_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/prepare_chaos_v21.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/prepare_gd_eob_hcc_external.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 4
+- path: tools/prepare_liverhccseg_v21.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/prepare_lld_mmri_v23_external.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/prepare_openswisshcc.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/prepare_openswisshcc_highdimensional_batch.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/prepare_openswisshcc_holdout_blind.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/prepare_v23_external_validation.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/prepare_v23_retrospective_multicohort.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 3
+- path: tools/prepare_v23_retrospective_multicohort_phase2.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/prepare_v23_retrospective_multicohort_phase3.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/prepare_v24_liver_enriched_openswisshcc.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/profile_openswisshcc_localizer_roi_v10_timing.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/project_openswisshcc_enhancement_top5_timing_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/quest_network.ps1
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 3
+    tests: 1
+    tools: 1
+    docs: 1
+- path: tools/rank_liver_integrity_candidates.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/rebind_medsiglip_embeddings.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/remediate_openswisshcc_candidates.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/render_best_worst_gallery.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+    docs: 3
+- path: tools/render_liver_mesh_gallery.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/render_liver_state_gallery.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/render_liver_union_gallery.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/render_openswisshcc_candidate.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+- path: tools/render_openswisshcc_fallback.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/render_openswisshcc_multisequence.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/render_segmentation_shadow_mesh_comparison_v2.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/render_spotlight_panel.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/report_openswisshcc_v11_v13_cross_tab.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/review_chaos_v21_panels.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/review_liverhccseg_v21_panels.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/review_lld_mmri_v23.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/review_lld_mmri_v23_full_fov.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/review_lld_mmri_v23_liver_enriched.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/review_openswisshcc_axial_atlas_v17.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/review_openswisshcc_candidate_volume_v16.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/review_openswisshcc_holdout_v21.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/review_openswisshcc_localizer_roi_v10.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/review_openswisshcc_multisequence.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/review_openswisshcc_multisequence_quality.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/review_openswisshcc_panels.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 4
+- path: tools/review_openswisshcc_volumetric.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_chaos_v21_signals.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_gd_eob_hbp_pilot.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_internal_blind_visual_case.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/run_liverhccseg_v21_signals.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/run_lld_mmri_v23_full_fov_timing.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_lld_mmri_v23_liver_enriched_timing.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_lld_mmri_v23_signals.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_mrsegmentator_chaos_gpu_v2.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/run_multi_signal_production.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_arterial_union_localizer_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_axial_atlas_chunk_v18.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_axial_atlas_rag_v19.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_axial_atlas_score_v17.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/run_openswisshcc_candidate_volume_score_v16.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/run_openswisshcc_candidate_volume_timing_v16.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_highdimensional_batch.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_highdimensional_pilot.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_holdout_v21.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+    docs: 9
+- path: tools/run_openswisshcc_holdout_v21_isolated_localizer.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+- path: tools/run_openswisshcc_holdout_v21_localizer_win.ps1
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_holdout_v21_medsiglip_win.ps1
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_inference.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/run_openswisshcc_lesion_localizer_chunk.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+- path: tools/run_openswisshcc_lesion_localizer_chunk_win.ps1
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_lesion_localizer_pilot.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+- path: tools/run_openswisshcc_lesion_localizer_pilot_win.ps1
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/run_openswisshcc_localizer_roi_v10_ab.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_multisequence_chunk.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_multisequence_pairwise.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_slice_pairwise.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_v20_fusion.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_volume_score_batch_v14.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_volume_score_pilot_v14.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_volumetric_inference.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_volumetric_medsiglip.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_openswisshcc_volumetric_pairwise.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 2
+- path: tools/run_raw_phase_equivalence_benchmark.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/run_segmentation_visualization_shadow_v2.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/run_totalsegmentator_liver_cohort_v2.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_v23_retrospective_multicohort_phase4.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_v24_liver_enriched_inference.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/run_visual_benchmark.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/scan_openswisshcc_multisequence_geometry.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/score_medsiglip_panel.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    docs: 4
+- path: tools/segment_aorta_for_gallery.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/select_openswisshcc_enhancement_proposals_v22.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/serve_quest_certificate.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 1
+    tests: 3
+- path: tools/setup_graphify_argos.ps1
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+    tools: 1
+    docs: 1
+- path: tools/setup_medgemma.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 4
+    tools: 1
+    docs: 6
+- path: tools/setup_real_env.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 3
+- path: tools/single_label_segment_worker.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 3
+- path: tools/smoke_gpu.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 3
+    docs: 2
+- path: tools/smoke_monophase_advisory.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/start_argos_docker_mac.sh
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 2
+    docs: 1
+- path: tools/start_medgemma.ps1
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 2
+    docs: 3
+- path: tools/start_medgemma_gateway_win.ps1
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/start_oren_quest_dynamic.ps1
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    launch: 1
+    tests: 3
+    docs: 1
+- path: tools/start_oren_webapp_only.ps1
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/stop_medgemma.ps1
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/stop_medgemma_gateway_win.ps1
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/test_morphological_closing_gate.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/test_mrsegmentator_isolated.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/test_vessel_closing_gate.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+    docs: 2
+- path: tools/time_openswisshcc_candidate_shape_v23.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/train_medsiglip_classifier.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/train_medsiglip_head.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/train_medsiglip_multiclass.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    runtime: 1
+    docs: 1
+- path: tools/train_medsiglip_pairwise_subtype.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/train_medsiglip_partial.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/train_patch25d_classifier.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/train_radiomics_classifier.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 2
+- path: tools/validate_phase_union_against_reference.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/verify_argos_docker_portable.sh
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
+    docs: 2
+- path: tools/verify_argos_docker_runtime.ps1
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 5
+- path: tools/verify_graphify_argos.py
+  status: TEST_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    tests: 1
+- path: tools/verify_internal_blind_benchmark_120.py
+  status: STATIC_ORPHAN
+  confidence: NONE
+  refs: {}
+- path: tools/verify_lld_mmri_v23_segmentation_audit.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/verify_medsiglip_device_agreement.py
+  status: RUNTIME_OR_LAUNCH_WIRED
+  confidence: STRONG
+  refs:
+    runtime: 1
+    launch: 3
+    docs: 1
+- path: tools/verify_medsiglip_phase13.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/verify_openswisshcc_v23_baseline.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 1
+- path: tools/verify_synthetic_external_stress_v1.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 5
+- path: tools/verify_synthetic_external_stress_v1_evaluation.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 3
+- path: tools/verify_volumetry.py
+  status: DOC_REFERENCED_ONLY
+  confidence: STRONG
+  refs:
+    docs: 4
+- path: tools/vessel_continuity_segment_worker.py
+  status: TOOLCHAIN_ONLY
+  confidence: STRONG
+  refs:
+    tools: 1
