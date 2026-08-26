@@ -62,8 +62,11 @@ def _model_done(case_dir: Path) -> bool:
         return False
 
 
-def _build_model(case_dir: Path) -> tuple[bool, str]:
-    """Gera a malha do figado em subprocesso, sem inventar uma lesao."""
+def _build_model(case_dir: Path, profile_rel: str | None = None) -> tuple[bool, str]:
+    """Gera a malha do figado em subprocesso, sem inventar uma lesao.
+
+    `profile_rel` (CT-01) escolhe o perfil por job; None preserva o default
+    MR — nenhum caller de RM mudou."""
     proc = server._run(
         [
             server.PY,
@@ -71,7 +74,7 @@ def _build_model(case_dir: Path) -> tuple[bool, str]:
             "finalize",
             str(case_dir),
             "--profile",
-            server.PROFILE,
+            profile_rel or server.PROFILE,
             "--no-lesion",
         ],
         timeout=server.MODEL_TIMEOUT,

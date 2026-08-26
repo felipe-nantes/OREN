@@ -1,0 +1,125 @@
+# =====================================================================
+# Perfil de órgão: FÍGADO — TOMOGRAFIA COMPUTADORIZADA (CT)
+# ---------------------------------------------------------------------
+# CT-01 (2026-08-25): porte do padrão validado no Volyrics
+# (OREN_CT_INGESTAO_ESPECIFICACAO.md, docs/249-250 daquele repo).
+# O motor (dtwin/) é agnóstico de modalidade: TODO o comportamento
+# específico de CT mora neste YAML. profiles/figado.yaml (RM) é intocado.
+# =====================================================================
+
+id: figado_ct
+nome_exibicao: "Fígado (TC)"
+
+# Estado regulatório: PESQUISA sempre (contexto/03_REGULATORIO_LGPD.md).
+# A promoção a CLINICO é gate formal, nunca consequência de números bons.
+estado_regulatorio: PESQUISA
+
+# Validação técnica LOCAL: os benchmarks de TC citados no aviso de volumetria
+# (razão 0,99, n=40) são medição do Volyrics, NÃO replicada neste repositório.
+# Enquanto false, o webapp só aceita TC com a flag de operador
+# WEBAPP_CT_ENABLED=1. `validado: true` exige o benchmark volumétrico local
+# (fase CT-01-F) e NÃO promove uso assistencial (flags independentes).
+validado: false
+
+# Modalidade aceita. O estágio 1 ABORTA se o exame não for desta modalidade.
+modalidade: [CT]
+
+# Normalização de referência/inspeção (não vai para o segmentador — o
+# TotalSegmentator normaliza internamente). Herdado de RM sem recalibração;
+# para inspeção 2D de TC um windowing HU dedicado é follow-up documentado.
+normalizacao: zscore
+
+# --- Segmentação do ÓRGÃO (automática) -------------------------------
+segmentacao_orgao:
+  motor: totalsegmentator_ct
+  motor_task: total           # task CT nativa do TotalSegmentator
+  rotulo_alvo: liver
+
+# --- Anatomia interna para o visualizador 3D (automática, CT) ---------
+# Estruturas opcionais: uma ausência não invalida a máscara hepática.
+# ATENÇÃO (lacuna documentada na spec de origem): em uso real do Volyrics a
+# task liver_segments de CT já devolveu Couinaud incompleto num caso; o
+# require_complete abaixo degrada FAIL-CLOSED (sem Couinaud, nunca Couinaud
+# errado). Validar em amostra maior na fase CT-01-F antes de confiar.
+segmentacao_anatomia:
+  habilitada: true
+  tarefas:
+    - motor_task: liver_segments
+      fast: false
+      require_complete: true     # publicar Couinaud apenas com I–VIII válidos
+      estruturas:
+        - {papel: couinaud_i,    rotulo: liver_segment_1, nome: "Segmento Couinaud I",    cor: "#E69F00", material: segment, opacidade: 0.82}
+        - {papel: couinaud_ii,   rotulo: liver_segment_2, nome: "Segmento Couinaud II",   cor: "#56B4E9", material: segment, opacidade: 0.82}
+        - {papel: couinaud_iii,  rotulo: liver_segment_3, nome: "Segmento Couinaud III",  cor: "#009E73", material: segment, opacidade: 0.82}
+        - {papel: couinaud_iv,   rotulo: liver_segment_4, nome: "Segmento Couinaud IV",   cor: "#F0E442", material: segment, opacidade: 0.82}
+        - {papel: couinaud_v,    rotulo: liver_segment_5, nome: "Segmento Couinaud V",    cor: "#0072B2", material: segment, opacidade: 0.82}
+        - {papel: couinaud_vi,   rotulo: liver_segment_6, nome: "Segmento Couinaud VI",   cor: "#D55E00", material: segment, opacidade: 0.82}
+        - {papel: couinaud_vii,  rotulo: liver_segment_7, nome: "Segmento Couinaud VII",  cor: "#CC79A7", material: segment, opacidade: 0.82}
+        - {papel: couinaud_viii, rotulo: liver_segment_8, nome: "Segmento Couinaud VIII", cor: "#8C564B", material: segment, opacidade: 0.82}
+    - motor_task: total
+      estruturas:
+        - {papel: vesicula_biliar, rotulo: gallbladder, nome: "Vesícula biliar", cor: "#62A65A", material: gallbladder, opacidade: 0.90}
+        - {papel: veia_porta_esplenica, rotulo: portal_vein_and_splenic_vein, nome: "Veia porta e esplênica", cor: "#16A6C9", material: vessel, opacidade: 0.92}
+        - {papel: veia_cava_inferior, rotulo: inferior_vena_cava, nome: "Veia cava inferior", cor: "#4D78C8", material: vessel, opacidade: 0.92}
+
+# --- Segmentação da LESÃO (manual no 3D Slicer no MVP) ----------------
+segmentacao_lesao:
+  modo: manual_slicer
+  ferramentas_sugeridas: [threshold, region_growing, paint]
+
+# Localização automática de candidato: DESABILITADA em CT por decisão
+# deliberada (spec de origem §6): o nome da task de lesão CT do
+# TotalSegmentator não foi confirmado, e adivinhar arriscaria abortar o
+# exame por task inexistente ou rodar a task errada em silêncio.
+localizacao_candidata:
+  habilitada: false
+
+# --- Refino das máscaras (herdado de RM; parâmetros topológicos) ------
+refino:
+  orgao:
+    opening: true
+    opening_radius: 2
+    min_volume_voxels: 300
+  lesao:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 30
+  candidato:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 1
+  anatomia:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 20
+
+# --- Geração de malha -------------------------------------------------
+# HERDADO DE RM SEM RECALIBRAÇÃO (mesma honestidade da spec de origem):
+# CT de abdome tem espaçamento entre cortes tipicamente mais fino e uniforme
+# que RM, então a reamostragem/suavização abaixo tende a ser CONSERVADORA
+# demais (mais suavização do que CT precisa), não errada. Recalibrar com
+# medição própria é follow-up da fase CT-01-F.
+mesh:
+  nivel_marching_cubes: 0.5
+  suavizacao_iteracoes: 30
+  feature_angle: 60.0
+  taubin_pass_band: 0.1
+  reamostragem_isotropica_mm: 0.8
+  suavizacao_campo_sigma_mm: 2.0
+  max_triangulos: 160000
+  cor_orgao: "#C8A27D"
+  cor_lesao: "#D7263D"
+  cor_candidato: "#FF8400"
+
+# --- Exportação -------------------------------------------------------
+viewer:
+  quality_metrics:
+    max_volume_error_percent: 2.0
+    max_surface_p95_voxels: 1.0
+
+exportacao:
+  sistema_coordenadas: LPS
+
+# --- Flywheel ----------------------------------------------------------
+flywheel:
+  dir: "flywheel"

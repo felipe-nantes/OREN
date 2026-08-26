@@ -61,6 +61,14 @@ STATIC = ROOT / "static"
 VIEWER = REPO / "viewer"
 WORKSPACE = Path("casos/webapp")
 PROFILE = "profiles/figado.yaml"
+# CT-01 (2026-08-25): perfil POR MODALIDADE (padrao portado do Volyrics).
+# PROFILE permanece o default MR — todo o fluxo de RM e byte-identico ao
+# anterior; CT so diverge quando o operador habilita e o cliente seleciona.
+MODALITY_PROFILES = {"MR": PROFILE, "CT": "profiles/figado_ct.yaml"}
+# TC atras de flag de operador ate a validacao volumetrica LOCAL (fase
+# CT-01-F): os numeros citados no aviso sao medicao do Volyrics, nao deste
+# repo (perfil figado_ct.yaml declara validado: false pela mesma razao).
+CT_ENABLED = os.environ.get("WEBAPP_CT_ENABLED", "0") == "1"
 MEDGEMMA_CONFIG = os.environ.get("WEBAPP_MEDGEMMA_CONFIG", "configs/medgemma_local_4b.yaml")
 VOLUMETRIC_MEDGEMMA_CONFIG = os.environ.get(
     "WEBAPP_VOLUMETRIC_MEDGEMMA_CONFIG", "configs/medgemma_local_4b_volumetric.yaml"
@@ -457,17 +465,67 @@ def _run(cmd: list[str], timeout: int, cwd: str | None = None) -> subprocess.Com
     return subprocess.run(cmd, cwd=cwd or str(REPO), capture_output=True, text=True, timeout=timeout)
 
 
+def _profile_path_for(modality: str) -> str:
+    """Caminho (relativo ao repo) do perfil da modalidade selecionada.
+
+    CT-01: seleção EXPLÍCITA pelo cliente; modalidade fora do mapa é recusada
+    aqui — nunca rebaixada em silêncio para o perfil default."""
+    perfil = MODALITY_PROFILES.get(str(modality or "").upper())
+    if not perfil:
+        raise PipelineError(f"Modalidade não suportada: {modality!r}.")
+    return perfil
+
+
+def _aviso_volumetria_ct() -> dict:
+    """Nota consultiva de calibração para volumetria de TC (CT-01, D5).
+
+    É medição registrada, não configuração: benchmark do VOLYRICS (docs/249 +
+    docs/250 daquele repo; CHAOS-CT n=20 razão 0,991; 3D-IRCADb-01 n=20 razão
+    0,997; combinado mediana 0,99; Spearman rho 0,035 p=0,88 — erro NÃO
+    escala com carga tumoral, ao contrário da RM). NÃO replicada neste
+    repositório — por isso o perfil CT segue `validado: false` e a nota nunca
+    vira correção automática: o volume publicado é sempre o da máscara
+    aprovada na revisão humana."""
+    return {
+        "tipo": "calibracao_volumetria_ct",
+        "mensagem": (
+            "Contexto de calibração (TC): em benchmark externo contra referência "
+            "humana (n=40; CHAOS-CT e 3D-IRCADb-01), a razão mediana "
+            "volume-predito/referência foi 0,99, sem subestimação sistemática "
+            "detectável e sem escalonamento do erro com carga tumoral. "
+            "MEDIÇÃO DE ORIGEM EXTERNA (Volyrics, docs/249-250 daquele projeto), "
+            "não replicada neste repositório. Viés de mediana populacional não "
+            "prevê o erro deste caso individual."
+        ),
+        "razao_mediana_externa": 0.99,
+        "origem": "volyrics_docs_249_250_n40",
+        "replicada_neste_repositorio": False,
+        "correcao_aplicada": False,
+        "requires_human_review": True,
+        "research_only": True,
+        "clinical_use_allowed": False,
+    }
+
+
 def _segment(
-    series_dir: str, case_dir: Path, device: str, timeout: int, *, fast: bool
+    series_dir: str,
+    case_dir: Path,
+    device: str,
+    timeout: int,
+    *,
+    fast: bool,
+    profile_rel: str | None = None,
 ) -> subprocess.CompletedProcess:
     """Roda a segmentação pelo launcher, a partir do %TEMP% (fora do OneDrive).
 
     `fast=False` (exame individual) usa full-res (~1.5mm) para uma máscara mais
-    fiel; `fast=True` (benchmark) mantém 3mm por throughput."""
+    fiel; `fast=True` (benchmark) mantém 3mm por throughput. `profile_rel`
+    (CT-01) escolhe o perfil por job; None preserva o default MR — nenhum
+    caller de RM mudou."""
     return run_segmentation_subprocess(
         dicom_dir=Path(series_dir),
         case_dir=case_dir,
-        profile_path=REPO / PROFILE,
+        profile_path=REPO / (profile_rel or PROFILE),
         device=device,
         fast=fast,
         timeout_seconds=timeout,
@@ -914,6 +972,9 @@ from webapp.jobs import (
     _run_delayed_medsiglip_advisory as _run_delayed_medsiglip_advisory,
 )
 from webapp.jobs import (
+    process_ct_job as process_ct_job,
+)
+from webapp.jobs import (
     process_job as process_job,
 )
 from webapp.jobs import (
@@ -992,7 +1053,9 @@ def health() -> dict:
         backend = "pronto" if data.get("status") == "ready" else "carregando"
     except Exception:
         backend = "desligado"
-    return {"backend": backend}
+    # CT-01: a UI só mostra o seletor de modalidade quando o operador
+    # habilitou TC (flag WEBAPP_CT_ENABLED; perfil CT ainda validado:false).
+    return {"backend": backend, "ct_enabled": CT_ENABLED}
 
 
 def _probe_backend(health_url: str) -> str:
@@ -1055,11 +1118,36 @@ async def analyze(request: Request) -> dict:
     files = [v for v in form.getlist("files") if not isinstance(v, str)]
     if not files:
         raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
+    # CT-01: modalidade e SELECAO EXPLICITA do cliente (decisao do operador,
+    # 2026-08-25); a tag DICOM vira validacao no worker. Default "MR" preserva
+    # compatibilidade total com clientes existentes.
+    modality = str(form.get("modality") or "MR").upper()
+    if modality not in MODALITY_PROFILES:
+        raise HTTPException(
+            status_code=400, detail=f"Modalidade não suportada: {modality!r}."
+        )
+    if modality == "CT" and not CT_ENABLED:
+        # Perfil CT declara validado:false (benchmark local pendente, fase
+        # CT-01-F); sem a flag de operador o caminho nem existe.
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Análise de TC indisponível neste ambiente (validação local "
+                "pendente; habilite com WEBAPP_CT_ENABLED=1)."
+            ),
+        )
     # O exame individual roda EXCLUSIVAMENTE o classificador visual da Etapa C,
     # que é o de melhor acertividade medida. O cliente não escolhe: um pedido que
     # mande outro cenário é recusado em vez de silenciosamente rebaixado, para
     # que ninguém receba um resultado pior achando que pediu outra coisa.
     pedido = form.get("scenario")
+    if modality == "CT" and pedido is not None:
+        # O cenário de TC é implicado pela modalidade (ct_volumetric, sem
+        # triagem); um pedido explícito seria ignorado — recusar é honesto.
+        raise HTTPException(
+            status_code=400,
+            detail="Exame de TC não aceita seleção de cenário (é sempre ct_volumetric).",
+        )
     if pedido is not None and str(pedido) != INDIVIDUAL_SCREENING_MODE:
         raise HTTPException(
             status_code=400,
@@ -1068,11 +1156,18 @@ async def analyze(request: Request) -> dict:
                 f"A análise individual usa apenas {INDIVIDUAL_SCREENING_MODE!r}."
             ),
         )
-    scenario = INDIVIDUAL_SCREENING_MODE
+    scenario = "ct_volumetric" if modality == "CT" else INDIVIDUAL_SCREENING_MODE
     enhanced_raw = form.get("enhanced_3d")
     if enhanced_raw is not None and str(enhanced_raw) not in {"0", "1"}:
         raise HTTPException(status_code=400, detail="Opção de 3-D aprimorado inválida.")
     enhanced_3d = str(enhanced_raw or "0") == "1"
+    if enhanced_3d and modality == "CT":
+        # O 3-D aprimorado usa o MRSegmentator — RM por definição; recusar
+        # explícito em vez de rebaixar em silêncio.
+        raise HTTPException(
+            status_code=400,
+            detail="Segmentação 3-D aprimorada é exclusiva de RM.",
+        )
     if enhanced_3d and not (
         ENHANCED_3D_OPT_IN_ENABLED and MRSEGMENTATOR_EXE.is_file()
     ):
@@ -1110,15 +1205,20 @@ async def analyze(request: Request) -> dict:
         _jobs[job_id] = {
             "state": "queued", "step": "recebendo", "progress": 5, "result": None,
             "analysis_scenario": scenario,
+            "modality": modality,
             "monophase_medgemma_config": monophase_config,
             "enhanced_3d": enhanced_3d,
         }
+    # CT-01 (D3/D4): TC despacha para o worker dedicado (série única, sem
+    # triagem, perfil figado_ct); RM segue o caminho atual byte-idêntico.
+    worker = process_ct_job if modality == "CT" else process_visual_job
     threading.Thread(
-        target=process_visual_job, args=(job_id, raw_dir), daemon=True
+        target=worker, args=(job_id, raw_dir), daemon=True
     ).start()
     return {
         "job_id": job_id,
         "analysis_scenario": scenario,
+        "modality": modality,
         "enhanced_3d": enhanced_3d,
     }
 

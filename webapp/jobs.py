@@ -9,6 +9,7 @@ Import circular seguro: só o objeto módulo é capturado.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -832,3 +833,208 @@ def process_job(
         shutil.rmtree(raw_dir, ignore_errors=True)
         shutil.rmtree(server.WORKSPACE / job_id / "_series", ignore_errors=True)
 
+def _select_ct_series(raw_dir: Path) -> tuple[list[str], int]:
+    """Seleciona a série de TC com mais cortes no envio (CT-01, D3).
+
+    Caminho deliberadamente SIMPLES, espelhando a decisão validada no
+    Volyrics: TC entra por série única (o caso comum de TC de abdome), sem a
+    heurística de sequências que é específica de RM. Agrupa por
+    SeriesInstanceUID, aceita apenas Modality == CT e devolve a maior série.
+    Labels e ground truth nunca participam.
+    """
+    import pydicom
+
+    series: dict[str, list[str]] = {}
+    for path in sorted(Path(raw_dir).rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            ds = pydicom.dcmread(str(path), stop_before_pixels=True, force=True)
+        except Exception:
+            continue
+        modality = str(getattr(ds, "Modality", "") or "").upper()
+        if modality != "CT":
+            continue
+        uid = str(getattr(ds, "SeriesInstanceUID", "") or "sem_uid")
+        series.setdefault(uid, []).append(str(path))
+    if not series:
+        return [], 0
+    melhores = max(series.values(), key=len)
+    return melhores, len(melhores)
+
+
+def process_ct_job(job_id: str, raw_dir: Path) -> None:
+    """Exame de TC: segmentação → malha 3D → volumetria → revisão humana.
+
+    CT-01 (D4): SEM triagem visual — os classificadores MedSigLIP/MedGemma
+    foram treinados e congelados sobre RM; rodá-los em TC seria claim sem
+    lastro. O payload declara a ausência explicitamente. Perfil, avisos e
+    fluxo seguem o plano CT-01 (perfil figado_ct.yaml por job; multifásico
+    nunca é tentado — a validação de origem cobre apenas série única).
+    """
+    case_dir = (server.WORKSPACE / job_id / "case").resolve()
+    worker_started = time.monotonic()
+    started_at_utc = datetime.now(timezone.utc).isoformat()
+    durations_seconds: dict[str, float] = {}
+    outcome = "failed"
+    failure_stage: str | None = "series_selection_and_copy"
+    segmentation_device: str | None = None
+    viewer_ready = False
+    viewer_error = ""
+    perfil_ct = server.MODALITY_PROFILES["CT"]
+    try:
+        server._set(job_id, state="processing", step="ingestao", progress=15)
+        series_started = time.monotonic()
+        best_files, n = _select_ct_series(raw_dir)
+        if not best_files or n < server.MIN_SLICES:
+            durations_seconds["series_selection_and_copy"] = round(
+                time.monotonic() - series_started, 4
+            )
+            outcome = "not_completed"
+            server._set(job_id, state="done", result=server._graceful(
+                "Não encontramos uma série DICOM de TC válida no envio.",
+                "Você selecionou TC, mas o envio não contém uma série de TC com "
+                "múltiplos cortes — confira a modalidade do exame e a seleção."))
+            return
+
+        series_dir_path = server.WORKSPACE / job_id / "_series"
+        series_dir_path.mkdir(parents=True, exist_ok=True)
+        for i, source in enumerate(best_files):
+            shutil.copyfile(source, series_dir_path / f"{i:05d}_{os.path.basename(source)}")
+        series_dir = str(series_dir_path.resolve())
+        durations_seconds["series_selection_and_copy"] = round(
+            time.monotonic() - series_started, 4
+        )
+
+        failure_stage = "preparation_and_segmentation"
+        segmentation_started = time.monotonic()
+        try:
+            server._set(job_id, step="segmentacao", progress=45)
+            segmentation_device = "gpu"
+            prep = server._segment(
+                series_dir, case_dir, "gpu", server.PREP_TIMEOUT_GPU,
+                fast=False, profile_rel=perfil_ct,
+            )
+            if not server._seg_done(case_dir):
+                reason = server._cli_reason(prep)
+                log.warning("Job CT %s: GPU falhou (%s); tentando CPU...", job_id, reason[:100])
+                shutil.rmtree(case_dir, ignore_errors=True)
+                server._set(job_id, step="segmentacao", progress=55)
+                segmentation_device = "cpu_fallback"
+                prep = server._segment(
+                    series_dir, case_dir, "cpu", server.PREP_TIMEOUT_CPU,
+                    fast=False, profile_rel=perfil_ct,
+                )
+                if not server._seg_done(case_dir):
+                    reason = server._cli_reason(prep)
+                    outcome = "not_completed"
+                    server._set(job_id, state="done", result=server._graceful(
+                        server._friendly_text(reason), reason))
+                    return
+        finally:
+            durations_seconds["preparation_and_segmentation"] = round(
+                time.monotonic() - segmentation_started, 4
+            )
+
+        server._persist_series_selection(case_dir, best_files)
+
+        # D4: triagem visual DELIBERADAMENTE ausente — segue direto para o 3D.
+        failure_stage = "model_3d"
+        server._set(job_id, step="modelo_3d", progress=80)
+        model_started = time.monotonic()
+        try:
+            viewer_ready, viewer_error = server._build_model(
+                case_dir, profile_rel=perfil_ct
+            )
+        finally:
+            durations_seconds["model_3d"] = round(time.monotonic() - model_started, 4)
+
+        if not viewer_ready:
+            outcome = "not_completed"
+            server._set(job_id, state="done", result=server._graceful(
+                server._friendly_text(viewer_error), viewer_error))
+            return
+
+        outcome = "completed"
+        failure_stage = None
+        # Volume para o card de resultado: leitura defensiva do manifesto que o
+        # finalize acabou de escrever (a volumetria completa fica no viewer).
+        liver_volume_ml = None
+        try:
+            manifest = json.loads(
+                (case_dir / "outputs" / "viewer_manifest.json").read_text(encoding="utf-8")
+            )
+            liver_volume_ml = (
+                (manifest.get("volumetry") or {}).get("whole_liver_summary") or {}
+            ).get("volume_ml")
+        except Exception:
+            liver_volume_ml = None
+        result = {
+            "status": "concluido",
+            "analysis_scenario": "ct_volumetric",
+            "modality": "CT",
+            "profile": "figado_ct",
+            # Ausência honesta, nunca omissão silenciosa (CT-01, D4):
+            "screening_available": False,
+            "screening_unavailable_reason": (
+                "A triagem visual (MedSigLIP/MedGemma) foi treinada e validada "
+                "apenas para RM; este exame de TC segue para volumetria e "
+                "revisão 3D sem classificação automática."
+            ),
+            "prediction": None,
+            "viewer_ready": True,
+            "viewer_url": f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}",
+            "liver_volume_ml": liver_volume_ml,
+            "volumetry_note": server._aviso_volumetria_ct(),
+            "requires_human_review": True,
+            "research_only": True,
+            "clinical_use_allowed": False,
+            "disclaimer": server.DISCLAIMER,
+        }
+        server._set(
+            job_id,
+            state="done",
+            step="concluido",
+            progress=100,
+            approval={"status": "pending"},
+            result=result,
+        )
+    except subprocess.TimeoutExpired:
+        outcome = "timeout"
+        server._set(job_id, state="done", result=server._graceful(
+            "O processamento excedeu o tempo limite.", "timeout"))
+    except Exception as exc:
+        outcome = "failed"
+        log.exception("Job CT %s: falha inesperada", job_id)
+        server._set(job_id, state="done", result=server._graceful(
+            "Ocorreu um erro inesperado no processamento.", type(exc).__name__))
+    finally:
+        durations_seconds["total_with_3d"] = round(time.monotonic() - worker_started, 4)
+        try:
+            timing = build_operational_timing(
+                job_id=job_id,
+                analysis_scenario="ct_volumetric",
+                medgemma_config="(ct_volumetric_sem_triagem)",
+                medgemma_config_sha256="not_applicable",
+                started_at_utc=started_at_utc,
+                finished_at_utc=datetime.now(timezone.utc).isoformat(),
+                durations_seconds=durations_seconds,
+                outcome=outcome,
+                report_available=False,
+                viewer_ready=viewer_ready,
+                failure_stage=failure_stage,
+                segmentation_device=segmentation_device,
+                report_budget_seconds=DEFAULT_REPORT_BUDGET_SECONDS,
+            )
+            timing_path = persist_operational_timing(case_dir, timing)
+            server._set(
+                job_id,
+                operational_timing=timing,
+                operational_timing_artifact=str(
+                    timing_path.relative_to((server.WORKSPACE / job_id).resolve())
+                ),
+            )
+        except Exception:
+            log.exception("Job CT %s: não foi possível persistir a auditoria de tempo", job_id)
+        shutil.rmtree(raw_dir, ignore_errors=True)
+        shutil.rmtree(server.WORKSPACE / job_id / "_series", ignore_errors=True)

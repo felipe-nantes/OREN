@@ -44,7 +44,7 @@ tooling:
 commits_main:
   pushed: [7efa2dc, 0ba6f01, bd278b5, 8c31c76, "5087041", 42a8514, e4dd3cc, b66002a, dfb36b5, 515b7b3, 637d9e1, 3f06f48, 3d146d5, c986e17, "072c3e6", 73ccb3e, daa878c, 29be45b, 77727b3, 0d0ccc2, b3cd61d, b634f71, 5fa342e, b5e739e, e0d311b, a8ceeb8]
   push_status: "origin/main = 6a48a1f (verificado 2026-08-25); ciclo POST_AUDIT completo ate ROB-BATCH"
-  nao_commitado: "REF-06B (TOOLS_STATUS_INDEX 298 tools + guarda; W-046 RESOLVED inteiro; suite 1809/4/0) — commit quando solicitado"
+  nao_commitado: "H-05 fase A (mediacao *_unspecified: OpenSwiss ~100%/LLD 0,2%; fase B gated) + CT-01 fases A-E (perfil figado_ct, rota modality, worker ct_volumetric SEM triagem, UI, 14 testes; suite 1823/4/0) — commit quando solicitado"
 
 migracao_docker_nativo:
   task: TASK-2026-08-18-MIGR-01

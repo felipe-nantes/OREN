@@ -54,6 +54,9 @@ PATCH_POINTS = (
     "_build_model", "_case_dir_for_job", "_persist_series_selection",
     "_visual_bundle_root", "load_screening_config", "select_best_mr_series",
     "VISUAL_AUTHORIZED_PHASE_AUDIT", "VISUAL_BENCHMARK_SCENARIOS",
+    # CT-01 (2026-08-25): superficie nova do fluxo de TC
+    "process_ct_job", "CT_ENABLED", "MODALITY_PROFILES",
+    "_profile_path_for", "_aviso_volumetria_ct",
 )
 
 
