@@ -55,6 +55,19 @@ from dtwin.segmentation_subprocess import run_segmentation_subprocess
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 log = logging.getLogger("dtwin.webapp")
 
+# Entry legado `python -m webapp.server`: sob runpy este arquivo executa como
+# o módulo __main__, e os submódulos da façade (REF-03) fazem
+# `from webapp import server` — o que criaria uma SEGUNDA instância deste
+# módulo e re-entraria o ciclo de import com os submódulos parcialmente
+# inicializados. O auto-alias abaixo garante UMA instância única (mesma
+# semântica do caminho de produção `uvicorn webapp.server:app`).
+if __name__ == "__main__" and "webapp.server" not in sys.modules:
+    _modulo_main = sys.modules.get(__name__)
+    # Alias apenas quando o __main__ é ESTE arquivo (o caso `python -m`);
+    # runpy.run_module de terceiros mantém __main__ alheio e fica de fora.
+    if getattr(_modulo_main, "__file__", None) == __file__:
+        sys.modules["webapp.server"] = _modulo_main
+
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 STATIC = ROOT / "static"

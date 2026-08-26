@@ -88,3 +88,32 @@ def test_patch_points_da_facade_existem():
         "símbolos monkeypatched/importados sumiram do namespace server "
         f"(a façade do REF-03 exige mantê-los): {ausentes}"
     )
+
+
+def test_entry_legado_python_m_webapp_server_atravessa_a_facade(tmp_path):
+    """Sob `python -m webapp.server` este arquivo executa como __main__ e os
+    submódulos da façade (REF-03) importam webapp.server — sem o auto-alias
+    em sys.modules nasceria uma SEGUNDA instância e o ciclo re-entraria
+    (regressão observada em 2026-08-25 ao subir o preview do CT-01).
+    O stub de uvicorn prova que main() é alcançado sem abrir porta."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    raiz = Path(__file__).resolve().parents[1]
+    stub = tmp_path / "uvicorn.py"
+    stub.write_text(
+        'def run(*a, **k):\n    print("UVICORN_STUB_OK")\n', encoding="utf-8"
+    )
+    ambiente = dict(os.environ, PYTHONPATH=str(tmp_path))
+    proc = subprocess.run(
+        [sys.executable, "-m", "webapp.server"],
+        cwd=raiz,
+        env=ambiente,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert proc.returncode == 0, proc.stderr[-800:]
+    assert "UVICORN_STUB_OK" in proc.stdout
