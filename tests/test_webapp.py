@@ -993,19 +993,50 @@ def test_delayed_medsiglip_runs_only_as_persisted_advisory(monkeypatch, tmp_path
     assert '"affects_primary_decision": false' in persisted.read_text(encoding="utf-8")
 
 
-def test_medsiglip_advisory_rejects_non_delayed_sequence_without_inference(
+def test_medsiglip_advisory_roda_fora_do_dominio_com_declaracao(
     monkeypatch, tmp_path
 ):
-    from dtwin.learning import exam_to_panels
+    """Restauração 2026-08-28 (ordem do operador): o segundo leitor roda em
+    qualquer sequência monofásica, mas fora de T1 tardia o payload DECLARA
+    o domínio não validado e a limitação correspondente — nunca % mudas."""
+    from dtwin.learning import exam_to_panels, monophase_visual_inference
 
+    case_dir = tmp_path / "case"
+    case_dir.mkdir()
+    (case_dir / "volume.nii.gz").write_bytes(b"volume")
+    (case_dir / "mask_organ.nii.gz").write_bytes(b"mask")
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "bundle_manifest.json").write_text("{}", encoding="utf-8")
+    panel = tmp_path / "panel.png"
+    panel.write_bytes(b"panel")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr(server, "REPO", tmp_path)
+    monkeypatch.setattr(server, "MONOPHASE_DELAYED_VISUAL_BUNDLE", "bundle")
     monkeypatch.setattr(server, "MONOPHASE_DELAYED_ADVISORY_ENABLED", True)
     monkeypatch.setattr(
         exam_to_panels,
         "build_monophase_exam_panels",
-        lambda **_kwargs: pytest.fail("painéis não devem ser gerados para fase inelegível"),
+        lambda **_kwargs: SimpleNamespace(
+            panel_paths=[panel], panel_count=1, manifest_path=manifest
+        ),
+    )
+    monkeypatch.setattr(
+        monophase_visual_inference,
+        "infer_monophase_case_from_panels",
+        lambda **_kwargs: {
+            "prediction": "NEGATIVE",
+            "score": 0.30,
+            "threshold": 0.59,
+            "panel_count": 1,
+            "panel_manifest_sha256": "b" * 64,
+            "class_probabilities": {"negative_unspecified": 0.70, "positive_unspecified": 0.30},
+        },
     )
     result = server._run_delayed_medsiglip_advisory(
-        case_dir=tmp_path,
+        case_dir=case_dir,
         case_id="case123",
         input_assessment={
             "mode": "single_phase",
@@ -1017,7 +1048,10 @@ def test_medsiglip_advisory_rejects_non_delayed_sequence_without_inference(
         primary_prediction="NEGATIVA",
     )
 
-    assert result["status"] == "not_eligible"
+    assert result["status"] == "completed"
+    assert result["sequence_out_of_validated_domain"] is True
+    assert result["class_probabilities"]["negative_unspecified"] == 0.70
+    assert any("FORA da fase validada" in lim for lim in result["known_limitations"])
     assert result["affects_primary_decision"] is False
 
 

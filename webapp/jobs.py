@@ -538,17 +538,16 @@ def _run_delayed_medsiglip_advisory(
         result = {**base, "status": "disabled", "reason": "advisory_disabled_by_configuration"}
         _write_json_atomic(output_path, result)
         return result
-    if (
+    # Restauração do laudo com % por tipo (2026-08-28, ordem do operador):
+    # o segundo leitor roda em QUALQUER sequência monofásica. Fora da fase
+    # validada (T1 tardia) as probabilidades são sinal de pesquisa FORA DE
+    # DOMÍNIO — o payload declara isso e a UI exibe o aviso; o papel segue
+    # estritamente advisory (nunca altera o laudo MedGemma).
+    fora_do_dominio = (
         contract.get("source_phase_key") != "t1_delayed"
         or contract.get("sequence_specific_medsiglip_bundle_allowed") is not True
-    ):
-        result = {
-            **base,
-            "status": "not_eligible",
-            "reason": "validated_head_requires_explicit_t1_delayed_series",
-        }
-        _write_json_atomic(output_path, result)
-        return result
+    )
+    base["sequence_out_of_validated_domain"] = fora_do_dominio
 
     bundle_root = (server.REPO / server.MONOPHASE_DELAYED_VISUAL_BUNDLE).resolve()
     if not (bundle_root / "bundle_manifest.json").is_file():
@@ -593,11 +592,18 @@ def _run_delayed_medsiglip_advisory(
             if comparable and advisory_prediction == primary
             else "Os leitores discordaram ou o leitor principal foi inconclusivo; priorize a revisão humana."
         ),
-        "known_limitations": [
-            "O classificador foi desenvolvido no LLD-MMRI.",
-            "A validação externa OpenSwissHCC não atingiu o gate de sensibilidade.",
-            "O resultado não substitui nem altera o relatório MedGemma.",
-        ],
+        "known_limitations": (
+            ([
+                f"A série analisada ({contract.get('source_phase_key') or 'desconhecida'}) "
+                "está FORA da fase validada (T1 tardia): as probabilidades são "
+                "sinal de pesquisa fora de domínio."
+            ] if fora_do_dominio else [])
+            + [
+                "O classificador foi desenvolvido no LLD-MMRI.",
+                "A validação externa OpenSwissHCC não atingiu o gate de sensibilidade.",
+                "O resultado não substitui nem altera o relatório MedGemma.",
+            ]
+        ),
         "latency_seconds": round(time.monotonic() - started, 4),
     }
     _write_json_atomic(output_path, result)

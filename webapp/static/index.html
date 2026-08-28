@@ -505,6 +505,22 @@ function renderResult(result){
       c.appendChild(field('Score do segundo leitor',
         escapeHtml(Number(second.score).toFixed(4))
         +' <span style="color:var(--mut)">(limiar '+escapeHtml(Number(second.threshold).toFixed(4))+')</span>'));
+      // Restauração (2026-08-28, ordem do operador): % de certeza por tipo
+      // visíveis em todo exame monofásico, com o domínio declarado.
+      const sprobs=second.class_probabilities||{};
+      const sordem=Object.keys(sprobs).sort((a,b)=>sprobs[b]-sprobs[a]);
+      if(sordem.length){
+        c.appendChild(field('Distribuição por classe (2º leitor)',
+          '<ul>'+sordem.map(k=>'<li>'+escapeHtml(k)+': '+pct(sprobs[k])+'</li>').join('')+'</ul>'));
+      }
+      if(second.sequence_out_of_validated_domain){
+        const dom=el('div','note');
+        dom.style.borderLeft='3px solid #c0392b'; dom.style.paddingLeft='10px';
+        dom.innerHTML='<b>Fora do domínio validado.</b> A série analisada não é T1 tardia — '
+          +'estas probabilidades são sinal de pesquisa fora da fase em que o classificador foi validado. '
+          +'Interprete apenas com revisão humana.';
+        c.appendChild(dom);
+      }
     }else if(second && second.status==='not_eligible'){
       c.appendChild(el('div','note','O segundo leitor MedSigLIP não foi aplicado: o classificador disponível exige uma série T1 tardia explicitamente identificada. O relatório principal do MedGemma permanece válido dentro das limitações monofásicas.'));
     }else if(second && (second.status==='unavailable'||second.status==='disabled')){
