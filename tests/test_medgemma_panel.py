@@ -126,3 +126,33 @@ def test_fast_panel_crops_to_liver_without_artificial_contour(synthetic_case, tm
     with Image.open(result.panel_path) as image:
         pixels = np.asarray(image)
     assert not np.any(np.all(pixels == np.array([255, 196, 0]), axis=2))
+
+
+def test_manifesto_ct_rejeitado_com_config_mr_e_aceito_com_config_ct(
+    synthetic_case, tmp_path
+):
+    """Modalidade do manifesto é validada contra a config de screening.
+
+    Config MR (default) segue MR-only: manifesto CT rejeita. Config que
+    declara modality CT (benchmark CT-01-F) aceita CT, REJEITA MR (a
+    restrição nunca amplia) e grava modality=CT no manifesto do painel.
+    """
+    manifest = synthetic_case.read_manifest()
+    manifest["modality"] = "CT"
+    manifest.pop("volume_sha256", None)
+    synthetic_case.write_manifest(manifest)
+    with pytest.raises(PipelineError, match="modalidade compatível"):
+        _generate(synthetic_case, tmp_path)
+
+    config_ct = load_screening_config("configs/medgemma_4b.yaml")
+    config_ct["modality"] = "CT"
+    result = _generate(synthetic_case, tmp_path, screening_config=config_ct)
+    panel_manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert panel_manifest["modality"] == "CT"
+
+    manifest["modality"] = "MR"
+    synthetic_case.write_manifest(manifest)
+    with pytest.raises(PipelineError, match="modalidade compatível"):
+        _generate(
+            synthetic_case, tmp_path / "mr_sob_ct", screening_config=config_ct
+        )

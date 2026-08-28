@@ -12,10 +12,10 @@ regra_de_derivacao: 'Mecanica e reproduzivel: frozen_scientific = sha256 do arqu
 aviso: Status e METADADO CONSULTIVO de navegacao; nao confere autoridade cientifica nem substitui os contratos
   congelados.
 resumo:
-  total: 119
+  total: 120
   frozen_scientific: 6
   production: 15
-  experimental: 96
+  experimental: 97
   legacy: 2
   familias_presentes:
   - v1
@@ -214,6 +214,10 @@ configs:
   referenced_by:
     outros:
     - graphify-out/manifest.json
+- path: configs/medgemma_local_4b_ct_benchmark.yaml
+  status: experimental
+  referenced_by:
+    outros: 1
 - path: configs/medgemma_local_4b_fast_pathology.yaml
   status: production
   referenced_by:

@@ -49,7 +49,23 @@ def _require_file(path: Path, label: str) -> None:
         raise PipelineError(f"{label} não encontrado: {path}")
 
 
-def _validate_case_manifest(path: Path) -> dict[str, Any]:
+def _allowed_modalities(screening_config: dict[str, Any]) -> frozenset[str]:
+    """Modalidades aceitas no manifesto do caso, derivadas da config de screening.
+
+    A config declara `medgemma_screening.modality` (MRI nos backends de
+    produção). Default e caminho RM permanecem idênticos ({MR, MRI}); uma
+    config experimental de outra modalidade (ex.: CT do benchmark CT-01-F)
+    restringe o aceite exatamente à modalidade declarada — nunca amplia RM.
+    """
+    declared = str(screening_config.get("modality", "MRI")).upper()
+    if declared in {"MR", "MRI"}:
+        return frozenset({"MR", "MRI"})
+    return frozenset({declared})
+
+
+def _validate_case_manifest(
+    path: Path, allowed_modalities: frozenset[str] = frozenset({"MR", "MRI"})
+) -> dict[str, Any]:
     _require_file(path, "Manifesto do caso")
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -64,8 +80,11 @@ def _validate_case_manifest(path: Path) -> dict[str, Any]:
         raise PipelineError("A análise MedGemma exige policy=anonymize.")
     if manifest.get("regulatory_state") != "PESQUISA":
         raise PipelineError("A análise MedGemma só está habilitada em modo PESQUISA.")
-    if str(manifest.get("modality", "")).upper() not in {"MR", "MRI"}:
-        raise PipelineError("A análise MedGemma deste fluxo exige modalidade RM (MR/MRI).")
+    if str(manifest.get("modality", "")).upper() not in allowed_modalities:
+        raise PipelineError(
+            "A análise MedGemma exige modalidade compatível com a config "
+            f"({sorted(allowed_modalities)})."
+        )
     return manifest
 
 
@@ -180,7 +199,10 @@ def generate_liver_panel(
     output_dir.mkdir(parents=True, exist_ok=True)
     _require_file(volume_path, "Volume de RM")
     _require_file(liver_mask_path, "Máscara do fígado")
-    case_manifest = _validate_case_manifest(case_manifest_path)
+    config_modality = str(screening_config.get("modality", "MRI")).upper()
+    case_manifest = _validate_case_manifest(
+        case_manifest_path, _allowed_modalities(screening_config)
+    )
     volume_sha256 = sha256_of(volume_path)
     recorded_volume_sha256 = case_manifest.get("volume_sha256")
     if recorded_volume_sha256 and recorded_volume_sha256 != volume_sha256:
@@ -279,7 +301,7 @@ def generate_liver_panel(
         manifest = {
             "schema_version": "dtwin-medgemma-panel-set-v2",
             "case_id": case_manifest["case_id"], "organ": expected_organ,
-            "modality": "MRI", "regulatory_mode": "RESEARCH",
+            "modality": config_modality, "regulatory_mode": "RESEARCH",
             "input_type": (
                 "mri_liver_crop_without_overlay"
                 if crop_to_liver and not show_contour else "mri_with_liver_contour"
@@ -383,7 +405,7 @@ def generate_liver_panel(
     manifest = {
         "case_id": case_manifest["case_id"],
         "organ": expected_organ,
-        "modality": "MRI",
+        "modality": config_modality,
         "regulatory_mode": "RESEARCH",
         "input_type": (
             "mri_liver_crop_without_overlay"

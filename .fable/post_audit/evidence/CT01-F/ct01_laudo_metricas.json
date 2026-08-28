@@ -1,0 +1,136 @@
+{
+  "schema": "argos-ct01f-laudo-metricas-v1",
+  "research_only": true,
+  "clinical_use_allowed": false,
+  "primario_tipo": {
+    "tcia_hcc": {
+      "n": 40,
+      "n_ok": 40,
+      "n_failed": 0,
+      "acertos_tipo": 5,
+      "pct_acerto_tipo": 12.5,
+      "distribuicao_tipo_hipotese": {
+        "None": 11,
+        "hcc": 5,
+        "invalido:negativo": 3,
+        "indeterminado": 19,
+        "cisto": 1,
+        "invalido:negativa": 1
+      },
+      "distribuicao_tipo_parse": {
+        "None": 11,
+        "prefixo": 29
+      },
+      "distribuicao_deteccao": {
+        "INCONCLUSIVA": 11,
+        "POSITIVA": 7,
+        "NEGATIVA": 22
+      }
+    },
+    "tcia_crlm": {
+      "n": 40,
+      "n_ok": 40,
+      "n_failed": 0,
+      "acertos_tipo": 0,
+      "pct_acerto_tipo": 0.0,
+      "distribuicao_tipo_hipotese": {
+        "hcc": 5,
+        "indeterminado": 24,
+        "None": 8,
+        "cisto": 1,
+        "invalido:negativa": 1,
+        "invalido:negativo": 1
+      },
+      "distribuicao_tipo_parse": {
+        "prefixo": 32,
+        "None": 8
+      },
+      "distribuicao_deteccao": {
+        "POSITIVA": 7,
+        "NEGATIVA": 26,
+        "INCONCLUSIVA": 7
+      }
+    },
+    "combinado": {
+      "n": 80,
+      "acertos_tipo": 5,
+      "pct_acerto_tipo": 6.2
+    }
+  },
+  "secundario_deteccao": {
+    "positivos": {
+      "n": 148,
+      "n_ok": 146,
+      "POSITIVA": 24,
+      "INCONCLUSIVA": 31,
+      "sensibilidade_pct": 16.2
+    },
+    "negativos_chaos": {
+      "n": 20,
+      "n_ok": 20,
+      "NEGATIVA": 12,
+      "INCONCLUSIVA": 3,
+      "especificidade_pct": 60.0
+    },
+    "deteccao_chaos_ct": {
+      "NEGATIVA": 12,
+      "POSITIVA": 5,
+      "INCONCLUSIVA": 3
+    },
+    "deteccao_msd_task03": {
+      "POSITIVA": 10,
+      "NEGATIVA": 43,
+      "INCONCLUSIVA": 13
+    },
+    "deteccao_tcia_hcc": {
+      "INCONCLUSIVA": 11,
+      "POSITIVA": 7,
+      "NEGATIVA": 22
+    },
+    "deteccao_tcia_crlm": {
+      "POSITIVA": 7,
+      "NEGATIVA": 26,
+      "INCONCLUSIVA": 7
+    }
+  },
+  "secundario_volumetria": {
+    "chaos_ct": {
+      "n": 20,
+      "razao_mediana": 0.9947,
+      "razao_iqr": [
+        0.9816,
+        1.0067
+      ],
+      "dice_mediana": 0.9695,
+      "dice_min": 0.949
+    },
+    "msd_task03": {
+      "n": 66,
+      "razao_mediana": 1.0208,
+      "razao_iqr": [
+        1.0008,
+        1.0429
+      ],
+      "dice_mediana": 0.9688,
+      "dice_min": 0.9136,
+      "spearman_erro_vs_carga": {
+        "rho": -0.141,
+        "p": 0.2912
+      },
+      "enriquecimento_tumor_no_perdido_mediana": 1.0
+    }
+  },
+  "n_registros": 168,
+  "falhas": [
+    {
+      "braco": "msd_task03",
+      "caso": "liver_114",
+      "motivo": "PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 'C:\\\\User"
+    },
+    {
+      "braco": "msd_task03",
+      "caso": "liver_127",
+      "motivo": "RuntimeError: Background workers died. Look for the error message further up! If there is none then your RAM was full an"
+    }
+  ]
+}

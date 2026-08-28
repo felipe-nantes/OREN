@@ -46,6 +46,7 @@ from .medgemma_panel import (
     PANEL_FILENAME,
     PANEL_MANIFEST_FILENAME,
     PanelResult,
+    _allowed_modalities,
     _geometry_compatible,
     _require_file,
     _select_uniform_indices,
@@ -227,7 +228,10 @@ def generate_liver_panel_multiphase(
             raise PipelineError("Cobertura física por fase inválida para fusão multifásica.")
         support_fractions = {name: float(value) for name, value in support_fractions.items()}
 
-    case_manifest = _validate_case_manifest(case_manifest_path)
+    config_modality = str(screening_config.get("modality", "MRI")).upper()
+    case_manifest = _validate_case_manifest(
+        case_manifest_path, _allowed_modalities(screening_config)
+    )
 
     mask_img = read_image(liver_mask_path)
     if mask_img.GetDimension() != 3:
@@ -379,7 +383,7 @@ def generate_liver_panel_multiphase(
         manifest = {
             "schema_version": "dtwin-medgemma-panel-set-v2",
             "case_id": case_manifest["case_id"], "organ": expected_organ,
-            "modality": "MRI", "regulatory_mode": "RESEARCH",
+            "modality": config_modality, "regulatory_mode": "RESEARCH",
             "input_type": "mri_multiphase_rgb_fusion_liver_crop",
             "lesion_pre_marked": False, "panel_strategy": strategy,
             "panel_image": first_path.name, "panel_sha256": sha256_of(first_path),
@@ -506,7 +510,7 @@ def generate_liver_panel_multiphase(
     manifest = {
         "case_id": case_manifest["case_id"],
         "organ": expected_organ,
-        "modality": "MRI",
+        "modality": config_modality,
         "regulatory_mode": "RESEARCH",
         "input_type": "mri_multiphase_rgb_fusion_liver_crop",
         "lesion_pre_marked": False,
