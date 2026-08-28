@@ -92,8 +92,9 @@
               <option value="CT">Tomografia computadorizada (TC)</option>
             </select>
             <div class="small" id="modalityHint">
-              TC segue para segmentação, volumetria e modelo 3D com revisão humana.
-              A triagem visual automática é exclusiva de RM e não roda em TC.
+              TC segue para segmentação, volumetria, modelo 3D e laudo visual
+              experimental (zero-shot; acurácia medida exibida no resultado).
+              Revisão humana obrigatória.
             </div>
           </div>
           <div class="note">O envio é processado localmente. O exame é des-identificado automaticamente e nenhum dado sai desta máquina.</div>
@@ -394,19 +395,43 @@ function renderVisualResult(result){
 }
 
 function renderCtResult(result){
-  // CT-01 (D4): TC não tem triagem visual — o card diz isso com todas as
-  // letras em vez de exibir um campo de predição vazio.
+  // CT-LAUDO (2026-08-28, ordem do operador): TC exibe o laudo MedGemma
+  // completo quando disponível, com a acurácia MEDIDA no benchmark local
+  // sempre visível; sem laudo, a ausência é declarada com motivo.
   const c=$('#resultCard'); c.innerHTML='';
+  const rep = result.report||null;
   const head = el('div','verdict');
-  head.appendChild(el('span','vbadge v-INCONCLUSIVA','SEM TRIAGEM'));
-  head.appendChild(el('div','', '<div style="font-weight:700">Volumetria e modelo 3D — TC</div>'
-    +'<div class="sub">Exame de tomografia em modo Pesquisa</div>'));
+  if(rep){
+    const verdict=(rep.resultado_hipotese||'INCONCLUSIVA').toUpperCase();
+    head.appendChild(el('span','vbadge v-'+(['POSITIVA','NEGATIVA','INCONCLUSIVA'].includes(verdict)?verdict:'INCONCLUSIVA'), verdict));
+    head.appendChild(el('div','', '<div style="font-weight:700">Hipótese visual + volumetria — TC</div>'
+      +'<div class="sub">Exame de tomografia em modo Pesquisa</div>'));
+  }else{
+    head.appendChild(el('span','vbadge v-INCONCLUSIVA','SEM TRIAGEM'));
+    head.appendChild(el('div','', '<div style="font-weight:700">Volumetria e modelo 3D — TC</div>'
+      +'<div class="sub">Exame de tomografia em modo Pesquisa</div>'));
+  }
   c.appendChild(head);
-  const aviso=el('div','note');
-  aviso.style.borderLeft='3px solid #4a90a4'; aviso.style.paddingLeft='10px';
-  aviso.innerHTML='<b>Este exame não passou por triagem visual automática.</b> '
-    +escapeHtml(result.screening_unavailable_reason||'A triagem visual é exclusiva de RM.');
-  c.appendChild(aviso);
+  if(rep){
+    c.appendChild(field('Resumo do achado', escapeHtml(rep.resumo_do_achado||'—')));
+    c.appendChild(field('Localização aproximada', escapeHtml(rep.localizacao_aproximada||'—')));
+    c.appendChild(field('Sinais visuais observados', list(rep.sinais_visuais_observados)));
+    c.appendChild(field('Confiança', '<span class="conf">'+escapeHtml(rep.confianca||'—')+'</span>'));
+    c.appendChild(field('Limitações da análise', list(rep.limitacoes_da_analise)));
+    if(result.screening_validation && result.screening_validation.nota){
+      const val=el('div','note');
+      val.style.borderLeft='3px solid #d98324'; val.style.paddingLeft='10px';
+      val.innerHTML='<b>Acurácia medida em TC (não validado).</b> '
+        +escapeHtml(result.screening_validation.nota);
+      c.appendChild(val);
+    }
+  }else{
+    const aviso=el('div','note');
+    aviso.style.borderLeft='3px solid #4a90a4'; aviso.style.paddingLeft='10px';
+    aviso.innerHTML='<b>Este exame não recebeu laudo automático nesta execução.</b> '
+      +escapeHtml(result.screening_unavailable_reason||'Backend de triagem indisponível.');
+    c.appendChild(aviso);
+  }
   if(Number.isFinite(result.liver_volume_ml)){
     c.appendChild(field('Volume hepático segmentado', Number(result.liver_volume_ml).toFixed(0)+' mL'));
   }
@@ -418,7 +443,7 @@ function renderCtResult(result){
   }
   const meta = el('div','meta');
   meta.appendChild(el('span','chip','Modalidade: <b>TC</b>'));
-  meta.appendChild(el('span','chip','Modo: <b>Volumetria + 3D</b>'));
+  meta.appendChild(el('span','chip','Modo: <b>'+(rep?'Laudo + Volumetria + 3D':'Volumetria + 3D')+'</b>'));
   meta.appendChild(el('span','chip','Status: <b>revisão humana obrigatória</b>'));
   c.appendChild(meta);
   c.appendChild(el('div','note', escapeHtml(result.disclaimer||'')));

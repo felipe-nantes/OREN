@@ -213,10 +213,12 @@ def test_select_ct_series_sem_ct_devolve_vazio(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# D4 — fluxo CT completo SEM triagem (teste negativo central do plano)
+# CT-LAUDO (2026-08-28, ordem do operador — revoga o D4): o fluxo CT roda o
+# laudo MedGemma com a config do benchmark; falha degrada DECLARADA sem
+# derrubar volumetria/3D. MedSigLIP e workers de RM continuam proibidos.
 # ---------------------------------------------------------------------------
 
-def _prepara_fluxo_ct(monkeypatch, tmp_path, job_id):
+def _prepara_fluxo_ct(monkeypatch, tmp_path, job_id, laudo="ok"):
     monkeypatch.setattr(server, "WORKSPACE", tmp_path)
     monkeypatch.setattr(server, "MIN_SLICES", 1)
     perfis_usados = {}
@@ -236,14 +238,51 @@ def _prepara_fluxo_ct(monkeypatch, tmp_path, job_id):
         return True, ""
 
     monkeypatch.setattr(server, "_build_model", fake_build_model)
-    # Sentinelas: QUALQUER toque na superfície de triagem falha o teste.
+    # Laudo CT: subprocesso e leitura do report simulados; a máscara não
+    # existe no fake, então o timeout também é stub (assinatura preservada).
+    from webapp import jobs as jobs_mod
+
+    class _SitkStub:
+        @staticmethod
+        def ReadImage(path):
+            return object()
+
+        @staticmethod
+        def GetArrayFromImage(img):
+            import numpy as np
+
+            return np.ones((2, 2, 2), dtype=np.uint8)
+
+    monkeypatch.setattr(jobs_mod, "sitk", _SitkStub)
+    monkeypatch.setattr(jobs_mod, "effective_screening_timeout", lambda *a, **k: (60, 1))
+    monkeypatch.setattr(server, "load_screening_config", lambda *a, **k: {})
+
+    import subprocess as _sp
+
+    def fake_run(cmd, timeout, cwd=None):
+        perfis_usados["screening_cmd"] = list(cmd)
+        assert "dtwin.medgemma_screening" in cmd
+        assert server.CT_MEDGEMMA_CONFIG in cmd
+        return _sp.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(server, "_run", fake_run)
+    relatorio = {
+        "report": {
+            "resultado_hipotese": "INCONCLUSIVA",
+            "resumo_do_achado": "TIPO_HIPOTESE: indeterminado. Sem achado focal claro.",
+            "localizacao_aproximada": "não aplicável",
+            "sinais_visuais_observados": ["parênquima homogêneo"],
+            "confianca": "baixa",
+            "limitacoes_da_analise": ["zero-shot em TC"],
+            "necessidade_de_revisao_humana": True,
+        }
+    }
     monkeypatch.setattr(
-        server, "_run", lambda *a, **k: pytest.fail("subprocesso inesperado em job CT")
+        server, "_load_report",
+        (lambda p: relatorio) if laudo == "ok" else (lambda p: None),
     )
-    monkeypatch.setattr(
-        server, "load_screening_config",
-        lambda *a, **k: pytest.fail("config de triagem lida em job CT"),
-    )
+    monkeypatch.setattr(server, "_cli_reason", lambda proc: "backend_indisponivel")
+    # Sentinelas: superfícies EXCLUSIVAS de RM continuam proibidas em CT.
     monkeypatch.setattr(
         server, "process_job", lambda *a, **k: pytest.fail("process_job chamado em job CT")
     )
@@ -262,9 +301,9 @@ def _prepara_fluxo_ct(monkeypatch, tmp_path, job_id):
     return perfis_usados
 
 
-def test_fluxo_ct_completo_sem_triagem_com_perfil_ct(monkeypatch, tmp_path):
+def test_fluxo_ct_completo_com_laudo_e_perfil_ct(monkeypatch, tmp_path):
     job_id = "c1000000000a"
-    perfis = _prepara_fluxo_ct(monkeypatch, tmp_path, job_id)
+    perfis = _prepara_fluxo_ct(monkeypatch, tmp_path, job_id, laudo="ok")
     raw = tmp_path / job_id / "_upload"
     uid = generate_uid()
     for i in range(2):
@@ -277,9 +316,15 @@ def test_fluxo_ct_completo_sem_triagem_com_perfil_ct(monkeypatch, tmp_path):
     result = job["result"]
     assert result["status"] == "concluido"
     assert result["analysis_scenario"] == "ct_volumetric"
-    assert result["screening_available"] is False
+    # CT-LAUDO: laudo presente, com a acurácia MEDIDA sempre anexada
+    assert result["screening_available"] is True
+    assert result["screening_unavailable_reason"] is None
+    assert result["report"]["resultado_hipotese"] == "INCONCLUSIVA"
+    assert result["screening_validation"]["validado"] is False
+    assert result["screening_validation"]["zero_shot"] is True
+    assert result["screening_validation"]["sensibilidade_pct"] == 16.2
+    assert "screening_cmd" in perfis  # o CLI real de screening foi invocado
     assert result["prediction"] is None
-    assert "RM" in result["screening_unavailable_reason"]
     assert result["viewer_ready"] is True
     assert result["requires_human_review"] is True
     assert result["volumetry_note"]["correcao_aplicada"] is False
@@ -287,6 +332,27 @@ def test_fluxo_ct_completo_sem_triagem_com_perfil_ct(monkeypatch, tmp_path):
     # o perfil CT viajou até a segmentação E até o finalize
     assert perfis["segment"] == "profiles/figado_ct.yaml"
     assert perfis["model"] == "profiles/figado_ct.yaml"
+
+
+def test_fluxo_ct_laudo_indisponivel_degrada_declarado(monkeypatch, tmp_path):
+    """Falha do laudo NÃO derruba o job: volumetria/3D seguem e a ausência
+    é declarada com motivo — nunca omissão silenciosa."""
+    job_id = "c3000000000c"
+    _prepara_fluxo_ct(monkeypatch, tmp_path, job_id, laudo="falha")
+    raw = tmp_path / job_id / "_upload"
+    uid = generate_uid()
+    for i in range(2):
+        _dicom_sintetico(raw / f"ct_{i}.dcm", "CT", uid)
+
+    server.process_ct_job(job_id, raw)
+
+    result = server._jobs[job_id]["result"]
+    assert result["status"] == "concluido"
+    assert result["screening_available"] is False
+    assert "não pôde ser gerado" in result["screening_unavailable_reason"]
+    assert result["report"] is None
+    assert result["screening_validation"] is None
+    assert result["viewer_ready"] is True
 
 
 def test_fluxo_ct_com_upload_de_rm_falha_gracioso(monkeypatch, tmp_path):

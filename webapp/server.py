@@ -96,6 +96,29 @@ MONOPHASE_MEDGEMMA_CONFIG = os.environ.get(
     "WEBAPP_MONOPHASE_MEDGEMMA_CONFIG",
     "configs/medgemma_local_4b_monophase_rag.yaml",
 )
+# CT-LAUDO (2026-08-28, ordem do operador — revoga o D4 do CT-01): laudo
+# MedGemma zero-shot em TC usa a MESMA config do benchmark CT-01-F, para
+# que os números de acurácia medidos descrevam exatamente o que roda aqui.
+CT_MEDGEMMA_CONFIG = os.environ.get(
+    "WEBAPP_MEDGEMMA_CONFIG_CT",
+    "configs/medgemma_local_4b_ct_benchmark.yaml",
+)
+# Acurácia MEDIDA do laudo zero-shot em TC (CT01-F, 2026-08-28; evidência
+# em .fable/post_audit/evidence/CT01-F/). Acompanha todo resultado de TC.
+CT_SCREENING_VALIDATION = {
+    "validado": False,
+    "zero_shot": True,
+    "benchmark": "CT01-F (2026-08-28)",
+    "sensibilidade_pct": 16.2,
+    "especificidade_pct": 60.0,
+    "acerto_tipo_pct": 6.2,
+    "nota": (
+        "Laudo experimental: modelo de triagem visual portado de RM sem "
+        "ajuste para TC. No benchmark local pré-registrado detectou apenas "
+        "16,2% dos casos com tumor e classificou o tipo corretamente em "
+        "6,2%. Uso em pesquisa; NUNCA substitui leitura radiológica."
+    ),
+}
 PATHOLOGY_TARGET_MEDGEMMA_CONFIG = os.environ.get(
     "WEBAPP_PATHOLOGY_TARGET_MEDGEMMA_CONFIG",
     "configs/medgemma_local_4b_volumetric_pathology_target.yaml",

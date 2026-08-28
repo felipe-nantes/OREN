@@ -938,7 +938,49 @@ def process_ct_job(job_id: str, raw_dir: Path) -> None:
 
         server._persist_series_selection(case_dir, best_files)
 
-        # D4: triagem visual DELIBERADAMENTE ausente — segue direto para o 3D.
+        # CT-LAUDO (2026-08-28, ordem do operador — revoga o D4 do CT-01):
+        # laudo MedGemma zero-shot em TC com a config do benchmark CT-01-F.
+        # A acurácia MEDIDA acompanha o payload (CT_SCREENING_VALIDATION).
+        # Falha do laudo NÃO derruba o job: volumetria e 3D permanecem, com
+        # a ausência declarada — nunca omissão silenciosa.
+        failure_stage = "medgemma_screening"
+        server._set(job_id, step="medgemma", progress=70)
+        screening_started = time.monotonic()
+        ct_report = None
+        ct_screening_error: str | None = None
+        try:
+            ct_config = server.CT_MEDGEMMA_CONFIG
+            screening_config = server.load_screening_config(server.REPO / ct_config)
+            screening_timeout, _panel_count = effective_screening_timeout(
+                sitk.GetArrayFromImage(
+                    sitk.ReadImage(str(case_dir / "mask_organ.nii.gz"))
+                ) > 0,
+                screening_config,
+                server.SCREEN_TIMEOUT,
+            )
+            with server._medgemma_screening_lock:
+                scr = server._run(
+                    [
+                        server.PY, "-m", "dtwin.medgemma_screening",
+                        "--case-dir", str(case_dir),
+                        "--medgemma-config", ct_config,
+                        "--confirm-no-visible-phi",
+                    ],
+                    timeout=screening_timeout,
+                )
+            ct_report = server._load_report(
+                case_dir / "outputs" / "medgemma" / "medgemma_report.json"
+            )
+            if ct_report is None:
+                ct_screening_error = server._cli_reason(scr)
+        except Exception as exc:
+            log.exception("Job CT %s: laudo MedGemma indisponível", job_id)
+            ct_screening_error = type(exc).__name__
+        finally:
+            durations_seconds["screening_subprocess"] = round(
+                time.monotonic() - screening_started, 4
+            )
+
         failure_stage = "model_3d"
         server._set(job_id, step="modelo_3d", progress=80)
         model_started = time.monotonic()
@@ -974,12 +1016,19 @@ def process_ct_job(job_id: str, raw_dir: Path) -> None:
             "analysis_scenario": "ct_volumetric",
             "modality": "CT",
             "profile": "figado_ct",
-            # Ausência honesta, nunca omissão silenciosa (CT-01, D4):
-            "screening_available": False,
+            # CT-LAUDO: laudo MedGemma presente quando o backend respondeu;
+            # ausência sempre declarada com motivo, nunca silenciosa.
+            "screening_available": ct_report is not None,
             "screening_unavailable_reason": (
-                "A triagem visual (MedSigLIP/MedGemma) foi treinada e validada "
-                "apenas para RM; este exame de TC segue para volumetria e "
-                "revisão 3D sem classificação automática."
+                None if ct_report is not None else (
+                    "O laudo MedGemma de TC não pôde ser gerado nesta "
+                    f"execução ({ct_screening_error or 'backend indisponível'}); "
+                    "volumetria e revisão 3D seguem normalmente."
+                )
+            ),
+            "report": (ct_report or {}).get("report"),
+            "screening_validation": (
+                dict(server.CT_SCREENING_VALIDATION) if ct_report is not None else None
             ),
             "prediction": None,
             "viewer_ready": True,
@@ -1014,7 +1063,7 @@ def process_ct_job(job_id: str, raw_dir: Path) -> None:
             timing = build_operational_timing(
                 job_id=job_id,
                 analysis_scenario="ct_volumetric",
-                medgemma_config="(ct_volumetric_sem_triagem)",
+                medgemma_config=server.CT_MEDGEMMA_CONFIG,
                 medgemma_config_sha256="not_applicable",
                 started_at_utc=started_at_utc,
                 finished_at_utc=datetime.now(timezone.utc).isoformat(),

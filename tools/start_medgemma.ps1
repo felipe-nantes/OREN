@@ -29,7 +29,12 @@ New-Item -ItemType Directory -Path $StateDir -Force | Out-Null
 
 if (Test-Path $PidFile) {
     $ExistingPid = [int](Get-Content $PidFile -Raw)
-    if (Get-Process -Id $ExistingPid -ErrorAction SilentlyContinue) {
+    # PID vivo não basta: o Windows recicla PIDs após reboot e o arquivo
+    # velho pode apontar para um processo alheio (observado: RuntimeBroker
+    # herdou o PID e o launcher recusava subir o backend). Só confie no PID
+    # se o processo for de fato o medgemma_server deste repo.
+    $Existing = Get-CimInstance Win32_Process -Filter "ProcessId=$ExistingPid" -ErrorAction SilentlyContinue
+    if ($Existing -and $Existing.CommandLine -match 'medgemma_server') {
         Write-Output "MedGemma já está em execução (PID=$ExistingPid)."
         exit 0
     }
