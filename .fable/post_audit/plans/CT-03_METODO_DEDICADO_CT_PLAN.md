@@ -67,9 +67,24 @@ saem honestos com iteração declarada se não alcançada.
       decisão declarada) atrás de WEBAPP_CT_CANDIDATE_ENABLED; timeout
       próprio WEBAPP_CT_CANDIDATE_TIMEOUT=300
 - [x] B.4 Testes (24 passed em test_ct_ingestion + guard)
-- [ ] B smoke em 2 casos HCC reais (em execução)
-- [ ] C benchmark de detecção pré-registrado
-- [ ] D pipeline de tipo (labels → slices → embeddings → head)
+- [x] B smoke em 2 casos HCC reais (VERDE: candidatos com componentes e
+      volumes, ~2,6 min/caso pelo caminho de produção)
+- [~] C benchmark de detecção RODANDO (chaos → train → teste → msd + 2
+      varreduras; JSONL em evidence/CT03/; work preservado em
+      D:\datasets_ct\_ct03_work)
+- [~] D pipeline de tipo:
+      - [x] D.1 labels protegidos por coorte: 222 treino + 80 teste
+            congelado (casos/qualification/ct03_v1/; proveniência DOI)
+      - [x] D.3 protocolo CONGELADO antes de extração supervisionada:
+            ct03_ct_type_protocol_v1.lock.json + splits aninhados 5x4
+            por paciente, seed 20260828, assinatura b1c2f21c...
+      - [x] D.5-config medsiglip_ct_axial_type_v1.yaml validada pelo
+            load_multiclass_config (cenário ct_medsiglip_type)
+      - [ ] D.2 slices (ct03_build_slices.py pronto; GATED pelas
+            máscaras da campanha C — dataset imutável, roda 1x com os
+            222 completos)
+      - [ ] D.4 embeddings (GPU livre exigida: parar gateway MedGemma)
+      - [ ] D.5 OOF + train_production_bundle
 - [ ] E avaliação congelada gate 75/75
 - [ ] F integração UI com % por classe
 - [ ] G benignos (gated)

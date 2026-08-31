@@ -1,0 +1,43 @@
+# CT-03 fase D — protocolo de treino do classificador de TIPO em TC
+# (hcc vs metastasis), congelado ANTES de qualquer extração supervisionada.
+# Plano aprovado pelo operador em 2026-08-28; metas 75/75 (deteccao à
+# parte, tipo CONDICIONAL entre detectados). Labels por diagnóstico de
+# coorte TCIA (HCC-TACE-Seg doi:10.7937/TCIA.5FNA-0924 = hcc;
+# Colorectal-Liver-Metastases doi:10.7937/QXK2-QG03 = metastasis).
+# O TESTE congelado (40+40, holdout_test_labels/) NÃO participa deste
+# protocolo — avaliação externa via external_bundle_evaluation.
+schema: argos-hybrid-training-config-v1
+candidate_id: ct03_v1_medsiglip_ct_axial_type
+target_condition: focal_liver_lesion_suspicion
+
+protected_label_sources:
+  - dataset_id: tcia_ct_type_v1
+    path: casos/qualification/ct03_v1/protected_ground_truth/labels.jsonl
+
+validation:
+  strategy: nested_patient_grouped_cross_validation
+  outer_folds: 5
+  inner_folds: 4
+  seed: 20260828
+  threshold_selection: inner_oof_only
+  feature_selection: inner_training_only
+
+acceptance:
+  sensitivity_minimum: 0.75
+  specificity_minimum: 0.75
+  type_accuracy_conditional_minimum: 0.75
+  confidence_interval_95_required: true
+  must_report_by_dataset: true
+
+failure_policy:
+  technical_failure_counts_as_error: true
+  inconclusive_counts_as_error: true
+  excluded_from_primary_metric: false
+
+safety:
+  protected_labels_never_sent_to_feature_extractor: true
+  lesion_masks_for_training_or_retrospective_audit_only: true
+  lesion_masks_never_sent_to_medsiglip_inference: true
+  lesion_masks_never_sent_to_medgemma: true
+  research_only: true
+  clinical_use_allowed: false

@@ -1,0 +1,35 @@
+# CT-03 fase D — head de TIPO de lesão em TC (hcc vs metastasis) sobre
+# embeddings MedSigLIP congelados de cortes axiais do fígado.
+# Plano aprovado pelo operador 2026-08-28; coorte TCIA com diagnóstico
+# por construção (todos os casos POSITIVOS — o head decide o TIPO; a
+# DETECÇÃO é do detector liver_lesions, medida à parte). positive_classes
+# [hcc] dá o eixo binário hcc-vs-metastasis para o threshold interno; a
+# métrica de interesse do CT-03 é o acerto de tipo condicional (argmax).
+schema: argos-hybrid-medsiglip-multiclass-config-v1
+candidate_id: ct03_medsiglip_ct_axial_type_v1
+model: class_balanced_multinomial_logistic_regression
+solver: lbfgs
+label_granularity: clinical_subtype
+restrict_to_dataset_ids:
+  - tcia_ct_type_v1
+positive_classes:
+  - hcc
+regularization_c_grid: [0.01, 0.1, 1.0]
+panel_probability_aggregations: [mean, max, top2_mean]
+standardization: inner_or_outer_training_panels_only
+threshold_selection: inner_oof_only
+persist_label_blind_class_probabilities: true
+subtype_probability_aggregation: mean
+seed: 20260828
+max_iter: 3000
+technical_failures_count_as_errors: true
+deployment:
+  analysis_scenario: ct_medsiglip_type
+  panel_image_mode: ct_single_phase_axial_liver_slices
+  expected_panel_counts: [1, 400]
+  source_phase_contract: exactly_one_real_series
+  source_phase_key: ct_portal
+  dynamic_enhancement_information_present: false
+  generalization_estimate_source: nested_oof_tcia_ct_type_research
+research_only: true
+clinical_use_allowed: false
