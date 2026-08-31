@@ -751,6 +751,9 @@ def process_job(
                     "role": "advisory_second_reader",
                     "status": "unavailable",
                     "reason": type(exc).__name__,
+                    # motivo legível chega à UI (ex.: "Volume possui menos de
+                    # 27 planos corporais") — indisponível nunca fica mudo
+                    "detail": str(exc)[:200],
                     "affects_primary_decision": False,
                     "external_gate_passed": False,
                     "requires_human_review": True,

@@ -1148,6 +1148,33 @@ def segmentation_visualization_capability() -> dict:
     }
 
 
+def _detect_upload_modality(raw_dir: Path, max_files: int = 200) -> set[str]:
+    """Modalidades DICOM presentes no envio (amostra de headers, sem pixels).
+
+    AUTO-modalidade (2026-08-28, ordem do operador: "a página de laudos deve
+    funcionar tanto na RM quanto na CT"): a tag Modality decide o worker;
+    MRI normaliza para MR. Arquivos ilegíveis são ignorados.
+    """
+    presentes: set[str] = set()
+    lidos = 0
+    for path in sorted(Path(raw_dir).rglob("*")):
+        if not path.is_file() or lidos >= max_files:
+            continue
+        lidos += 1
+        try:
+            ds = pydicom.dcmread(str(path), stop_before_pixels=True, force=True)
+        except Exception:
+            continue
+        tag = str(getattr(ds, "Modality", "") or "").upper()
+        if tag == "MRI":
+            tag = "MR"
+        if tag in MODALITY_PROFILES:
+            presentes.add(tag)
+        if presentes == set(MODALITY_PROFILES):
+            break
+    return presentes
+
+
 @app.post("/api/analyze")
 async def analyze(request: Request) -> dict:
     form = await _upload_form(request)
@@ -1156,8 +1183,12 @@ async def analyze(request: Request) -> dict:
         raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
     # CT-01: modalidade e SELECAO EXPLICITA do cliente (decisao do operador,
     # 2026-08-25); a tag DICOM vira validacao no worker. Default "MR" preserva
-    # compatibilidade total com clientes existentes.
+    # compatibilidade total com clientes existentes. AUTO (2026-08-28)
+    # resolve pela tag DICOM apos o upload — ver _detect_upload_modality.
     modality = str(form.get("modality") or "MR").upper()
+    modalidade_auto = modality == "AUTO"
+    if modalidade_auto:
+        modality = "MR"  # provisório; resolvido após salvar os arquivos
     if modality not in MODALITY_PROFILES:
         raise HTTPException(
             status_code=400, detail=f"Modalidade não suportada: {modality!r}."
@@ -1237,6 +1268,35 @@ async def analyze(request: Request) -> dict:
         dest = raw_dir.joinpath(*parts) if parts else raw_dir / f"file_{i}"
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(await uf.read())
+    if modalidade_auto:
+        presentes = _detect_upload_modality(raw_dir)
+        if presentes == {"MR", "CT"}:
+            shutil.rmtree(WORKSPACE / job_id, ignore_errors=True)
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "O envio mistura séries de RM e de TC; selecione a "
+                    "modalidade explicitamente para este exame."
+                ),
+            )
+        if presentes == {"CT"}:
+            if not CT_ENABLED:
+                shutil.rmtree(WORKSPACE / job_id, ignore_errors=True)
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "O envio é de TC, mas a análise de TC está indisponível "
+                        "neste ambiente (habilite com WEBAPP_CT_ENABLED=1)."
+                    ),
+                )
+            # Campos RM enviados por default do cliente (cenário, 3-D
+            # aprimorado, backend) são ignorados: o usuário pediu AUTO,
+            # não os pediu para TC.
+            modality = "CT"
+            scenario = "ct_volumetric"
+            enhanced_3d = False
+        # vazio ou só MR: segue o caminho de RM (o gracioso existente cobre
+        # envio sem série válida)
     with _lock:
         _jobs[job_id] = {
             "state": "queued", "step": "recebendo", "progress": 5, "result": None,

@@ -148,6 +148,83 @@ def test_analyze_ct_recusa_cenario_explicito_e_3d_aprimorado(monkeypatch, tmp_pa
     assert "RM" in resp.json()["detail"]
 
 
+def _post_auto(client, arquivos):
+    return client.post(
+        "/api/analyze",
+        files=[("files", (n, b, "application/dicom")) for n, b in arquivos],
+        data={"modality": "AUTO"},
+    )
+
+
+def _dicom_bytes(modality, uid):
+    import io
+    buf = io.BytesIO()
+    caminho = None
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        caminho = Path(td) / "x.dcm"
+        _dicom_sintetico(caminho, modality, uid)
+        buf.write(caminho.read_bytes())
+    return buf.getvalue()
+
+
+def test_analyze_auto_resolve_ct_pelo_dicom(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(server, "CT_ENABLED", True)
+    chamados = {}
+    monkeypatch.setattr(
+        server, "process_ct_job", lambda job_id, raw: chamados.update(ct=job_id)
+    )
+    monkeypatch.setattr(
+        server, "process_visual_job",
+        lambda *a, **k: pytest.fail("worker de RM chamado para envio de TC em AUTO"),
+    )
+    client = TestClient(server.app)
+    resp = _post_auto(client, [("a.dcm", _dicom_bytes("CT", generate_uid()))])
+    assert resp.status_code == 200
+    corpo = resp.json()
+    assert corpo["modality"] == "CT"
+    assert corpo["analysis_scenario"] == "ct_volumetric"
+
+
+def test_analyze_auto_resolve_rm_pelo_dicom(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(server, "CT_ENABLED", True)
+    chamados = {}
+    monkeypatch.setattr(
+        server, "process_visual_job", lambda *a, **k: chamados.update(mr=True)
+    )
+    monkeypatch.setattr(
+        server, "process_ct_job",
+        lambda *a, **k: pytest.fail("worker de TC chamado para envio de RM em AUTO"),
+    )
+    client = TestClient(server.app)
+    resp = _post_auto(client, [("a.dcm", _dicom_bytes("MR", generate_uid()))])
+    assert resp.status_code == 200
+    assert resp.json()["modality"] == "MR"
+
+
+def test_analyze_auto_mistura_exige_selecao_explicita(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(server, "CT_ENABLED", True)
+    client = TestClient(server.app)
+    resp = _post_auto(client, [
+        ("a.dcm", _dicom_bytes("MR", generate_uid())),
+        ("b.dcm", _dicom_bytes("CT", generate_uid())),
+    ])
+    assert resp.status_code == 400
+    assert "mistura" in resp.json()["detail"]
+
+
+def test_analyze_auto_ct_sem_flag_recusa_declarado(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(server, "CT_ENABLED", False)
+    client = TestClient(server.app)
+    resp = _post_auto(client, [("a.dcm", _dicom_bytes("CT", generate_uid()))])
+    assert resp.status_code == 409
+    assert "TC" in resp.json()["detail"]
+
+
 def test_analyze_sem_modalidade_segue_rm_como_sempre(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "WORKSPACE", tmp_path)
     chamados = {}

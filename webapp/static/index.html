@@ -88,7 +88,8 @@
           <div class="note hidden" id="modalityPicker">
             <label for="modalitySelect"><b>Modalidade do exame</b></label>
             <select id="modalitySelect">
-              <option value="MR" selected>Ressonância magnética (RM)</option>
+              <option value="AUTO" selected>Detectar automaticamente (RM/TC)</option>
+              <option value="MR">Ressonância magnética (RM)</option>
               <option value="CT">Tomografia computadorizada (TC)</option>
             </select>
             <div class="small" id="modalityHint">
@@ -198,7 +199,7 @@ async function startAnalysis(items){
     STEP_LABELS.ingestao='Selecionando a série de TC';
     fd.append('enhanced_3d','0');
   }else{
-    STEP_LABELS.ingestao='Selecionando a série de RM';
+    STEP_LABELS.ingestao=(modality==='AUTO')?'Detectando modalidade e selecionando a série':'Selecionando a série de RM';
     fd.append('scenario', 'hybrid_supervised');
     fd.append('enhanced_3d', ($('#enhanced3d') && $('#enhanced3d').checked) ? '1' : '0');
     // Só acompanha o envio quando há mais de um backend pronto; caso contrário o
@@ -524,7 +525,9 @@ function renderResult(result){
     }else if(second && second.status==='not_eligible'){
       c.appendChild(el('div','note','O segundo leitor MedSigLIP não foi aplicado: o classificador disponível exige uma série T1 tardia explicitamente identificada. O relatório principal do MedGemma permanece válido dentro das limitações monofásicas.'));
     }else if(second && (second.status==='unavailable'||second.status==='disabled')){
-      c.appendChild(el('div','note','O segundo leitor MedSigLIP ficou indisponível nesta execução. Isso não alterou o relatório principal do MedGemma.'));
+      c.appendChild(el('div','note','O segundo leitor MedSigLIP (que traz as % por classe) ficou indisponível nesta execução'
+        +(second.detail?': '+escapeHtml(second.detail):'.')
+        +' Isso não alterou o relatório principal do MedGemma.'));
     }
   }
   if(rep.alvo_da_triagem){
