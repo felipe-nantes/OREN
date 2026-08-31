@@ -872,6 +872,75 @@ def _select_ct_series(raw_dir: Path) -> tuple[list[str], int]:
     return melhores, len(melhores)
 
 
+def _localize_candidate_ct(case_dir: Path, profile_rel: str) -> dict[str, Any]:
+    """Detector de lesão TC (CT-03) via contrato de candidato advisory.
+
+    Sem gate de predição (decisão declarada do plano CT-03): em TC não há
+    classificador de triagem congelado — o detector é a leitura primária
+    de lesão e permanece advisory (revisão humana obrigatória; nunca
+    alimenta classificador nenhum). A task vem do PERFIL de TC
+    (localizacao_candidata.motor_task) e passa pela allowlist fail-closed
+    de dtwin.candidate_region.
+    """
+    from dtwin.candidate_subprocess import candidate_error, run_candidate_subprocess
+    from dtwin.core import load_profile
+
+    perfil = load_profile(server.REPO / profile_rel)
+    bloco = perfil.get("localizacao_candidata") or {}
+    if not bloco.get("habilitada"):
+        return {
+            "status": "disabled_by_profile",
+            "candidate_present": False,
+            "used_by_screening_inference": False,
+            "requires_human_review": False,
+        }
+    request = {
+        "schema": "argos-candidate-request-v1",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "modality": "CT",
+        "task": str(bloco.get("motor_task") or ""),
+        "screening_decision_frozen": True,
+        "prediction": "not_applicable_ct_detector_is_primary_reader",
+        "visual_score": 0.0,
+        "visual_threshold": 0.0,
+        "subtype_determined": False,
+        "subtype": None,
+        "subtype_label": None,
+        "used_by_screening_inference": False,
+        "ground_truth_included": False,
+        "research_only": True,
+    }
+    request_path = case_dir / "candidate_request.json"
+    temp = request_path.with_name(".candidate_request.json.tmp")
+    temp.write_text(json.dumps(request, indent=2, ensure_ascii=False), encoding="utf-8")
+    temp.replace(request_path)
+    process = run_candidate_subprocess(
+        case_dir=case_dir,
+        request_path=request_path,
+        device="gpu",
+        timeout_seconds=server.CT_CANDIDATE_TIMEOUT,
+        python_executable=server.PY,
+    )
+    manifest_path = case_dir / "candidate_region.json"
+    if process.returncode == 0 and manifest_path.is_file():
+        result = json.loads(manifest_path.read_text("utf-8"))
+        if result.get("schema") != "argos-candidate-region-v1":
+            raise PipelineError("Schema do candidato automático inválido.")
+        return result
+    for name in (
+        "mask_candidate.nii.gz", "mask_candidate_clean.nii.gz",
+        "mesh_candidate.vtp", "candidate_region.json",
+    ):
+        (case_dir / name).unlink(missing_ok=True)
+    return {
+        "status": "localization_unavailable",
+        "candidate_present": False,
+        "used_by_screening_inference": False,
+        "requires_human_review": True,
+        "reason": candidate_error(process),
+    }
+
+
 def process_ct_job(job_id: str, raw_dir: Path) -> None:
     """Exame de TC: segmentação → malha 3D → volumetria → revisão humana.
 
@@ -990,6 +1059,32 @@ def process_ct_job(job_id: str, raw_dir: Path) -> None:
                 time.monotonic() - screening_started, 4
             )
 
+        # CT-03 (plano aprovado 2026-08-28): detector de lesão TC como
+        # candidato advisory. Diferença declarada vs RM: aqui NÃO há gate
+        # de predição — o detector É a leitura primária de lesão em TC
+        # (não existe classificador de triagem congelado para TC). Nunca
+        # derruba o job; falha vira status declarado no payload.
+        candidate_localization: dict[str, Any] | None = None
+        if server.CT_CANDIDATE_ENABLED:
+            failure_stage = "candidate_localization"
+            server._set(job_id, step="localizacao_candidata", progress=76)
+            candidato_started = time.monotonic()
+            try:
+                candidate_localization = _localize_candidate_ct(case_dir, perfil_ct)
+            except Exception as exc:
+                log.exception("Job CT %s: localizador de candidato falhou", job_id)
+                candidate_localization = {
+                    "status": "localization_unavailable",
+                    "candidate_present": False,
+                    "used_by_screening_inference": False,
+                    "requires_human_review": True,
+                    "reason": str(exc)[:200],
+                }
+            finally:
+                durations_seconds["candidate_localization"] = round(
+                    time.monotonic() - candidato_started, 4
+                )
+
         failure_stage = "model_3d"
         server._set(job_id, step="modelo_3d", progress=80)
         model_started = time.monotonic()
@@ -1040,6 +1135,13 @@ def process_ct_job(job_id: str, raw_dir: Path) -> None:
                 dict(server.CT_SCREENING_VALIDATION) if ct_report is not None else None
             ),
             "prediction": None,
+            "candidate_localization": candidate_localization,
+            "lesion_candidate_volume_ml": (
+                round(candidate_localization["total_candidate_volume_mm3"] / 1000.0, 1)
+                if candidate_localization
+                and candidate_localization.get("total_candidate_volume_mm3") is not None
+                else None
+            ),
             "viewer_ready": True,
             "viewer_url": f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}",
             "liver_volume_ml": liver_volume_ml,

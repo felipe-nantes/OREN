@@ -67,12 +67,20 @@ segmentacao_lesao:
   modo: manual_slicer
   ferramentas_sugeridas: [threshold, region_growing, paint]
 
-# Localização automática de candidato: DESABILITADA em CT por decisão
-# deliberada (spec de origem §6): o nome da task de lesão CT do
-# TotalSegmentator não foi confirmado, e adivinhar arriscaria abortar o
-# exame por task inexistente ou rodar a task errada em silêncio.
+# Localização automática de candidato (CT-03, 2026-08-28, plano aprovado
+# pelo operador): o TotalSegmentator 2.15.0 TEM task de lesão hepática em
+# TC — `liver_lesions` (Dataset591, 842 sujeitos, sem licença comercial).
+# Mesmo contrato advisory do candidato de RM: pós-fluxo, nunca alimenta
+# classificador, revisão humana obrigatória. Gate operacional adicional:
+# WEBAPP_CT_CANDIDATE_ENABLED (default desligado até o gate 75/75 do
+# benchmark CT-03).
 localizacao_candidata:
-  habilitada: false
+  habilitada: true
+  motor: totalsegmentator_ct
+  motor_task: liver_lesions
+  executar_pos_inferencia: true
+  uso_na_inferencia: false
+  revisao_humana_obrigatoria: true
 
 # --- Refino das máscaras (herdado de RM; parâmetros topológicos) ------
 refino:

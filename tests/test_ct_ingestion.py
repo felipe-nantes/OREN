@@ -49,8 +49,15 @@ def test_perfil_ct_parseia_com_os_campos_do_plano():
     tarefas = perfil["segmentacao_anatomia"]["tarefas"]
     assert tarefas[0]["motor_task"] == "liver_segments"
     assert tarefas[0]["require_complete"] is True, "Couinaud CT degrada fail-closed"
-    # D7: localizacao de candidato DESABILITADA (task CT sem nome confirmado)
-    assert perfil["localizacao_candidata"]["habilitada"] is False
+    # CT-03 (2026-08-28, plano aprovado — revoga D7): TS 2.15.0 tem task de
+    # lesao TC (liver_lesions/Dataset591); candidato advisory habilitado no
+    # perfil, gate operacional em WEBAPP_CT_CANDIDATE_ENABLED (default 0).
+    candidato = perfil["localizacao_candidata"]
+    assert candidato["habilitada"] is True
+    assert candidato["motor_task"] == "liver_lesions"
+    assert candidato["uso_na_inferencia"] is False
+    assert candidato["revisao_humana_obrigatoria"] is True
+    assert server.CT_CANDIDATE_ENABLED is False, "fail-closed ate o gate 75/75"
 
 
 def test_perfil_mr_permanece_intocado_como_default():
@@ -409,6 +416,55 @@ def test_fluxo_ct_completo_com_laudo_e_perfil_ct(monkeypatch, tmp_path):
     # o perfil CT viajou até a segmentação E até o finalize
     assert perfis["segment"] == "profiles/figado_ct.yaml"
     assert perfis["model"] == "profiles/figado_ct.yaml"
+
+
+def test_fluxo_ct_com_detector_habilitado_anexa_candidato(monkeypatch, tmp_path):
+    """CT-03: com a flag ligada, o job chama o localizador (sem gate de
+    predição) e anexa candidate_localization + volume ao payload."""
+    from webapp import jobs as jobs_mod
+
+    job_id = "c4000000000d"
+    _prepara_fluxo_ct(monkeypatch, tmp_path, job_id, laudo="ok")
+    monkeypatch.setattr(server, "CT_CANDIDATE_ENABLED", True)
+    chamadas = {}
+
+    def fake_localize(case_dir, profile_rel):
+        chamadas["profile"] = profile_rel
+        return {"schema": "argos-candidate-region-v1", "status": "pending_human_review",
+                "candidate_present": True, "total_candidate_volume_mm3": 12345.6,
+                "used_by_screening_inference": False, "requires_human_review": True}
+
+    monkeypatch.setattr(jobs_mod, "_localize_candidate_ct", fake_localize)
+    raw = tmp_path / job_id / "_upload"
+    uid = generate_uid()
+    for i in range(2):
+        _dicom_sintetico(raw / f"ct_{i}.dcm", "CT", uid)
+
+    server.process_ct_job(job_id, raw)
+
+    result = server._jobs[job_id]["result"]
+    assert result["status"] == "concluido"
+    assert result["candidate_localization"]["candidate_present"] is True
+    assert result["lesion_candidate_volume_ml"] == 12.3
+    assert chamadas["profile"] == "profiles/figado_ct.yaml"
+
+
+def test_candidate_region_recusa_task_fora_da_allowlist(tmp_path):
+    """A task de localização vem da solicitação mas passa por allowlist
+    fail-closed — nunca uma task arbitrária chega ao TotalSegmentator."""
+    import json as _json
+
+    from dtwin.candidate_region import generate_candidate_region
+    from dtwin.core import PipelineError
+
+    (tmp_path / "volume.nii.gz").write_bytes(b"x")
+    (tmp_path / "mask_organ.nii.gz").write_bytes(b"x")
+    req = tmp_path / "candidate_request.json"
+    req.write_text(_json.dumps({
+        "schema": "argos-candidate-request-v1", "task": "total",
+    }), encoding="utf-8")
+    with pytest.raises(PipelineError, match="não autorizada"):
+        generate_candidate_region(tmp_path, device="cpu", request_path=req)
 
 
 def test_fluxo_ct_laudo_indisponivel_degrada_declarado(monkeypatch, tmp_path):

@@ -30,7 +30,13 @@ from .core import (
 )
 
 SCHEMA = "argos-candidate-region-v1"
-TASK = "liver_lesions_mr"
+TASK = "liver_lesions_mr"  # default RM — comportamento byte-idêntico
+# CT-03 (2026-08-28, plano aprovado): a task pode vir da solicitação — o
+# webapp conhece a modalidade/perfil e escreve o request. Allowlist
+# fail-closed: nunca uma task arbitrária. "liver_lesions" = Dataset591
+# (TC, 842 sujeitos, sem licença comercial); a máscara de saída tem o
+# mesmo nome (liver_lesions.nii.gz) nas duas tasks.
+ALLOWED_TASKS = frozenset({"liver_lesions_mr", "liver_lesions"})
 
 
 def _same_geometry(a, b) -> bool:
@@ -56,6 +62,7 @@ def validate_and_store_candidate(
     request: dict[str, Any],
     model_version: str,
     elapsed_seconds: float,
+    task: str = TASK,
 ) -> dict[str, Any]:
     """Validate geometry/binarity, clip to liver and publish an auditable mask."""
     raw_image = read_image(Path(raw_mask_path))
@@ -104,7 +111,7 @@ def validate_and_store_candidate(
         "created_at": now_utc(),
         "status": "pending_human_review" if component_count else "no_candidate_detected",
         "source": "automatic_post_inference_localizer",
-        "task": TASK,
+        "task": task,
         "model_version": model_version,
         "screening_frozen_before_localization": True,
         "used_by_screening_inference": False,
@@ -149,6 +156,9 @@ def generate_candidate_region(
         raise PipelineError("Solicitação de localização inválida.") from exc
     if request.get("schema") != "argos-candidate-request-v1":
         raise PipelineError("Schema da solicitação de localização inválido.")
+    task = str(request.get("task") or TASK)
+    if task not in ALLOWED_TASKS:
+        raise PipelineError(f"Task de localização não autorizada: {task!r}.")
 
     try:
         import importlib.metadata
@@ -163,7 +173,7 @@ def generate_candidate_region(
         totalsegmentator(
             input=str(case.volume),
             output=str(staging),
-            task=TASK,
+            task=task,
             crop_path=str(case.mask_organ),
             device=device,
             fast=False,
@@ -174,13 +184,14 @@ def generate_candidate_region(
         raw_path = staging / "liver_lesions.nii.gz"
         if not raw_path.is_file():
             raise PipelineError("O localizador não produziu a máscara esperada.")
-        version = f"TotalSegmentator {importlib.metadata.version('TotalSegmentator')} / {TASK}"
+        version = f"TotalSegmentator {importlib.metadata.version('TotalSegmentator')} / {task}"
         return validate_and_store_candidate(
             case,
             raw_path,
             request=request,
             model_version=version,
             elapsed_seconds=time.monotonic() - started,
+            task=task,
         )
     finally:
         shutil.rmtree(staging, ignore_errors=True)

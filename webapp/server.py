@@ -103,6 +103,12 @@ CT_MEDGEMMA_CONFIG = os.environ.get(
     "WEBAPP_MEDGEMMA_CONFIG_CT",
     "configs/medgemma_local_4b_ct_benchmark.yaml",
 )
+# CT-03 (2026-08-28, plano aprovado): detector de lesão TC (TS task
+# liver_lesions/Dataset591) como candidato advisory. Fail-closed até o
+# gate 75/75 do benchmark CT-03; timeout próprio (3d_fullres_high em TC
+# de abdome não cabe nos 95s do candidato de RM).
+CT_CANDIDATE_ENABLED = os.environ.get("WEBAPP_CT_CANDIDATE_ENABLED", "0") == "1"
+CT_CANDIDATE_TIMEOUT = int(os.environ.get("WEBAPP_CT_CANDIDATE_TIMEOUT", "300"))
 # Acurácia MEDIDA do laudo zero-shot em TC (CT01-F, 2026-08-28; evidência
 # em .fable/post_audit/evidence/CT01-F/). Acompanha todo resultado de TC.
 CT_SCREENING_VALIDATION = {
