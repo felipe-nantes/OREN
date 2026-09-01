@@ -85,6 +85,100 @@ def test_stage3_success_writes_organ_mask(synthetic_case, monkeypatch):
     assert int(array_from(read_image(synthetic_case.mask_organ)).sum()) > 0
 
 
+# RIM-01 (2026-08-28, plano aprovado): rotulo_alvo aceita lista (órgão par —
+# mask_organ = UNIÃO lógica dos rótulos); string permanece byte-idêntica.
+PAIRED_ORGAN_PROFILE = {
+    "segmentacao_orgao": {"rotulo_alvo": ["kidney_left", "kidney_right"], "motor_task": "total_mr"}
+}
+
+
+def test_stage3_multi_label_union_writes_organ_mask_from_two_disjoint_rois(
+    synthetic_case, monkeypatch
+):
+    def writer(**kw):
+        out = Path(kw["output"])
+        vol = read_image(Path(kw["input"]))
+        arr = array_from(vol)
+        shape = arr.shape
+        left = make_sphere_mask(shape, tuple(s // 4 for s in shape), max(shape) // 8)
+        right = make_sphere_mask(
+            shape, tuple(3 * s // 4 for s in shape), max(shape) // 8
+        )
+        by_role = {"kidney_left": left, "kidney_right": right}
+        for role in kw["roi_subset"]:
+            save_image(array_to_image(by_role[role], vol, np.uint8), out / f"{role}.nii.gz")
+
+    _install_fake_totalseg(monkeypatch, writer)
+    synthetic_case.mask_organ.unlink()
+    stage3_segment_organ(synthetic_case, PAIRED_ORGAN_PROFILE, device="cpu", fast=True)
+    assert synthetic_case.mask_organ.exists()
+    union = array_from(read_image(synthetic_case.mask_organ)) > 0
+    left = array_from(read_image(synthetic_case.seg_dir / "kidney_left.nii.gz")) > 0
+    right = array_from(read_image(synthetic_case.seg_dir / "kidney_right.nii.gz")) > 0
+    assert int(union.sum()) == int((left | right).sum())
+    assert int((left & right).sum()) == 0  # spheres não se sobrepõem — prova a união real
+    assert int(union.sum()) > int(left.sum())  # ambos os lados contribuem
+
+
+def test_stage3_multi_label_missing_one_side_aborts(synthetic_case, monkeypatch):
+    """Se um dos rótulos do par não sai da task, aborta — nunca publica meio órgão."""
+    def writer(**kw):
+        out = Path(kw["output"])
+        vol = read_image(Path(kw["input"]))
+        arr = array_from(vol)
+        left = make_sphere_mask(arr.shape, tuple(s // 2 for s in arr.shape), max(arr.shape) // 4)
+        save_image(array_to_image(left, vol, np.uint8), out / "kidney_left.nii.gz")
+        # kidney_right.nii.gz deliberadamente não escrito
+
+    _install_fake_totalseg(monkeypatch, writer)
+    with pytest.raises(PipelineError, match="kidney_right"):
+        stage3_segment_organ(synthetic_case, PAIRED_ORGAN_PROFILE, device="cpu", fast=True)
+
+
+def test_stage3_rotulo_alvo_invalido_aborta(synthetic_case, monkeypatch):
+    perfil_lista_vazia = {"segmentacao_orgao": {"rotulo_alvo": [], "motor_task": "total_mr"}}
+    with pytest.raises(PipelineError, match="string ou lista"):
+        stage3_segment_organ(synthetic_case, perfil_lista_vazia, device="cpu", fast=True)
+
+    perfil_tipo_errado = {"segmentacao_orgao": {"rotulo_alvo": 42, "motor_task": "total_mr"}}
+    with pytest.raises(PipelineError, match="string ou lista"):
+        stage3_segment_organ(synthetic_case, perfil_tipo_errado, device="cpu", fast=True)
+
+
+def test_stage3_perfil_real_rins_rm_produz_uniao_e_estruturas_por_lado(
+    synthetic_case, monkeypatch
+):
+    """Prova que profiles/rins.yaml (arquivo real, não dict sintético) é
+    consumido corretamente: mask_organ = união L+R; seg_raw/ preserva os
+    dois rótulos individualmente p/ a anatomia (rim_esquerdo/rim_direito)."""
+    from dtwin.core import load_profile
+
+    perfil = load_profile("profiles/rins.yaml")
+
+    def writer(**kw):
+        out = Path(kw["output"])
+        vol = read_image(Path(kw["input"]))
+        arr = array_from(vol)
+        shape = arr.shape
+        left = make_sphere_mask(shape, tuple(s // 4 for s in shape), max(shape) // 8)
+        right = make_sphere_mask(
+            shape, tuple(3 * s // 4 for s in shape), max(shape) // 8
+        )
+        by_role = {"kidney_left": left, "kidney_right": right}
+        for role in kw["roi_subset"]:
+            save_image(array_to_image(by_role[role], vol, np.uint8), out / f"{role}.nii.gz")
+
+    _install_fake_totalseg(monkeypatch, writer)
+    synthetic_case.mask_organ.unlink()
+    stage3_segment_organ(synthetic_case, perfil, device="cpu", fast=True)
+    assert synthetic_case.mask_organ.exists()
+    left = array_from(read_image(synthetic_case.seg_dir / "kidney_left.nii.gz")) > 0
+    right = array_from(read_image(synthetic_case.seg_dir / "kidney_right.nii.gz")) > 0
+    union = array_from(read_image(synthetic_case.mask_organ)) > 0
+    assert int(union.sum()) == int((left | right).sum())
+    assert int(left.sum()) > 0 and int(right.sum()) > 0  # ambos os lados saíram
+
+
 def test_stage3_exports_supported_internal_anatomy_without_affecting_liver_gate(
     synthetic_case, monkeypatch
 ):

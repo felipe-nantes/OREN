@@ -57,6 +57,9 @@ PATCH_POINTS = (
     # CT-01 (2026-08-25): superficie nova do fluxo de TC
     "process_ct_job", "CT_ENABLED", "MODALITY_PROFILES",
     "_profile_path_for", "_aviso_volumetria_ct",
+    # RIM-01 (2026-08-28): superficie nova do multi-orgao (fase B)
+    "process_organ_job", "PROFILES", "ORGANS_SUPORTADOS", "KIDNEY_ENABLED",
+    "_organ_profile_path_for",
 )
 
 

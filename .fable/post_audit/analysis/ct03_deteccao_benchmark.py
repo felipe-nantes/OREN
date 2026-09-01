@@ -50,7 +50,10 @@ from dtwin.stages import _refine_mask  # noqa: E402  (refino DE PRODUÇÃO)
 
 DADOS_C = Path(r"C:\datasets_ct")
 DADOS_D = Path(r"D:\datasets_ct")
-TRABALHO = DADOS_D / "_ct03_work"
+# 2026-08-28: work migrado para C: (NTFS) — o D: segue "Full Repair
+# Needed" com 3.456+ corrupcoes; nada de campanha nele ate reparo CONCLUIR.
+# Retencao enxuta por caso (volume/seg apagados apos medir) faz caber em C:.
+TRABALHO = DADOS_C / "_ct03_work_c"
 SAIDA = RAIZ / ".fable/post_audit/evidence/CT03"
 SAIDA.mkdir(parents=True, exist_ok=True)
 PY = str(RAIZ / ".venv-win" / "Scripts" / "python.exe")
@@ -59,10 +62,27 @@ CAND_UM = str(Path(__file__).with_name("ct03_candidato_um_caso.py"))
 REFINO = {"opening": True, "radius": 2, "min_voxels": 300}
 FEITOS: set[tuple[str, str]] = set()
 
-_TMP = TRABALHO / "_tmp"
+# Temp SEMPRE em NTFS (C:): churn de arquivos pequenos do nnU-Net em
+# exFAT sem journaling corrompeu D:\..._ct03_work\_tmp (WinError 1392,
+# 2026-08-28; diretório em quarentena por evitação — NUNCA tocar).
+# Dados grandes sequenciais (volumes/máscaras) continuam no D:.
+_TMP = Path(r"C:\datasets_ct\_bench_work\_tmp")
 _TMP.mkdir(parents=True, exist_ok=True)
 os.environ["TMP"] = os.environ["TEMP"] = str(_TMP)
 tempfile.tempdir = str(_TMP)
+
+
+def _gz_integro(path: Path) -> bool:
+    """Lê o gzip inteiro (valida CRC) — pega truncamento/rot do exFAT."""
+    import gzip
+
+    try:
+        with gzip.open(path, "rb") as f:
+            while f.read(1 << 20):
+                pass
+        return True
+    except Exception:
+        return False
 
 
 def _um_caso(caso: str, braco: str, ground_truth: str, volume_fonte,
@@ -73,6 +93,12 @@ def _um_caso(caso: str, braco: str, ground_truth: str, volume_fonte,
     try:
         work.mkdir(parents=True, exist_ok=True)
         vol_path = work / "volume.nii.gz"
+        # pré-reuso: artefato existente só vale se o gzip validar inteiro
+        if vol_path.is_file() and not _gz_integro(vol_path):
+            vol_path.unlink(missing_ok=True)
+        mask_check = work / "mask_organ.nii.gz"
+        if mask_check.is_file() and not _gz_integro(mask_check):
+            mask_check.unlink(missing_ok=True)
         if not vol_path.is_file():
             fonte = Path(volume_fonte)
             if fonte.is_dir():
@@ -85,6 +111,11 @@ def _um_caso(caso: str, braco: str, ground_truth: str, volume_fonte,
                 sitk.WriteImage(reader.Execute(), str(vol_path))
             else:
                 sitk.WriteImage(sitk.ReadImage(str(fonte)), str(vol_path))
+            if not _gz_integro(vol_path):
+                vol_path.unlink(missing_ok=True)
+                registro.update(status="failed",
+                                motivo="escrita do volume corrompida (verificacao pos-escrita)")
+                return registro
 
         mask_path = work / "mask_organ.nii.gz"
         if not mask_path.is_file():
@@ -106,6 +137,11 @@ def _um_caso(caso: str, braco: str, ground_truth: str, volume_fonte,
             mask_img = sitk.GetImageFromArray(m.astype(np.uint8))
             mask_img.CopyInformation(liver_img)
             sitk.WriteImage(mask_img, str(mask_path))
+            if not _gz_integro(mask_path):
+                mask_path.unlink(missing_ok=True)
+                registro.update(status="failed",
+                                motivo="escrita da mascara corrompida (verificacao pos-escrita)")
+                return registro
 
         manifest_path = work / "candidate_region.json"
         if not manifest_path.is_file():
@@ -145,6 +181,25 @@ def _um_caso(caso: str, braco: str, ground_truth: str, volume_fonte,
         )
     except Exception as exc:
         registro.update(status="failed", motivo=f"{type(exc).__name__}: {exc}"[:250])
+    # Retencao enxuta (C: tem ~23GB livres): apos medir com sucesso,
+    # volume e seg/ (regeneraveis das fontes NTFS) sao apagados; ficam so
+    # mask_organ + candidato (~10MB/caso). A fase D regenera volumes em
+    # lote quando houver armazenamento saudavel.
+    if registro.get("status") == "ok":
+        import shutil as _sh
+
+        (work / "volume.nii.gz").unlink(missing_ok=True)
+        _sh.rmtree(work / "seg", ignore_errors=True)
+    # Autocura: artefato truncado/corrompido (escrito na janela de
+    # corrupção do exFAT) é apagado para o retry regenerar do zero.
+    motivo = str(registro.get("motivo") or "")
+    if registro.get("status") == "failed" and any(
+        token in motivo for token in ("EOFError", "1392", "corrupted",
+                                      "end-of-stream")):
+        import shutil as _shutil
+
+        _shutil.rmtree(work, ignore_errors=True)
+        registro["artefatos_apagados_para_regenerar"] = True
     return registro
 
 
@@ -204,8 +259,9 @@ def main() -> None:
     elif quais in ("chaos_tuning", "chaos_teste"):
         fontes.append(casos_chaos(quais))
     if quais in ("all", "train"):
-        fontes.append(casos_tcia(DADOS_D / "TCIA_HCC_TRAIN", "tcia_hcc_train"))
-        fontes.append(casos_tcia(DADOS_D / "TCIA_CRLM_TRAIN", "tcia_crlm_train"))
+        # fontes de treino em C: (NTFS) desde 2026-08-28 — corrupção do D:
+        fontes.append(casos_tcia(DADOS_C / "TCIA_HCC_TRAIN", "tcia_hcc_train"))
+        fontes.append(casos_tcia(DADOS_C / "TCIA_CRLM_TRAIN", "tcia_crlm_train"))
     if quais in ("all", "teste"):
         fontes.append(casos_tcia(DADOS_C / "TCIA_HCC", "tcia_hcc_teste"))
         fontes.append(casos_tcia(DADOS_C / "TCIA_CRLM", "tcia_crlm_teste"))

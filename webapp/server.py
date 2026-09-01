@@ -82,6 +82,21 @@ MODALITY_PROFILES = {"MR": PROFILE, "CT": "profiles/figado_ct.yaml"}
 # CT-01-F): os numeros citados no aviso sao medicao do Volyrics, nao deste
 # repo (perfil figado_ct.yaml declara validado: false pela mesma razao).
 CT_ENABLED = os.environ.get("WEBAPP_CT_ENABLED", "0") == "1"
+# RIM-01 (2026-08-28, plano aprovado): eixo orgao x modalidade. MODALITY_
+# PROFILES permanece como estava (alias figado-only; patch-points do REF-03
+# e o teste _profile_path_for continuam validos byte-identicos). PROFILES e
+# a tabela nova, usada apenas quando organ != "figado".
+PROFILES = {
+    ("figado", "MR"): PROFILE,
+    ("figado", "CT"): "profiles/figado_ct.yaml",
+    ("rins", "MR"): "profiles/rins.yaml",
+    ("rins", "CT"): "profiles/rins_ct.yaml",
+}
+ORGANS_SUPORTADOS = frozenset(organ for organ, _ in PROFILES)
+# Rim atras de flag de operador ate a validacao volumetrica LOCAL (fase F do
+# plano RIM-01, benchmark contra CHAOS-MR/KiTS): perfis rins.yaml/rins_ct.yaml
+# declaram validado: false pela mesma razao do padrao CT-01.
+KIDNEY_ENABLED = os.environ.get("WEBAPP_KIDNEY_ENABLED", "0") == "1"
 MEDGEMMA_CONFIG = os.environ.get("WEBAPP_MEDGEMMA_CONFIG", "configs/medgemma_local_4b.yaml")
 VOLUMETRIC_MEDGEMMA_CONFIG = os.environ.get(
     "WEBAPP_VOLUMETRIC_MEDGEMMA_CONFIG", "configs/medgemma_local_4b_volumetric.yaml"
@@ -515,6 +530,18 @@ def _profile_path_for(modality: str) -> str:
     perfil = MODALITY_PROFILES.get(str(modality or "").upper())
     if not perfil:
         raise PipelineError(f"Modalidade não suportada: {modality!r}.")
+    return perfil
+
+
+def _organ_profile_path_for(organ: str, modality: str) -> str:
+    """Caminho do perfil para (órgão, modalidade) — RIM-01, análogo ao
+    _profile_path_for de CT-01 mas cobrindo o eixo novo. Combinação fora
+    da tabela é recusada aqui, nunca rebaixada em silêncio."""
+    perfil = PROFILES.get((str(organ or "").lower(), str(modality or "").upper()))
+    if not perfil:
+        raise PipelineError(
+            f"Combinação órgão/modalidade não suportada: {organ!r}/{modality!r}."
+        )
     return perfil
 
 
@@ -1023,6 +1050,9 @@ from webapp.jobs import (
     process_monophase_medsiglip_job as process_monophase_medsiglip_job,
 )
 from webapp.jobs import (
+    process_organ_job as process_organ_job,
+)
+from webapp.jobs import (
     process_visual_job as process_visual_job,
 )
 from webapp.payloads import (
@@ -1097,7 +1127,7 @@ def health() -> dict:
         backend = "desligado"
     # CT-01: a UI só mostra o seletor de modalidade quando o operador
     # habilitou TC (flag WEBAPP_CT_ENABLED; perfil CT ainda validado:false).
-    return {"backend": backend, "ct_enabled": CT_ENABLED}
+    return {"backend": backend, "ct_enabled": CT_ENABLED, "kidney_enabled": KIDNEY_ENABLED}
 
 
 def _probe_backend(health_url: str) -> str:
@@ -1187,11 +1217,36 @@ async def analyze(request: Request) -> dict:
     files = [v for v in form.getlist("files") if not isinstance(v, str)]
     if not files:
         raise HTTPException(status_code=400, detail="Nenhum arquivo enviado.")
+    # RIM-01 (2026-08-28): orgao e SELECAO EXPLICITA do cliente, mesmo padrao
+    # de honestidade da modalidade em CT-01. Default "figado" preserva
+    # compatibilidade total com clientes existentes.
+    organ = str(form.get("organ") or "figado").lower()
+    if organ not in ORGANS_SUPORTADOS:
+        raise HTTPException(status_code=400, detail=f"Órgão não suportado: {organ!r}.")
+    if organ == "rins" and not KIDNEY_ENABLED:
+        # Perfis rins.yaml/rins_ct.yaml declaram validado:false (benchmark
+        # local pendente, fase F do plano RIM-01); sem a flag o caminho nem
+        # existe — mesmo padrão do CT_ENABLED.
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Análise de rins indisponível neste ambiente (validação local "
+                "pendente; habilite com WEBAPP_KIDNEY_ENABLED=1)."
+            ),
+        )
     # CT-01: modalidade e SELECAO EXPLICITA do cliente (decisao do operador,
     # 2026-08-25); a tag DICOM vira validacao no worker. Default "MR" preserva
     # compatibilidade total com clientes existentes. AUTO (2026-08-28)
     # resolve pela tag DICOM apos o upload — ver _detect_upload_modality.
     modality = str(form.get("modality") or "MR").upper()
+    if organ == "rins" and modality == "AUTO":
+        # Detecção automática de modalidade é figado-específica (o ramo AUTO
+        # abaixo dispara process_ct_job direto); rim exige seleção explícita
+        # de RM/TC nesta fase — escopo declarado, não rebaixamento silencioso.
+        raise HTTPException(
+            status_code=400,
+            detail="Análise de rins exige modalidade explícita (RM ou TC); AUTO não é suportado.",
+        )
     modalidade_auto = modality == "AUTO"
     if modalidade_auto:
         modality = "MR"  # provisório; resolvido após salvar os arquivos
@@ -1199,65 +1254,92 @@ async def analyze(request: Request) -> dict:
         raise HTTPException(
             status_code=400, detail=f"Modalidade não suportada: {modality!r}."
         )
-    if modality == "CT" and not CT_ENABLED:
-        # Perfil CT declara validado:false (benchmark local pendente, fase
-        # CT-01-F); sem a flag de operador o caminho nem existe.
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "Análise de TC indisponível neste ambiente (validação local "
-                "pendente; habilite com WEBAPP_CT_ENABLED=1)."
-            ),
-        )
-    # O exame individual roda EXCLUSIVAMENTE o classificador visual da Etapa C,
-    # que é o de melhor acertividade medida. O cliente não escolhe: um pedido que
-    # mande outro cenário é recusado em vez de silenciosamente rebaixado, para
-    # que ninguém receba um resultado pior achando que pediu outra coisa.
-    pedido = form.get("scenario")
-    if modality == "CT" and pedido is not None:
-        # O cenário de TC é implicado pela modalidade (ct_volumetric, sem
-        # triagem); um pedido explícito seria ignorado — recusar é honesto.
-        raise HTTPException(
-            status_code=400,
-            detail="Exame de TC não aceita seleção de cenário (é sempre ct_volumetric).",
-        )
-    if pedido is not None and str(pedido) != INDIVIDUAL_SCREENING_MODE:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Modo de exame individual não autorizado: {str(pedido)!r}. "
-                f"A análise individual usa apenas {INDIVIDUAL_SCREENING_MODE!r}."
-            ),
-        )
-    scenario = "ct_volumetric" if modality == "CT" else INDIVIDUAL_SCREENING_MODE
-    enhanced_raw = form.get("enhanced_3d")
-    if enhanced_raw is not None and str(enhanced_raw) not in {"0", "1"}:
-        raise HTTPException(status_code=400, detail="Opção de 3-D aprimorado inválida.")
-    enhanced_3d = str(enhanced_raw or "0") == "1"
-    if enhanced_3d and modality == "CT":
-        # O 3-D aprimorado usa o MRSegmentator — RM por definição; recusar
-        # explícito em vez de rebaixar em silêncio.
-        raise HTTPException(
-            status_code=400,
-            detail="Segmentação 3-D aprimorada é exclusiva de RM.",
-        )
-    if enhanced_3d and not (
-        ENHANCED_3D_OPT_IN_ENABLED and MRSEGMENTATOR_EXE.is_file()
-    ):
-        raise HTTPException(
-            status_code=409,
-            detail="Segmentação 3-D aprimorada indisponível neste ambiente.",
-        )
-    # A escolha de backend MedGemma NÃO é escolha de cenário: ela só tem efeito
-    # se o exame cair no fallback monofásico. Um id não registrado é recusado
-    # aqui, antes de gastar segmentação, em vez de rebaixado em silêncio.
-    backend_pedido = form.get("medgemma_backend")
-    try:
-        monophase_config = _medgemma_backend_config(
-            str(backend_pedido) if backend_pedido else None, MONOPHASE_MEDGEMMA_CONFIG
-        )
-    except PipelineError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if organ == "figado":
+        if modality == "CT" and not CT_ENABLED:
+            # Perfil CT declara validado:false (benchmark local pendente, fase
+            # CT-01-F); sem a flag de operador o caminho nem existe.
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Análise de TC indisponível neste ambiente (validação local "
+                    "pendente; habilite com WEBAPP_CT_ENABLED=1)."
+                ),
+            )
+        # O exame individual roda EXCLUSIVAMENTE o classificador visual da Etapa C,
+        # que é o de melhor acertividade medida. O cliente não escolhe: um pedido que
+        # mande outro cenário é recusado em vez de silenciosamente rebaixado, para
+        # que ninguém receba um resultado pior achando que pediu outra coisa.
+        pedido = form.get("scenario")
+        if modality == "CT" and pedido is not None:
+            # O cenário de TC é implicado pela modalidade (ct_volumetric, sem
+            # triagem); um pedido explícito seria ignorado — recusar é honesto.
+            raise HTTPException(
+                status_code=400,
+                detail="Exame de TC não aceita seleção de cenário (é sempre ct_volumetric).",
+            )
+        if pedido is not None and str(pedido) != INDIVIDUAL_SCREENING_MODE:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Modo de exame individual não autorizado: {str(pedido)!r}. "
+                    f"A análise individual usa apenas {INDIVIDUAL_SCREENING_MODE!r}."
+                ),
+            )
+        scenario = "ct_volumetric" if modality == "CT" else INDIVIDUAL_SCREENING_MODE
+        enhanced_raw = form.get("enhanced_3d")
+        if enhanced_raw is not None and str(enhanced_raw) not in {"0", "1"}:
+            raise HTTPException(status_code=400, detail="Opção de 3-D aprimorado inválida.")
+        enhanced_3d = str(enhanced_raw or "0") == "1"
+        if enhanced_3d and modality == "CT":
+            # O 3-D aprimorado usa o MRSegmentator — RM por definição; recusar
+            # explícito em vez de rebaixar em silêncio.
+            raise HTTPException(
+                status_code=400,
+                detail="Segmentação 3-D aprimorada é exclusiva de RM.",
+            )
+        if enhanced_3d and not (
+            ENHANCED_3D_OPT_IN_ENABLED and MRSEGMENTATOR_EXE.is_file()
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Segmentação 3-D aprimorada indisponível neste ambiente.",
+            )
+        # A escolha de backend MedGemma NÃO é escolha de cenário: ela só tem efeito
+        # se o exame cair no fallback monofásico. Um id não registrado é recusado
+        # aqui, antes de gastar segmentação, em vez de rebaixado em silêncio.
+        backend_pedido = form.get("medgemma_backend")
+        try:
+            monophase_config = _medgemma_backend_config(
+                str(backend_pedido) if backend_pedido else None, MONOPHASE_MEDGEMMA_CONFIG
+            )
+        except PipelineError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    else:
+        # RIM-01: escopo v1 e SOMENTE volumetria + 3D -- sem triagem/laudo,
+        # sem cenario configuravel, sem 3-D aprimorado (MRSegmentator e
+        # figado-especifico), sem backend MedGemma. Qualquer um desses
+        # campos vindo no envio e recusado explicito, nunca ignorado em
+        # silencio.
+        for campo, valor in (
+            ("scenario", form.get("scenario")),
+            ("medgemma_backend", form.get("medgemma_backend")),
+        ):
+            if valor is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Analise de rins nao aceita o campo {campo!r}.",
+                )
+        enhanced_raw = form.get("enhanced_3d")
+        if enhanced_raw is not None and str(enhanced_raw) not in {"0", "1"}:
+            raise HTTPException(status_code=400, detail="Opcao de 3-D aprimorada invalida.")
+        if str(enhanced_raw or "0") == "1":
+            raise HTTPException(
+                status_code=400,
+                detail="Segmentacao 3-D aprimorada e exclusiva de figado/RM.",
+            )
+        scenario = "organ_volumetric"
+        enhanced_3d = False
+        monophase_config = MONOPHASE_MEDGEMMA_CONFIG  # nao usado por process_organ_job
     relpaths = form.get("relpaths")
     job_id = uuid.uuid4().hex[:12]
     raw_dir = WORKSPACE / job_id / "_upload"
@@ -1308,12 +1390,20 @@ async def analyze(request: Request) -> dict:
             "state": "queued", "step": "recebendo", "progress": 5, "result": None,
             "analysis_scenario": scenario,
             "modality": modality,
+            "organ": organ,
             "monophase_medgemma_config": monophase_config,
             "enhanced_3d": enhanced_3d,
         }
     # CT-01 (D3/D4): TC despacha para o worker dedicado (série única, sem
     # triagem, perfil figado_ct); RM segue o caminho atual byte-idêntico.
-    worker = process_ct_job if modality == "CT" else process_visual_job
+    # RIM-01: qualquer modalidade de rim despacha para o worker genérico de
+    # órgão (volumetria + 3D, sem triagem — nenhum classificador renal existe).
+    if organ == "rins":
+        worker = process_organ_job
+    elif modality == "CT":
+        worker = process_ct_job
+    else:
+        worker = process_visual_job
     threading.Thread(
         target=worker, args=(job_id, raw_dir), daemon=True
     ).start()
@@ -1321,6 +1411,7 @@ async def analyze(request: Request) -> dict:
         "job_id": job_id,
         "analysis_scenario": scenario,
         "modality": modality,
+        "organ": organ,
         "enhanced_3d": enhanced_3d,
     }
 

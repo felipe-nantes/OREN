@@ -9,6 +9,7 @@ import SimpleITK as sitk
 from dtwin.core import PipelineError
 from dtwin.volumetry import (
     VOLUMETRY_CONTRACT,
+    VOLUMETRY_CONTRACT_V2,
     VOLUMETRY_CSV_NAME,
     VOLUMETRY_JSON_NAME,
     VOLUMETRY_SCHEMA,
@@ -57,6 +58,59 @@ def test_volumetry_uses_mask_voxels_and_physical_spacing(tmp_path):
         "anterior_posterior": 9.0,
         "superior_inferior": 8.0,
     }
+
+
+def test_volumetry_default_organ_e_figado_com_alias_v2_identico(tmp_path):
+    """RIM-01: sem `organ`, o manifesto continua tendo TODAS as chaves v1
+    inalteradas (compat total) e GANHA as v2 como cópia exata — fígado
+    nunca perde whole_liver/whole_liver_summary/percent_of_whole_liver."""
+    shape = (4, 5, 6)
+    reference = _write(tmp_path / "volume.nii.gz", np.zeros(shape, np.float32))
+    mask = np.zeros(shape, np.uint8)
+    mask[1:3, 1:4, 2:6] = 1
+    liver = _write(tmp_path / "liver.nii.gz", mask)
+
+    manifest = build_volumetry_manifest(
+        reference_volume=reference,
+        structures=[VolumetryStructure("orgao", "Fígado", liver, "organ")],
+        output_dir=tmp_path / "outputs",
+        case_id="anon-volumetry-v2",
+    )
+
+    assert manifest["organ"] == "figado"
+    assert manifest["contract"] == VOLUMETRY_CONTRACT
+    assert manifest["contract_v2"] == VOLUMETRY_CONTRACT_V2
+    assert manifest["structures"][0]["measurement_class"] == "whole_liver"
+    assert manifest["organ_summary"] == manifest["whole_liver_summary"]
+    assert manifest["structures"][0]["percent_of_organ"] == (
+        manifest["structures"][0]["percent_of_whole_liver"]
+    )
+    with (tmp_path / "outputs" / VOLUMETRY_CSV_NAME).open(encoding="utf-8") as f:
+        cabecalho = f.readline()
+    assert "percent_of_whole_liver" in cabecalho and "percent_of_organ" in cabecalho
+
+
+def test_volumetry_organ_nao_figado_usa_whole_organ(tmp_path):
+    """Órgão par (rim): measurement_class do agregado vira genérico; as
+    chaves hepáticas v1 continuam presentes (compat estrutural), mas
+    marcadas com a semântica correta, não "whole_liver" para um rim."""
+    shape = (4, 5, 6)
+    reference = _write(tmp_path / "volume.nii.gz", np.zeros(shape, np.float32))
+    mask = np.zeros(shape, np.uint8)
+    mask[1:3, 1:4, 2:6] = 1
+    orgao = _write(tmp_path / "orgao.nii.gz", mask)
+
+    manifest = build_volumetry_manifest(
+        reference_volume=reference,
+        structures=[VolumetryStructure("orgao", "Rins", orgao, "organ")],
+        output_dir=tmp_path / "outputs",
+        case_id="anon-volumetry-rim",
+        organ="rins",
+    )
+
+    assert manifest["organ"] == "rins"
+    assert manifest["structures"][0]["measurement_class"] == "whole_organ"
+    assert manifest["organ_summary"]["volume_ml"] == manifest["whole_liver_summary"]["volume_ml"]
 
 
 def test_volumetry_rejects_mask_on_different_geometry(tmp_path):

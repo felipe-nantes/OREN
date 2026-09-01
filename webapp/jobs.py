@@ -1198,3 +1198,225 @@ def process_ct_job(job_id: str, raw_dir: Path) -> None:
             log.exception("Job CT %s: não foi possível persistir a auditoria de tempo", job_id)
         shutil.rmtree(raw_dir, ignore_errors=True)
         shutil.rmtree(server.WORKSPACE / job_id / "_series", ignore_errors=True)
+
+
+def process_organ_job(job_id: str, raw_dir: Path) -> None:
+    """Exame de qualquer órgão fora de fígado (RIM-01): segmentação →
+    malha 3D → volumetria → revisão humana.
+
+    Espelha deliberadamente o desenho D3/D4 do CT-01 (process_ct_job antes
+    do CT-LAUDO): SEM triagem visual e SEM laudo automático, porque não
+    existe classificador treinado para nenhum órgão além do fígado. Aceita
+    RM ou TC — a modalidade e o órgão do job resolvem o perfil via
+    server._organ_profile_path_for(organ, modality). v1 não roda
+    candidato de lesão (Fase D liga o de cisto renal em TC).
+    """
+    job_info = server._jobs.get(job_id) or {}
+    organ = str(job_info.get("organ") or "")
+    modality = str(job_info.get("modality") or "").upper()
+    case_dir = (server.WORKSPACE / job_id / "case").resolve()
+    worker_started = time.monotonic()
+    started_at_utc = datetime.now(timezone.utc).isoformat()
+    durations_seconds: dict[str, float] = {}
+    outcome = "failed"
+    failure_stage: str | None = "profile_resolution"
+    segmentation_device: str | None = None
+    viewer_ready = False
+    viewer_error = ""
+    try:
+        perfil_rel = server._organ_profile_path_for(organ, modality)
+    except PipelineError as exc:
+        server._set(job_id, state="done", result=server._graceful(
+            str(exc), "perfil_indisponivel"))
+        return
+    try:
+        failure_stage = "series_selection_and_copy"
+        server._set(job_id, state="processing", step="ingestao", progress=15)
+        series_started = time.monotonic()
+        if modality == "CT":
+            best_files, n = _select_ct_series(raw_dir)
+        else:
+            best_files, n = server.find_best_series(raw_dir)
+        if not best_files or n < server.MIN_SLICES:
+            durations_seconds["series_selection_and_copy"] = round(
+                time.monotonic() - series_started, 4
+            )
+            outcome = "not_completed"
+            server._set(job_id, state="done", result=server._graceful(
+                f"Não encontramos uma série DICOM de {modality} válida no envio.",
+                f"Você selecionou {organ}, mas o envio não contém uma série de "
+                f"{modality} com múltiplos cortes — confira a modalidade do "
+                "exame e a seleção."))
+            return
+
+        series_dir_path = server.WORKSPACE / job_id / "_series"
+        series_dir_path.mkdir(parents=True, exist_ok=True)
+        for i, source in enumerate(best_files):
+            shutil.copyfile(source, series_dir_path / f"{i:05d}_{os.path.basename(source)}")
+        series_dir = str(series_dir_path.resolve())
+        durations_seconds["series_selection_and_copy"] = round(
+            time.monotonic() - series_started, 4
+        )
+
+        failure_stage = "preparation_and_segmentation"
+        segmentation_started = time.monotonic()
+        try:
+            server._set(job_id, step="segmentacao", progress=45)
+            segmentation_device = "gpu"
+            prep = server._segment(
+                series_dir, case_dir, "gpu", server.PREP_TIMEOUT_GPU,
+                fast=False, profile_rel=perfil_rel,
+            )
+            if not server._seg_done(case_dir):
+                reason = server._cli_reason(prep)
+                log.warning("Job %s (%s/%s): GPU falhou (%s); tentando CPU...",
+                           job_id, organ, modality, reason[:100])
+                shutil.rmtree(case_dir, ignore_errors=True)
+                server._set(job_id, step="segmentacao", progress=55)
+                segmentation_device = "cpu_fallback"
+                prep = server._segment(
+                    series_dir, case_dir, "cpu", server.PREP_TIMEOUT_CPU,
+                    fast=False, profile_rel=perfil_rel,
+                )
+                if not server._seg_done(case_dir):
+                    reason = server._cli_reason(prep)
+                    outcome = "not_completed"
+                    server._set(job_id, state="done", result=server._graceful(
+                        server._friendly_text(reason), reason))
+                    return
+        finally:
+            durations_seconds["preparation_and_segmentation"] = round(
+                time.monotonic() - segmentation_started, 4
+            )
+
+        server._persist_series_selection(case_dir, best_files)
+
+        # RIM-01 v1: SEM laudo (não existe classificador treinado p/ este
+        # órgão). Candidato (fase D — cisto renal em TC, task kidney_cysts)
+        # é 100% dirigido pelo bloco localizacao_candidata do PERFIL; reusa
+        # _localize_candidate_ct (organ-agnóstico apesar do nome, herdado
+        # do CT-01/CT-03) sem gate de predição — mesmo racional: não existe
+        # classificador de triagem para nenhum órgão além do fígado.
+        candidate_localization = None
+        try:
+            from dtwin.core import load_profile as _load_profile
+
+            perfil_dict = _load_profile(server.REPO / perfil_rel)
+        except Exception:
+            perfil_dict = {}
+        if (perfil_dict.get("localizacao_candidata") or {}).get("habilitada"):
+            failure_stage = "candidate_localization"
+            server._set(job_id, step="localizacao_candidata", progress=76)
+            candidato_started = time.monotonic()
+            try:
+                candidate_localization = _localize_candidate_ct(case_dir, perfil_rel)
+            except Exception as exc:
+                log.exception("Job %s (%s/%s): localizador de candidato falhou",
+                              job_id, organ, modality)
+                candidate_localization = {
+                    "status": "localization_unavailable",
+                    "candidate_present": False,
+                    "used_by_screening_inference": False,
+                    "requires_human_review": True,
+                    "reason": str(exc)[:200],
+                }
+            finally:
+                durations_seconds["candidate_localization"] = round(
+                    time.monotonic() - candidato_started, 4
+                )
+
+        failure_stage = "model_3d"
+        server._set(job_id, step="modelo_3d", progress=80)
+        model_started = time.monotonic()
+        try:
+            viewer_ready, viewer_error = server._build_model(
+                case_dir, profile_rel=perfil_rel
+            )
+        finally:
+            durations_seconds["model_3d"] = round(time.monotonic() - model_started, 4)
+
+        if not viewer_ready:
+            outcome = "not_completed"
+            server._set(job_id, state="done", result=server._graceful(
+                server._friendly_text(viewer_error), viewer_error))
+            return
+
+        outcome = "completed"
+        failure_stage = None
+        # RIM-01 fase C: "organ_summary" é a chave v2 genérica (alias exato
+        # de whole_liver_summary — dtwin/volumetry.py); lida aqui em vez da
+        # hepática para que o payload de qualquer órgão use o nome certo.
+        organ_volume_ml = None
+        try:
+            manifest = json.loads(
+                (case_dir / "outputs" / "viewer_manifest.json").read_text(encoding="utf-8")
+            )
+            organ_volume_ml = (
+                (manifest.get("volumetry") or {}).get("organ_summary") or {}
+            ).get("volume_ml")
+        except Exception:
+            organ_volume_ml = None
+        result = {
+            "status": "concluido",
+            "analysis_scenario": "organ_volumetric",
+            "organ": organ,
+            "modality": modality,
+            "profile": Path(perfil_rel).stem,
+            "screening_available": False,
+            "screening_unavailable_reason": (
+                "Este órgão ainda não possui classificador de triagem "
+                "treinado; o exame segue direto para volumetria e revisão 3D."
+            ),
+            "prediction": None,
+            "candidate_localization": candidate_localization,
+            "viewer_ready": True,
+            "viewer_url": f"/viewer/index.html?case=/api/jobs/{job_id}/model&job={job_id}",
+            "organ_volume_ml": organ_volume_ml,
+            "requires_human_review": True,
+            "research_only": True,
+            "clinical_use_allowed": False,
+            "disclaimer": server.DISCLAIMER,
+        }
+        server._set(
+            job_id, state="done", step="concluido", progress=100,
+            approval={"status": "pending"}, result=result,
+        )
+    except subprocess.TimeoutExpired:
+        outcome = "timeout"
+        server._set(job_id, state="done", result=server._graceful(
+            "O processamento excedeu o tempo limite.", "timeout"))
+    except Exception as exc:
+        outcome = "failed"
+        log.exception("Job %s (%s/%s): falha inesperada", job_id, organ, modality)
+        server._set(job_id, state="done", result=server._graceful(
+            "Ocorreu um erro inesperado no processamento.", type(exc).__name__))
+    finally:
+        durations_seconds["total_with_3d"] = round(time.monotonic() - worker_started, 4)
+        try:
+            timing = build_operational_timing(
+                job_id=job_id,
+                analysis_scenario="organ_volumetric",
+                medgemma_config="(organ_volumetric_sem_triagem)",
+                medgemma_config_sha256="not_applicable",
+                started_at_utc=started_at_utc,
+                finished_at_utc=datetime.now(timezone.utc).isoformat(),
+                durations_seconds=durations_seconds,
+                outcome=outcome,
+                report_available=False,
+                viewer_ready=viewer_ready,
+                failure_stage=failure_stage,
+                segmentation_device=segmentation_device,
+                report_budget_seconds=DEFAULT_REPORT_BUDGET_SECONDS,
+            )
+            timing_path = persist_operational_timing(case_dir, timing)
+            server._set(
+                job_id,
+                operational_timing=timing,
+                operational_timing_artifact=str(
+                    timing_path.relative_to((server.WORKSPACE / job_id).resolve())
+                ),
+            )
+        except Exception:
+            log.exception("Job %s: não foi possível persistir a auditoria de tempo", job_id)
+        shutil.rmtree(raw_dir, ignore_errors=True)
+        shutil.rmtree(server.WORKSPACE / job_id / "_series", ignore_errors=True)

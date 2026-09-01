@@ -1,0 +1,100 @@
+# =====================================================================
+# Perfil de órgão: RINS — RESSONÂNCIA MAGNÉTICA (RM)
+# ---------------------------------------------------------------------
+# RIM-01 (2026-08-28, plano aprovado pelo operador): segundo órgão do
+# OREN, provando o motor agnóstico. Par como um todo — mask_organ é a
+# UNIÃO dos dois rins (TKV); cada lado é estrutura separada com
+# volumetria própria. Escopo v1: volumetria + 3D/XR + candidato de
+# cistos (só TC); SEM laudo automático (não há classificador renal
+# treinado — ver docs do plano). profiles/figado.yaml intocado.
+# =====================================================================
+
+id: rins
+nome_exibicao: "Rins"
+
+estado_regulatorio: PESQUISA
+
+# Validação técnica LOCAL pendente (fase F do plano RIM-01): benchmark
+# volumétrico contra CHAOS-MR (rins rotulados por humano). Enquanto
+# false, o webapp só aceita rim com a flag WEBAPP_KIDNEY_ENABLED=1.
+validado: false
+
+modalidade: [MR, MRI]
+
+normalizacao: zscore
+
+# --- Segmentação do ÓRGÃO (automática) -------------------------------
+# rotulo_alvo em LISTA: mask_organ = união lógica dos dois rótulos
+# (motor multi-rótulo do stage3, RIM-01 fase A). TS 2.15.0 dá
+# kidney_left/kidney_right em total_mr, sem licença.
+segmentacao_orgao:
+  motor: totalsegmentator_mri
+  motor_task: total_mr
+  rotulo_alvo: [kidney_left, kidney_right]
+
+# --- Anatomia interna para o visualizador 3D --------------------------
+# Cada lado vira estrutura PRÓPRIA (mesh + volumetria por lado), além
+# da máscara união do órgão inteiro (TKV). Mesma task já solicitada
+# acima — nenhuma segmentação extra.
+segmentacao_anatomia:
+  habilitada: true
+  tarefas:
+    - motor_task: total_mr
+      estruturas:
+        - {papel: rim_esquerdo, rotulo: kidney_left,  nome: "Rim esquerdo", cor: "#8E5AA6", material: organ, opacidade: 0.90}
+        - {papel: rim_direito,  rotulo: kidney_right, nome: "Rim direito",  cor: "#4E9F5A", material: organ, opacidade: 0.90}
+
+# --- Segmentação da LESÃO (fora de escopo v1 — sem candidato em RM) ---
+segmentacao_lesao:
+  modo: manual_slicer
+  ferramentas_sugeridas: [threshold, region_growing, paint]
+
+# Localização automática de candidato: DESABILITADA em RM (TS não tem
+# task de cisto renal em RM). Ligada só no perfil de TC.
+localizacao_candidata:
+  habilitada: false
+
+# --- Refino das máscaras (herdado de fígado; parâmetros topológicos) --
+refino:
+  orgao:
+    opening: true
+    opening_radius: 2
+    min_volume_voxels: 300
+  lesao:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 30
+  candidato:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 1
+  anatomia:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 20
+
+# --- Geração de malha (herdado de fígado sem recalibração) ------------
+mesh:
+  nivel_marching_cubes: 0.5
+  suavizacao_iteracoes: 30
+  feature_angle: 60.0
+  taubin_pass_band: 0.1
+  reamostragem_isotropica_mm: 0.8
+  suavizacao_campo_sigma_mm: 2.0
+  max_triangulos: 160000
+  cor_orgao: "#6B8FA3"
+  cor_lesao: "#D7263D"
+  cor_candidato: "#FF8400"
+
+# --- Exportação ---------------------------------------------------------
+viewer:
+  quality_metrics:
+    max_volume_error_percent: 2.0
+    max_surface_p95_voxels: 1.0
+
+exportacao:
+  sistema_coordenadas: LPS
+
+# --- Flywheel -----------------------------------------------------------
+flywheel:
+  dir: "flywheel"

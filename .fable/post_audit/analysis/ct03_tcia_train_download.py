@@ -21,7 +21,10 @@ from pathlib import Path
 from urllib.request import urlopen
 
 BASE = Path(r"C:\datasets_ct")            # metadados/seleções/logs
-DESTINO_RAIZ = Path(r"D:\datasets_ct")    # dados de treino no SSD externo
+# 2026-08-28: destino movido do D: para C: — a janela de corrupção do
+# exFAT destruiu 64/106 pacientes baixados (verificação SimpleITK). O D:
+# não é confiável nem para dados sequenciais; fontes ficam em NTFS.
+DESTINO_RAIZ = Path(r"C:\datasets_ct")
 API = ("https://services.cancerimagingarchive.net/nbia-api/services/v1/"
        "getImage?SeriesInstanceUID=")
 COLECOES = {

@@ -507,7 +507,22 @@ def _remove_anatomy_artifacts(case: Case, role: str) -> None:
 def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> None:
     seg = profile["segmentacao_orgao"]
     task = seg.get("motor_task", "total_mr")
-    label = seg["rotulo_alvo"]
+    # RIM-01 (2026-08-28, plano aprovado): rotulo_alvo aceita string
+    # (byte-idêntico ao histórico — fígado) OU lista de rótulos (órgão
+    # par: mask_organ = UNIÃO; cada rótulo segue disponível em seg_raw/
+    # para virar estrutura de anatomia no perfil). Lista vazia é erro.
+    rotulo_alvo = seg["rotulo_alvo"]
+    if isinstance(rotulo_alvo, str):
+        organ_labels = [rotulo_alvo]
+    elif isinstance(rotulo_alvo, list) and rotulo_alvo and all(
+        isinstance(item, str) and item.strip() for item in rotulo_alvo
+    ):
+        organ_labels = [str(item) for item in rotulo_alvo]
+    else:
+        raise PipelineError(
+            "segmentacao_orgao.rotulo_alvo deve ser string ou lista não vazia de strings."
+        )
+    label = organ_labels[0]  # representativo p/ mensagens de erro/log
     anatomy = _anatomy_structures(profile)
     anatomy_fast_by_task: dict[str, bool] = {}
     anatomy_require_complete: dict[str, bool] = {}
@@ -536,7 +551,7 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
         ) from e
 
     case.seg_dir.mkdir(parents=True, exist_ok=True)
-    labels_by_task: dict[str, set[str]] = {str(task): {str(label)}}
+    labels_by_task: dict[str, set[str]] = {str(task): {str(x) for x in organ_labels}}
     for anatomy_task, entry in anatomy:
         labels_by_task.setdefault(anatomy_task, set()).add(str(entry["rotulo"]))
     for current_task, labels in labels_by_task.items():
@@ -570,23 +585,42 @@ def stage3_segment_organ(case: Case, profile: dict, device: str, fast: bool) -> 
             # não cria dado sintético nem invalida um caso já segmentado.
             log.warning("Anatomia interna não disponível (%s): %s", current_task, e)
 
-    produced = case.seg_dir / f"{label}.nii.gz"
-    if not produced.exists():
+    organ_img = None
+    organ_union = None
+    for organ_label in organ_labels:
+        produced = case.seg_dir / f"{organ_label}.nii.gz"
+        if not produced.exists():
+            raise PipelineError(
+                f"Saída de segmentação esperada não encontrada: {produced}. "
+                f"Verifique se '{organ_label}' é classe válida da task '{task}' "
+                f"(rode: totalseg_info --classes -ta {task})."
+            )
+        current_img = read_image(produced)
+        current_arr = array_from(current_img) > 0
+        if organ_union is None:
+            organ_img = current_img
+            organ_union = current_arr
+        else:
+            if current_arr.shape != organ_union.shape:
+                raise PipelineError(
+                    f"Rótulos do órgão com geometrias divergentes: {organ_label}."
+                )
+            organ_union = organ_union | current_arr
+    if organ_union is None or int(organ_union.sum()) == 0:
         raise PipelineError(
-            f"Saída de segmentação esperada não encontrada: {produced}. "
-            f"Verifique se '{label}' é classe válida da task '{task}' "
-            f"(rode: totalseg_info --classes -ta {task})."
+            f"Segmentação automática não encontrou '{'+'.join(organ_labels)}' no "
+            "exame. Revisão humana necessária (não há órgão a modelar)."
         )
 
-    organ_img = read_image(produced)
-    if int(array_from(organ_img).sum()) == 0:
-        raise PipelineError(
-            f"Segmentação automática não encontrou '{label}' no exame. "
-            "Revisão humana necessária (não há órgão a modelar)."
-        )
-
-    save_image(organ_img, case.mask_organ)
-    log.info("Estágio 3: órgão '%s' segmentado automaticamente (task=%s).", label, task)
+    if len(organ_labels) == 1:
+        save_image(organ_img, case.mask_organ)  # caminho histórico byte-idêntico
+    else:
+        union_img = array_to_image(organ_union.astype(np.uint8), organ_img, np.uint8)
+        save_image(union_img, case.mask_organ)
+    log.info(
+        "Estágio 3: órgão '%s' segmentado automaticamente (task=%s).",
+        "+".join(organ_labels), task,
+    )
 
     volume_geometry = read_image(case.volume)
     anatomy_validity: dict[tuple[str, str], bool] = {}
@@ -1040,7 +1074,10 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
             # relevo da superfície -- justamente o que a malha nova passou a
             # descrever bem. 0,88 mantém os vasos visíveis por dentro sem
             # dissolver o órgão; o controle deslizante segue disponível.
-            "label": "Fígado", "material": "organ", "opacity": 0.88,
+            # RIM-01 fase C: rótulo vem do perfil (default "Fígado" preserva
+            # o caminho histórico byte-idêntico para quem não tem o campo).
+            "label": str(profile.get("nome_exibicao") or "Fígado"),
+            "material": "organ", "opacity": 0.88,
             "default_visible": not has_couinaud,
         },
         {
@@ -1210,12 +1247,16 @@ def stage7_export_publish(case: Case, profile: dict) -> None:
             if case.segmentation_quality_manifest_v2.is_file()
             else None
         ),
+        organ=str(profile["id"]),
     )
     viewer = {
         "schema": "argos-viewer-manifest-v2",
         "schema_version": 2,
         "case_id": manifest.get("case_id"),
         "organ": profile["id"],
+        # RIM-01 fase C: rótulo humano do órgão, para o viewer/XR pararem de
+        # assumir "Fígado" — additive, organ (string) intocado.
+        "organ_label": str(profile.get("nome_exibicao") or "Fígado"),
         "coordinate_system": profile.get("exportacao", {}).get(
             "sistema_coordenadas", "LPS"
         ),

@@ -1,0 +1,99 @@
+# =====================================================================
+# Perfil de órgão: RINS — TOMOGRAFIA COMPUTADORIZADA (TC)
+# ---------------------------------------------------------------------
+# RIM-01 (2026-08-28, plano aprovado pelo operador). Espelha rins.yaml
+# (RM) com motor_task CT. Candidato de cistos (task kidney_cysts, TS
+# 2.15.0/Dataset789, grátis): HABILITADO desde a fase D —
+# dtwin/candidate_region.py une os dois arquivos de saída da task
+# (kidney_cyst_left.nii.gz + kidney_cyst_right.nii.gz) antes de validar;
+# mesmo contrato advisory do candidato de fígado (pós-fluxo, revisão
+# humana obrigatória, nunca alimenta classificador nenhum).
+# =====================================================================
+
+id: rins_ct
+nome_exibicao: "Rins (TC)"
+
+estado_regulatorio: PESQUISA
+
+# Validação técnica LOCAL pendente (fase F): benchmark volumétrico
+# contra KiTS. Enquanto false, exige WEBAPP_KIDNEY_ENABLED=1.
+validado: false
+
+modalidade: [CT]
+
+normalizacao: zscore
+
+# --- Segmentação do ÓRGÃO (automática) -------------------------------
+segmentacao_orgao:
+  motor: totalsegmentator_ct
+  motor_task: total
+  rotulo_alvo: [kidney_left, kidney_right]
+
+# --- Anatomia interna para o visualizador 3D --------------------------
+segmentacao_anatomia:
+  habilitada: true
+  tarefas:
+    - motor_task: total
+      estruturas:
+        - {papel: rim_esquerdo, rotulo: kidney_left,  nome: "Rim esquerdo", cor: "#8E5AA6", material: organ, opacidade: 0.90}
+        - {papel: rim_direito,  rotulo: kidney_right, nome: "Rim direito",  cor: "#4E9F5A", material: organ, opacidade: 0.90}
+
+# --- Segmentação da LESÃO (manual no 3D Slicer no MVP) ----------------
+segmentacao_lesao:
+  modo: manual_slicer
+  ferramentas_sugeridas: [threshold, region_growing, paint]
+
+# Localização automática de candidato de CISTO renal: task kidney_cysts
+# do TotalSegmentator 2.15.0 (task 789, grátis) — ver cabeçalho (fase D).
+localizacao_candidata:
+  habilitada: true
+  motor: totalsegmentator_ct
+  motor_task: kidney_cysts
+  executar_pos_inferencia: true
+  uso_na_inferencia: false
+  revisao_humana_obrigatoria: true
+
+# --- Refino das máscaras (herdado de fígado; parâmetros topológicos) --
+refino:
+  orgao:
+    opening: true
+    opening_radius: 2
+    min_volume_voxels: 300
+  lesao:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 30
+  candidato:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 1
+  anatomia:
+    opening: false
+    opening_radius: 1
+    min_volume_voxels: 20
+
+# --- Geração de malha (herdado de fígado sem recalibração) ------------
+mesh:
+  nivel_marching_cubes: 0.5
+  suavizacao_iteracoes: 30
+  feature_angle: 60.0
+  taubin_pass_band: 0.1
+  reamostragem_isotropica_mm: 0.8
+  suavizacao_campo_sigma_mm: 2.0
+  max_triangulos: 160000
+  cor_orgao: "#6B8FA3"
+  cor_lesao: "#D7263D"
+  cor_candidato: "#FF8400"
+
+# --- Exportação ---------------------------------------------------------
+viewer:
+  quality_metrics:
+    max_volume_error_percent: 2.0
+    max_surface_p95_voxels: 1.0
+
+exportacao:
+  sistema_coordenadas: LPS
+
+# --- Flywheel -----------------------------------------------------------
+flywheel:
+  dir: "flywheel"

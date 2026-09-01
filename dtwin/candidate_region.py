@@ -36,7 +36,15 @@ TASK = "liver_lesions_mr"  # default RM — comportamento byte-idêntico
 # fail-closed: nunca uma task arbitrária. "liver_lesions" = Dataset591
 # (TC, 842 sujeitos, sem licença comercial); a máscara de saída tem o
 # mesmo nome (liver_lesions.nii.gz) nas duas tasks.
-ALLOWED_TASKS = frozenset({"liver_lesions_mr", "liver_lesions"})
+ALLOWED_TASKS = frozenset({"liver_lesions_mr", "liver_lesions", "kidney_cysts"})
+# Nome(s) do(s) arquivo(s) que cada task grava em staging/. Tasks de órgão
+# par produzem um arquivo POR LADO (kidney_cysts: TS 2.15.0/Dataset789) —
+# a união dos dois vira a máscara candidata bruta antes da validação.
+TASK_OUTPUT_FILES: dict[str, tuple[str, ...]] = {
+    "liver_lesions_mr": ("liver_lesions.nii.gz",),
+    "liver_lesions": ("liver_lesions.nii.gz",),
+    "kidney_cysts": ("kidney_cyst_left.nii.gz", "kidney_cyst_right.nii.gz"),
+}
 
 
 def _same_geometry(a, b) -> bool:
@@ -181,9 +189,31 @@ def generate_candidate_region(
             nr_thr_saving=1,
             quiet=True,
         )
-        raw_path = staging / "liver_lesions.nii.gz"
-        if not raw_path.is_file():
-            raise PipelineError("O localizador não produziu a máscara esperada.")
+        output_files = TASK_OUTPUT_FILES.get(task, ("liver_lesions.nii.gz",))
+        produced_paths = [staging / name for name in output_files]
+        missing = [str(p.name) for p in produced_paths if not p.is_file()]
+        if missing:
+            raise PipelineError(
+                f"O localizador não produziu a(s) máscara(s) esperada(s): {missing}."
+            )
+        if len(produced_paths) == 1:
+            raw_path = produced_paths[0]  # caminho histórico byte-idêntico
+        else:
+            # União lógica dos lados (rim par): mesma geometria (recorte na
+            # máscara do órgão), então basta OR voxel a voxel.
+            union_img = read_image(produced_paths[0])
+            union_arr = array_from(union_img) > 0
+            for extra_path in produced_paths[1:]:
+                extra_img = read_image(extra_path)
+                if extra_img.GetSize() != union_img.GetSize():
+                    raise PipelineError(
+                        f"Saídas de '{task}' com geometrias divergentes."
+                    )
+                union_arr = union_arr | (array_from(extra_img) > 0)
+            raw_path = staging / "_union_candidate.nii.gz"
+            save_image(
+                array_to_image(union_arr.astype(np.uint8), union_img, np.uint8), raw_path
+            )
         version = f"TotalSegmentator {importlib.metadata.version('TotalSegmentator')} / {task}"
         return validate_and_store_candidate(
             case,

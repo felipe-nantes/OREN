@@ -98,6 +98,23 @@
               Revisão humana obrigatória.
             </div>
           </div>
+          <!-- RIM-01: seletor de órgão — visível apenas quando o operador
+               habilitou rim no servidor (WEBAPP_KIDNEY_ENABLED). Rim é
+               experimental (validado:false): só volumetria + 3D, sem
+               triagem/laudo — não existe classificador renal treinado. -->
+          <div class="note hidden" id="organPicker">
+            <label for="organSelect"><b>Órgão do exame</b></label>
+            <select id="organSelect">
+              <option value="figado" selected>Fígado</option>
+              <option value="rins">Rins (experimental)</option>
+            </select>
+            <div class="small" id="organHint">
+              Rim é experimental: volumetria dos dois lados (união + por lado)
+              e modelo 3D, sem laudo automático nem triagem — nenhum
+              classificador renal foi treinado ainda. Exige modalidade
+              explícita (RM ou TC).
+            </div>
+          </div>
           <div class="note">O envio é processado localmente. O exame é des-identificado automaticamente e nenhum dado sai desta máquina.</div>
         </div>
 
@@ -189,13 +206,25 @@ async function startAnalysis(items){
   const rels=[];
   for(const {file,rel} of dicoms){ fd.append('files', file, file.name); rels.push(rel); }
   fd.append('relpaths', JSON.stringify(rels));
+  // RIM-01: órgão é seleção explícita, ao lado da modalidade.
+  const organ = ($('#organSelect') && !$('#organPicker').classList.contains('hidden'))
+    ? $('#organSelect').value : 'figado';
+  fd.append('organ', organ);
   // CT-01: modalidade é seleção explícita. Em TC o cenário é implicado pelo
   // servidor (ct_volumetric, sem triagem) e o 3-D aprimorado (MRSegmentator)
   // não se aplica — o servidor recusaria; a UI simplesmente não envia.
-  const modality = ($('#modalitySelect') && !$('#modalityPicker').classList.contains('hidden'))
+  let modality = ($('#modalitySelect') && !$('#modalityPicker').classList.contains('hidden'))
     ? $('#modalitySelect').value : 'MR';
+  // Rim exige modalidade explícita (servidor recusa AUTO); RM é o default
+  // seguro quando o operador deixou o seletor em "detectar automaticamente".
+  if(organ==='rins' && modality==='AUTO'){ modality = 'MR'; }
   fd.append('modality', modality);
-  if(modality==='CT'){
+  if(organ==='rins'){
+    // RIM-01 v1: sem cenário, sem 3-D aprimorado, sem backend MedGemma —
+    // nenhum classificador renal existe; o servidor recusaria esses campos.
+    STEP_LABELS.ingestao = modality==='CT' ? 'Selecionando a série de TC dos rins' : 'Selecionando a série de RM dos rins';
+    fd.append('enhanced_3d','0');
+  }else if(modality==='CT'){
     STEP_LABELS.ingestao='Selecionando a série de TC';
     fd.append('enhanced_3d','0');
   }else{
@@ -459,10 +488,47 @@ function renderCtResult(result){
   }
 }
 
+function renderOrganResult(result){
+  // RIM-01: qualquer órgão fora de fígado (v1: rim) — volumetria + 3D, sem
+  // triagem/laudo/candidato, porque não existe classificador treinado.
+  const c=$('#resultCard'); c.innerHTML='';
+  const rotuloOrgao = {rins: 'Rins'}[result.organ] || 'Órgão';
+  const head = el('div','verdict');
+  head.appendChild(el('span','vbadge v-INCONCLUSIVA','SEM TRIAGEM'));
+  head.appendChild(el('div','', `<div style="font-weight:700">Volumetria e modelo 3D — ${escapeHtml(rotuloOrgao)}</div>`
+    +`<div class="sub">Exame de ${escapeHtml(result.modality==='CT'?'tomografia':'ressonância')} em modo Pesquisa (experimental)</div>`));
+  c.appendChild(head);
+  const aviso=el('div','note');
+  aviso.style.borderLeft='3px solid #4a90a4'; aviso.style.paddingLeft='10px';
+  aviso.innerHTML='<b>Este exame não passou por triagem visual automática.</b> '
+    +escapeHtml(result.screening_unavailable_reason||'Não há classificador treinado para este órgão.');
+  c.appendChild(aviso);
+  if(Number.isFinite(result.organ_volume_ml)){
+    c.appendChild(field(`Volume de ${escapeHtml(rotuloOrgao.toLowerCase())} segmentado`, Number(result.organ_volume_ml).toFixed(0)+' mL'));
+  }
+  const meta = el('div','meta');
+  meta.appendChild(el('span','chip',`Órgão: <b>${escapeHtml(rotuloOrgao)}</b>`));
+  meta.appendChild(el('span','chip',`Modalidade: <b>${escapeHtml(result.modality||'—')}</b>`));
+  meta.appendChild(el('span','chip','Modo: <b>Volumetria + 3D</b>'));
+  meta.appendChild(el('span','chip','Status: <b>revisão humana obrigatória</b>'));
+  c.appendChild(meta);
+  c.appendChild(el('div','note', escapeHtml(result.disclaimer||'')));
+  if(result.viewer_ready && result.viewer_url){
+    const actions=el('div','btns');
+    const open=el('button','primary',`Visualizar ${rotuloOrgao.toLowerCase()} em 3D e revisar`);
+    open.onclick=()=>{ window.location.href=result.viewer_url; };
+    addQuestActions(actions,c);
+    actions.appendChild(open); c.appendChild(actions);
+  }else{
+    c.appendChild(el('div','note','A volumetria foi concluída, mas o modelo 3D não ficou disponível nesta execução.'));
+  }
+}
+
 function renderResult(result){
   show($('#progCard'),false); show($('#againBtns'),true); show($('#resultCard'),true);
   if(!result || result.status!=='concluido') return renderGraceful(result||{});
   if(result.analysis_scenario==='ct_volumetric') return renderCtResult(result);
+  if(result.analysis_scenario==='organ_volumetric') return renderOrganResult(result);
   if(result.analysis_scenario==='hybrid_supervised'||result.analysis_scenario==='monophase_medsiglip_delayed') return renderVisualResult(result);
   const rep = result.report||{};
   const verdict = (rep.resultado_hipotese||'INCONCLUSIVA').toUpperCase();
@@ -592,17 +658,28 @@ async function carregarSegmentacao3d(){
 carregarSegmentacao3d();
 // CT-01: o seletor de modalidade só existe quando o operador habilitou TC no
 // servidor (WEBAPP_CT_ENABLED). Sem a flag, a UI é idêntica à anterior.
+// RIM-01: o seletor de órgão só existe quando o operador habilitou rim
+// (WEBAPP_KIDNEY_ENABLED). Os dois seletores checam o MESMO /api/health.
 async function carregarModalidades(){
   let dados;
   try{ dados = await (await fetch('/api/health')).json(); }catch{ return; }
-  if(!dados.ct_enabled){ return; }
-  show($('#modalityPicker'), true);
-  $('#modalitySelect').addEventListener('change',()=>{
-    const ct = $('#modalitySelect').value==='CT';
-    // 3-D aprimorado (MRSegmentator) e escolha de backend MedGemma são RM-only.
-    if(ct){ show($('#enhanced3dPicker'),false); show($('#backendPicker'),false); }
-    else { carregarSegmentacao3d(); carregarBackends(); }
-  });
+  if(dados.ct_enabled){
+    show($('#modalityPicker'), true);
+    $('#modalitySelect').addEventListener('change', atualizarPickersPorSelecao);
+  }
+  if(dados.kidney_enabled){
+    show($('#organPicker'), true);
+    $('#organSelect').addEventListener('change', atualizarPickersPorSelecao);
+  }
+}
+function atualizarPickersPorSelecao(){
+  const organRim = $('#organSelect') && !$('#organPicker').classList.contains('hidden')
+    && $('#organSelect').value==='rins';
+  const ct = $('#modalitySelect') && $('#modalitySelect').value==='CT';
+  // 3-D aprimorado (MRSegmentator) e escolha de backend MedGemma são
+  // exclusivos de fígado/RM — nunca aparecem para TC nem para rim.
+  if(organRim || ct){ show($('#enhanced3dPicker'),false); show($('#backendPicker'),false); }
+  else { carregarSegmentacao3d(); carregarBackends(); }
 }
 carregarModalidades();
 drop.addEventListener('click',()=>$('#folderInput').click());

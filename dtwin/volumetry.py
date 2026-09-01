@@ -25,10 +25,15 @@ from .core import PipelineError, array_from, now_utc, read_image, sha256_of
 
 VOLUMETRY_SCHEMA = "oren-volumetry-manifest-v1"
 VOLUMETRY_CONTRACT = "oren-hepatic-volumetry-contract-v1"
+# RIM-01 (2026-08-28, plano aprovado): contrato v2 com chaves genéricas
+# (organ_summary/percent_of_organ) ao lado das hepáticas históricas —
+# alias, nunca substituição; fígado emite AMBAS, órgãos novos só as v2.
+VOLUMETRY_CONTRACT_V2 = "oren-organ-volumetry-contract-v2"
 VOLUMETRY_JSON_NAME = "volumetry_manifest.json"
 VOLUMETRY_CSV_NAME = "volumetry_summary.csv"
 
 LIVER_ROLE = "orgao"
+FIGADO_ORGAN_ID = "figado"
 COUINAUD_PREFIX = "couinaud_"
 VESSEL_ROLES = {"portal_vein", "inferior_vena_cava", "hepatic_vein"}
 
@@ -381,8 +386,19 @@ def build_volumetry_manifest(
     output_dir: Path,
     case_id: str | None = None,
     segmentation_quality: Mapping[str, Any] | Path | None = None,
+    organ: str = FIGADO_ORGAN_ID,
 ) -> dict[str, Any]:
-    """Mede e persiste JSON/CSV de forma atômica, sem alterar máscaras."""
+    """Mede e persiste JSON/CSV de forma atômica, sem alterar máscaras.
+
+    RIM-01: `organ` (id do perfil) é opcional e default "figado" — toda
+    chave v1 existente permanece presente com o mesmo valor para QUALQUER
+    chamador (nenhum campo é removido ou renomeado). O manifesto sempre
+    GANHA as chaves v2 genéricas (organ_summary/percent_of_organ); para
+    fígado elas são cópia exata das v1 (alias puro). Para outro órgão, as
+    v1 hepáticas (whole_liver_summary/percent_of_whole_liver) continuam
+    presentes por compatibilidade estrutural, mas com semântica marcada:
+    measurement_class do órgão vira "whole_organ" em vez de "whole_liver".
+    """
 
     reference_path = Path(reference_volume)
     if not reference_path.is_file():
@@ -401,12 +417,21 @@ def build_volumetry_manifest(
 
     liver_record = next((row for row in records if row["role"] == LIVER_ROLE), None)
     liver_volume = float(liver_record["volume_ml"]) if liver_record else None
+    is_figado = organ == FIGADO_ORGAN_ID
+    if liver_record is not None and not is_figado:
+        # RIM-01: corrige a semântica só na fronteira do manifesto — a
+        # função pura measurement_class() continua devolvendo
+        # "whole_liver" (byte-idêntica, testada diretamente) porque não
+        # sabe o órgão; aqui, onde o órgão é conhecido, o rótulo do
+        # órgão agregado passa a ser genérico para não-fígado.
+        liver_record["measurement_class"] = "whole_organ"
     for record in records:
         record["percent_of_whole_liver"] = (
             float(record["volume_ml"] / liver_volume * 100.0)
             if liver_volume and record["role"] != LIVER_ROLE
             else (100.0 if liver_volume and record["role"] == LIVER_ROLE else None)
         )
+        record["percent_of_organ"] = record["percent_of_whole_liver"]
 
     partition = _couinaud_partition(masks.get(LIVER_ROLE), masks)
     if partition.get("available") and not partition.get("gate_passed"):
@@ -432,6 +457,8 @@ def build_volumetry_manifest(
         "schema": VOLUMETRY_SCHEMA,
         "schema_version": 1,
         "contract": VOLUMETRY_CONTRACT,
+        "contract_v2": VOLUMETRY_CONTRACT_V2,
+        "organ": organ,
         "created_utc": now_utc(),
         "case_id": case_id,
         "scope": "physical_measurement_of_segmented_masks",
@@ -449,6 +476,12 @@ def build_volumetry_manifest(
             "direction": list(reference.GetDirection()),
         },
         "definitions": {
+            "whole_organ": (
+                "Inclui todo o tecido do órgão (ou par de órgãos, quando aplicável) "
+                "representado dentro da máscara segmentada; exclui estruturas "
+                "vizinhas e fragmentos removidos pelo refino. Não é substituída "
+                "pelo volume da malha."
+            ),
             "whole_liver": (
                 "Inclui parênquima, lesões e vasos intra-hepáticos representados "
                 "dentro da máscara hepática; exclui vesícula, veia porta "
@@ -476,6 +509,10 @@ def build_volumetry_manifest(
         "couinaud_partition": partition,
         "artifacts": artifacts,
     }
+    # RIM-01: alias v2 genérico — mesmo conteúdo de whole_liver_summary
+    # (cópia, não referência, para que os dois blocos não colidam se um
+    # consumidor futuro mutar um deles em memória antes de serializar).
+    manifest["organ_summary"] = dict(manifest["whole_liver_summary"])
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     _write_csv_atomic(output / VOLUMETRY_CSV_NAME, records)
@@ -506,6 +543,7 @@ def _write_csv_atomic(path: Path, records: Iterable[Mapping[str, Any]]) -> None:
         "measurement_class",
         "volume_ml",
         "percent_of_whole_liver",
+        "percent_of_organ",
         "voxel_count",
         "voxel_volume_mm3",
         "left_right_mm",
@@ -533,6 +571,10 @@ def _write_csv_atomic(path: Path, records: Iterable[Mapping[str, Any]]) -> None:
                 "percent_of_whole_liver": (
                     "" if record["percent_of_whole_liver"] is None
                     else format(float(record["percent_of_whole_liver"]), ".10f")
+                ),
+                "percent_of_organ": (
+                    "" if record["percent_of_organ"] is None
+                    else format(float(record["percent_of_organ"]), ".10f")
                 ),
                 "voxel_count": record["voxel_count"],
                 "voxel_volume_mm3": format(float(record["voxel_volume_mm3"]), ".10f"),

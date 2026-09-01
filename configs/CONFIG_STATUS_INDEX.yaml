@@ -12,10 +12,10 @@ regra_de_derivacao: 'Mecanica e reproduzivel: frozen_scientific = sha256 do arqu
 aviso: Status e METADADO CONSULTIVO de navegacao; nao confere autoridade cientifica nem substitui os contratos
   congelados.
 resumo:
-  total: 120
-  frozen_scientific: 6
+  total: 124
+  frozen_scientific: 9
   production: 15
-  experimental: 97
+  experimental: 98
   legacy: 2
   familias_presentes:
   - v1
@@ -719,6 +719,35 @@ configs:
     - tools/evaluate_medsiglip_external_bundle.py
     - tools/evaluate_multi_signal_fusion.py
     - tools/freeze_hybrid_training_protocol.py
+- path: configs/training/ct03_ct_type_nested_splits.json
+  status: frozen_scientific
+  family: ct03_v1
+  pinned_in_protocol_lock: true
+  referenced_by:
+    config:
+    - configs/training/ct03_ct_type_protocol_v1.lock.json
+    oneshot:
+    - .fable/post_audit/analysis/ct03_build_slices.py
+- path: configs/training/ct03_ct_type_protocol_v1.lock.json
+  status: frozen_scientific
+  family: ct03_v1
+  referenced_by:
+    oneshot:
+    - .fable/post_audit/analysis/ct03_build_slices.py
+    - tools/freeze_hybrid_training_protocol.py
+- path: configs/training/ct03_ct_type_protocol_v1.yaml
+  status: frozen_scientific
+  family: ct03_v1
+  pinned_in_protocol_lock: true
+  referenced_by:
+    oneshot:
+    - tools/freeze_hybrid_training_protocol.py
+- path: configs/training/medsiglip_ct_axial_type_v1.yaml
+  status: experimental
+  family: ct03_v1
+  referenced_by:
+    oneshot:
+    - tools/train_medsiglip_multiclass.py
 - path: configs/training/late_fusion_v1.yaml
   status: experimental
   family: v1
