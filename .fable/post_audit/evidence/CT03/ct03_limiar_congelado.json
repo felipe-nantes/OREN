@@ -1,0 +1,11 @@
+{
+  "schema": "argos-ct03-limiar-congelado-v1",
+  "research_only": true,
+  "regra": "Youden maximo na grade de volumes observados no tuning; empate resolve pro menor limiar; IMUTAVEL apos gravado",
+  "n_tuning_pos": 222,
+  "n_tuning_neg": 12,
+  "limiar_mm3": 984.4642,
+  "youden": 0.7860360360360361,
+  "sens_tuning": 0.8693693693693694,
+  "spec_tuning": 0.9166666666666666
+}

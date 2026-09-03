@@ -1,0 +1,39 @@
+{
+  "schema": "argos-ct03-deteccao-metricas-v1",
+  "research_only": true,
+  "clinical_use_allowed": false,
+  "limiar_mm3": 984.4642,
+  "primario_sensibilidade_teste": {
+    "n": 80,
+    "n_ok": 80,
+    "acertos": 67,
+    "pct": 83.8,
+    "ic95": [
+      74.2,
+      90.3
+    ]
+  },
+  "primario_especificidade_teste": {
+    "n": 8,
+    "n_ok": 8,
+    "acertos": 8,
+    "pct": 100.0,
+    "ic95": [
+      67.6,
+      100.0
+    ]
+  },
+  "secundario_msd_contaminacao_declarada": {
+    "n": 131,
+    "n_ok": 131,
+    "acertos": 96,
+    "pct": 73.3,
+    "ic95": [
+      65.1,
+      80.1
+    ]
+  },
+  "tuning_sens": 0.8693693693693694,
+  "tuning_spec": 0.9166666666666666,
+  "gate_75_75_deteccao": true
+}

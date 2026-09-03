@@ -1,0 +1,14 @@
+{
+  "schema": "argos-rim01f-ablacao-refino-v1",
+  "research_only": true,
+  "clinical_use_allowed": false,
+  "hipotese_testada": "a subestimação de volume no braço CHAOS-MR (razão mediana 0,665) vem da erosão morfológica do refino (opening radius=2 voxels), calibrado para o fígado sem recalibração — 2 voxels ~= 3mm no CHAOS-MR (voxel 1,44mm in-plane) contra ~1mm no KiTS (voxel ~0,5-0,92mm), explicando por que KiTS teve razão bem melhor (0,847) com o MESMO refino.",
+  "metodo": "mesma segmentação bruta do TotalSegmentator total_mr (uma vez por caso, sem custo extra de GPU), comparando 4 variantes de pós-processamento sobre a MESMA máscara bruta: sem refino nenhum, produção (opening radius=2), sem abertura (radius=2 mas opening=False), abertura leve (radius=1) — nos 3 piores casos do braço primário (33, 36, 5), medindo razão de volume e Dice contra o Ground do CHAOS a cada variante.",
+  "resultado": "HIPÓTESE REFUTADA. A máscara BRUTA (sem qualquer refino) já sai com razão 0,53-0,58 nos 3 casos — o refino de produção muda a razão em apenas ~0,01-0,015 (ruído, não a causa). Remover a abertura por completo ('sem_abertura') teve efeito igualmente pequeno (leve melhora). A sub-segmentação é uma propriedade do modelo total_mr do TotalSegmentator para rim em RM, não do pipeline de refino do OREN.",
+  "implicacao": "recalibrar o parâmetro radius de profiles/rins.yaml NÃO resolveria o problema. Melhorar a acurácia de rim em RM exigiria um modelo de segmentação diferente/dedicado (não existe task específica no TS 2.15.0 para isso) ou aceitar a limitação com validado:false documentado. O braço de TC (KiTS, razão 0,847) não sofre do mesmo grau — total_mr é especificamente menos preciso que total (CT) para este órgão.",
+  "casos": [
+    {"caso": "33", "vol_ref_ml": 337.8, "bruto_razao": 0.533, "bruto_dice": 0.6839, "producao_razao": 0.5193, "producao_dice": 0.6725, "sem_abertura_razao": 0.5367, "sem_abertura_dice": 0.687, "abertura_leve_razao": 0.533, "abertura_leve_dice": 0.6839},
+    {"caso": "36", "vol_ref_ml": 363.9, "bruto_razao": 0.5665, "bruto_dice": 0.7124, "producao_razao": 0.5453, "producao_dice": 0.6946, "sem_abertura_razao": 0.5731, "sem_abertura_dice": 0.7177, "abertura_leve_razao": 0.5665, "abertura_leve_dice": 0.7124},
+    {"caso": "5", "vol_ref_ml": 378.3, "bruto_razao": 0.5763, "bruto_dice": 0.7288, "producao_razao": 0.5603, "producao_dice": 0.7157, "sem_abertura_razao": 0.5815, "sem_abertura_dice": 0.7329, "abertura_leve_razao": 0.5763, "abertura_leve_dice": 0.7288}
+  ]
+}

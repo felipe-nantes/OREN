@@ -53,7 +53,14 @@ DADOS_D = Path(r"D:\datasets_ct")
 # 2026-08-28: work migrado para C: (NTFS) — o D: segue "Full Repair
 # Needed" com 3.456+ corrupcoes; nada de campanha nele ate reparo CONCLUIR.
 # Retencao enxuta por caso (volume/seg apagados apos medir) faz caber em C:.
-TRABALHO = DADOS_C / "_ct03_work_c"
+# 2026-09-02, ordem do operador: C: chegou a 100% cheio (938GB de dados
+# alheios ao repo); work-dir grande por caso (volume+seg, ~1-3GB/caso)
+# migrado p/ o SSD E: (exFAT, mas escrita de 150MB verificada por sha256;
+# 1,95TB livres). O _TMP de CHURN do nnU-Net abaixo continua em C: NTFS
+# -- e exatamente o padrao seguro ja provado (a licao do D: foi que CHURN
+# em exFAT corrompe, nao dado grande sequencial).
+TRABALHO = Path(r"E:\argos_work\_ct03_work")
+TRABALHO.mkdir(parents=True, exist_ok=True)
 SAIDA = RAIZ / ".fable/post_audit/evidence/CT03"
 SAIDA.mkdir(parents=True, exist_ok=True)
 PY = str(RAIZ / ".venv-win" / "Scripts" / "python.exe")
